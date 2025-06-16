@@ -1,5 +1,0 @@
-SRR3229273_1_val_1_bismark_bt2_pe.sort.bismark.cov.gz
-SRR3229274_1_val_1_bismark_bt2_pe.sort.bismark.cov.gz
-SRR3229267_1_val_1_bismark_bt2_pe.sort.bismark.cov.gz
-SRR3229268_1_val_1_bismark_bt2_pe.sort.bismark.cov.gz
-SRR3229247_1_val_1_bismark_bt2_pe.sort.bismark.cov.gz

@@ -1,0 +1,5 @@
+S2_6_1_val_1_bismark_bt2_pe.sort.bismark.cov.gz
+S1_5_1_val_1_bismark_bt2_pe.sort.bismark.cov.gz
+S1_4_1_val_1_bismark_bt2_pe.sort.bismark.cov.gz
+S1_3_1_val_1_bismark_bt2_pe.sort.bismark.cov.gz
+S1_2_1_val_1_bismark_bt2_pe.sort.bismark.cov.gz

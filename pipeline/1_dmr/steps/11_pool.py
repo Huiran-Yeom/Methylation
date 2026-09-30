@@ -46,6 +46,10 @@ import pandas as pd, pysam
 NB = _D + '/for_in_silico_test/normal_cfDNA_public/aligned_bam'
 GB = _D + '/training/GBM_cell-line/aligned_bam'
 BLOCK = 100
+try:   # 01~03 과 같은 격자. 어긋나면 풀이 패널과 다른 자리를 담는다.
+    BLOCK = int(_cfg.BLOCK_SIZE)
+except Exception:
+    pass
 
 a = sys.argv
 PANEL = a[a.index('--panel')+1]

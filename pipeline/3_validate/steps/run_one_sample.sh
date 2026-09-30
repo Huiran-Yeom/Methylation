@@ -166,6 +166,20 @@ val04_1d:07_llrfeat.py}"
     rm -f "$_MISS"; exit 1
   fi
   rm -f "$_MISS"
+  # LAYOUT=single 코호트는 make_val_config 가 val03_1·2·3 을 단일리드용으로
+  #   고쳐 두는데, 바로 위 최신화가 원본으로 되돌린다. 표시가 있으면 다시 건다.
+  #   to_single() 은 바꿀 문자열이 있을 때만 바꾸므로 여러 번 불러도 안전하다.
+  if [ -f "$W/.layout_single" ]; then
+    PYTHONPATH="$ANALYSIS_DIR" python - "$W" <<'SINGLE' >> "$L" 2>&1
+import os, sys
+from val_single import to_single
+w = sys.argv[1]
+for f in ('val03_1.py', 'val03_2.py', 'val03_3.py'):
+    p = os.path.join(w, f)
+    if os.path.exists(p):
+        to_single(p)
+SINGLE
+  fi
 else
   # 여기서 경고만 하고 계속하면 안 된다. 위 _MISS 분기와 같은 실패다.
   #   검체 폴더에 남아 있는 옛 스크립트가 그대로 돌아 그 피처만 빠진 채 완주하고,

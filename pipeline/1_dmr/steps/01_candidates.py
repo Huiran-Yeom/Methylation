@@ -49,6 +49,10 @@ if not _GEN:
                          '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
 OUT = _M + '/results/dmr/j_candidates' + _GEN
 BLOCK, MINCOV, MINCPG, FRAC = 100, 9, 3, 0.60   # MINCOV=9 → 리드 10 이상
+try:   # 02·03·11 과 같은 격자를 써야 한다. 여기만 100 을 박으면 04 가
+    BLOCK = int(_cfg.BLOCK_SIZE)   #   「쓸 수 있는 창이 0」 으로 죽는다.
+except Exception:
+    pass
 MINREP = 2   # 2026-08-20: 한 독립단위(세포주)는 파일 이만큼 관측돼야 관측으로 친다
 
 a = sys.argv

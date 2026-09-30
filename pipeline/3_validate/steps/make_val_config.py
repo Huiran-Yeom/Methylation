@@ -293,6 +293,11 @@ def main():
             if _LAYOUT[0].startswith('single'):
                 from val_single import to_single
                 to_single(d)
+                # 표시를 남긴다. run_one_sample.sh 의 최신화 루프가 매번 원본을
+                #   덮어쓰므로, 두 번째 실행부터는 이 패치가 사라진다.
+                #   그쪽이 이 표시를 보고 다시 건다.
+                io.open(os.path.join(work, '.layout_single'), 'w',
+                        encoding='utf-8').write(_LAYOUT[0] + chr(10))
 
     base = io.open(os.path.join(src, 'config.py'), encoding='utf-8').read()
     _rt = str(conf.get('RATIOS', '')).strip()

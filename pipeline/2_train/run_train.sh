@@ -54,6 +54,10 @@ step(){  # step <번호> <제목> <파일> [인자...]
 # 아래 export 가 GEN·METH_ROOT 를 처음 읽는 자리다. 없으면 set -u 로
 #   맨 「unbound variable」 이 난다. 다른 드라이버처럼 뜻이 있는 말로 멈춘다.
 : "${GEN:?GEN 이 없습니다 — 0_setup/config.conf 의 GEN 을 채우십시오}"
+# VERSION·PANEL 은 09 에서 처음 쓰인다. 거기까지 가는 데 몇 시간이 걸리므로
+#   여기서 먼저 막는다. set -u 아래에서는 09 에 가서야 unbound variable 이 난다.
+: "${VERSION:?VERSION 이 없습니다 — config.conf 에 넣거나 VERSION=j15bl200_5k_uni 로 주십시오}"
+: "${PANEL:?PANEL 이 없습니다 — config.conf 에 넣거나 PANEL=bl200 으로 주십시오}"
 : "${METH_ROOT:=/ssd_data/Methylation}"
 
 # 06·07 이 보는 후보·참조 경로를 「여기서」 내보낸다.

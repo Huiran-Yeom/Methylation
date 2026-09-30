@@ -102,20 +102,28 @@ def get(key):
 
 
 def get_path(key):
-    return get(key).rstrip('/')
+    return _expand(get(key))
 
 
-METH_ROOT = get_path('METH_ROOT')
-DATASET_ROOT = get_path('DATASET_ROOT')
-WORK_ROOT = get_path('WORK_ROOT')
-TMP_ROOT = get_path('TMP_ROOT')
 # conf 안의 $METH_ROOT·$DATASET_ROOT 를 여기서 푼다.
 #   셸은 `set -a; . config.conf` 로 풀지만, 파이썬이 conf 를 직접 읽을 때는
-#   그 둘이 「환경변수가 아니라서」 expandvars 가 못 푼다 — 문자 그대로 남는다.
+#   그 둘이 「환경변수가 아니라서」 expandvars 가 못 푼다. 문자 그대로 남는다.
+#   뿌리 둘은 자기 자신을 참조할 수 없으므로 먼저 푼 값을 담아 두고 쓴다.
+_ROOTS = {}
+
+
 def _expand(v):
-    for _k, _val in (('METH_ROOT', METH_ROOT), ('DATASET_ROOT', DATASET_ROOT)):
-        v = v.replace('${%s}' % _k, _val).replace('$' + _k, _val)
+    for _k in ('METH_ROOT', 'DATASET_ROOT'):
+        _val = _ROOTS.get(_k)
+        if _val:
+            v = v.replace('${%s}' % _k, _val).replace('$' + _k, _val)
     return os.path.expanduser(os.path.expandvars(v)).rstrip('/')
+
+
+METH_ROOT = _ROOTS['METH_ROOT'] = get_path('METH_ROOT')
+DATASET_ROOT = _ROOTS['DATASET_ROOT'] = get_path('DATASET_ROOT')
+WORK_ROOT = get_path('WORK_ROOT')
+TMP_ROOT = get_path('TMP_ROOT')
 
 
 TRAIN_SRC = get_path('TRAIN_SRC')

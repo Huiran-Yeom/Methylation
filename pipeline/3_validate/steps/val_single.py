@@ -38,11 +38,24 @@ def to_single(path):
                 "균일:쌍검사_" + _k)
     elif b == 'val03_3.py':
         rep("        '--paired-end',\n", "        '-s',\n", "단일모드")
+    # 걸어야 할 자리 수. 하나라도 못 걸면 멈춘다.
+    need = {'val03_1.py': 1, 'val03_2.py': 10, 'val03_3.py': 1}.get(b)
     if hits:
         io.open(path, 'w', encoding='utf-8').write(s)
         print('  [single] %-11s %s' % (b, ' · '.join(hits)))
-    elif b in ('val03_1.py', 'val03_2.py', 'val03_3.py'):
-        print('  [single] %-11s !! 바꾼 것 없음. 코드가 다를 수 있음' % b)
+    if need is None:
+        return
+    if len(hits) < need:
+        _msg = [
+            '중단: LAYOUT=single 인데 %s 를 단일리드용으로 못 고쳤습니다 (%d/%d 자리).'
+            % (b, len(hits), need),
+            '  이 파일이 찾는 문장은 학습 스크립트의 옛 판 것입니다. 학습 코드가',
+            '  바뀌면 여기 문자열도 같이 고쳐야 합니다.',
+            '  그대로 두면 짝 리드를 전제한 코드가 단일 리드 자료 위에서 돌아',
+            '  섞인 깊이와 피처가 조용히 틀립니다.',
+            '  짝 리드 자료라면 코호트 정의에 LAYOUT=mixed 를 적으십시오.',
+        ]
+        raise SystemExit(chr(10).join(_msg))
 
 
 def detect_layout(*bams):

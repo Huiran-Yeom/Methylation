@@ -1,0 +1,38 @@
+# ── 올리지 않는 것 ──────────────────────────────────────────────────
+# 실제 코호트 정의 — 검체 식별자 목록과 참여자 이름이 들어갑니다.
+#   예시만 올립니다: 3_validate/steps/cohorts/sample_cohort.conf.example
+3_validate/steps/cohorts/*.conf
+!3_validate/steps/cohorts/*.conf.example
+
+# 자료 (용량 + 통제접근)
+*.bam
+*.bam.bai
+*.cov
+*.cov.gz
+*.parquet
+*.csv
+*.xlsx
+*.joblib
+!**/cohorts/*.example
+
+# 산출물·로그
+results/
+sample_data/
+*.log
+config_snapshot.txt
+
+# 파이썬
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 편집기·운영체제
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# 작업 메모 — 공개 대상 아님
+_DEPLOY_HOLD.txt

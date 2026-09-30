@@ -1,0 +1,26 @@
+# 실제로 쓴 버전입니다 (2026-09-25 서버에서 측정).
+# 자세한 목록과 «왜 그 버전이 중요한가» 는 0_setup/ENVIRONMENT.md 에 있습니다.
+#
+# python 3.9  (conda env)
+#   conda create -n meth python=3.9 && conda activate meth && pip install -r requirements.txt
+
+numpy==1.22.3
+pandas==1.4.4
+scipy==1.7.0
+scikit-learn==1.5.1
+xgboost==2.1.1
+joblib==1.4.2
+pysam==0.22.1
+pyarrow==21.0.0
+
+# 엑셀 산출(Acc_*.xlsx)에 필요합니다.
+openpyxl
+
+# ── pip 으로 안 되는 것 ─────────────────────────────────────────────
+# 아래 셋은 별도 설치합니다 (conda / 패키지 관리자 / 소스):
+#   bismark   v0.24.1     바이설파이트 정렬·메틸화 추출
+#   bowtie2   2.5.1       bismark 가 내부에서 부릅니다
+#   samtools  1.5         정렬·색인·병합
+#
+# sklearn 버전이 특히 중요합니다 — RandomForest·SVC 의 기본값이 버전 사이에
+# 바뀌어서 다른 버전에서는 같은 숫자가 안 나옵니다.

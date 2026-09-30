@@ -1,0 +1,118 @@
+# 파일 이름 대응표 — 분석 당시 이름 -> 이 트리의 이름
+#
+# 왜 필요한가
+#   논문 방법 서술과 초기 공개본은 왼쪽 이름을 씁니다. 그 초기 공개본은
+#   «목표 저장소의 scripts/ 폴더» 이고, 이 트리 안에는 없습니다.
+#   이 트리는 번호를 «의존 순서» 로 다시 붙였습니다(2026-09-26). 그 사이를 잇습니다.
+#
+# 목표 저장소의 기존 scripts/ 와의 대응 — 아래 여섯이 초기 공개본입니다
+#   (그 폴더는 이 트리에 없습니다. 같은 저장소의 다른 폴더입니다.)
+#   scripts/step02_1_DMR.py                              -> 1_dmr/steps/ 계열 (옛 버전)
+#   scripts/step02_2_DMR.py                              -> 1_dmr/steps/07_panel.py 계열 (옛 버전)
+#   scripts/step03_1_Preprocessing_for_ML_RawData_Mixing.py -> 2_train/steps/01_...
+#   scripts/step03_2_Preprocessing_for_ML_RawData_Mixing.py -> 2_train/steps/02_...
+#   scripts/step03_3_Preprocessing_for_ML_RawData_Mixing.py -> 2_train/steps/03_...
+#   scripts/step04_ML_classifier.py                      -> 2_train/steps/08_ML_classifier.py
+#
+# 이 저장소에 «없는» 것 (실행 스크립트만 올렸다)
+#   run_panel_chain.sh              run_dmr.sh 가 같은 사슬을 이미 돈다
+#   (11_pool·감도 둘은 2026-09-29 에 되돌렸다 — 본선이었다. 위 대응표에 있다.)
+#   score_parallel.sh · run_missing.sh · run_all_samples.sh · aggregate_scores.py
+#                                   운영 편의용 런처 — 진입점이 그 일을 직접 한다
+#   메모리감시 · 진행현황 · 이어달리기  감시 코드 — 결과와 무관
+#   scripts/ 에 없는 것: 피처 05~07 · 모델 저장 09 · 검증 전체 · 결과 표 · 귀무 패널 여섯 · 설정
+#   즉 scripts/ 는 초기 스냅샷이고, 이 트리가 논문 최종본입니다.
+#
+# 원본 이름 -> 정리본 이름. 2026-08~09
+# (번호를 «의존 순서» 로 통일 2026-09-26. 감도 확인용은 번호에서 뺐다.)
+
+# 1_dmr/steps — 번호 있는 것만 차례로 돌리면 패널이 나온다
+step02_1_candidates.py -> 01_candidates.py
+step02_0a_blockcpg.py -> 02_blockcpg.py
+step02_0b_jsdcount.py -> 03_jsdcount.py
+step02_0c_jsd.py -> 04_jsd.py
+step02_0f_llrref.py -> 05_llrref.py
+step02_0e_select.py -> 06_select.py
+step02_2_panel.py -> 07_panel.py
+(인라인 · 실판 변환) -> 08_export_panels.py
+(인라인 · 귀무A 추출) -> 09_null_a.py
+(인라인 · 귀무B 추출) -> 10_null_b.py
+
+# 2026-09-29 에 되돌린 것 — 「감도용」이 아니라 본선이었다
+감도_jsdnull.py (step02_0d_jsdnull.py) -> 04b_jsdnull.py
+감도_jsdboot.py (step02_0db_jsdboot.py) -> 04c_jsdboot.py
+select_jsd보완.py (운영 트리에만 있던 것) -> 06b_select_supplement.py
+#   04b 가 null_*, 04c 가 boot_* 를 만들고 06b 가 그 둘로 jsdb200 판을 뽑는다.
+#   jsdb200 은 보고하는 세 판 중 하나다.
+
+# 드라이버
+돌리기_풀.sh (pool15*.sh) -> run_pool.sh
+step03_0_pool.py -> 11_pool.py
+#   11 이 만드는 j_pool<GEN>_cellline/pool_*.bam 을 2단계 첫 걸음이 읽는다.
+
+# 뺀 것
+step02_3_export_dmr.py -> (이 저장소에 없음 — 08_export_panels.py 가 대체)
+#   열이 Feature,Logistic_Regression,p_value 다. 실제 쓰는 패널 9개와 옛 세대
+#   패널 모두 Feature,dbeta,q 이므로 어느 세대의 패널도 이것이 만들지 않았다.
+#   08_export_panels.py 가 대체한다.
+
+# 2_train/steps
+step03_1_Preprocessing_for_ML_RawData_Mixing.py -> 01_Preprocessing_for_ML_RawData_Mixing.py
+step03_2_Preprocessing_for_ML_RawData_Mixing.py -> 02_Preprocessing_for_ML_RawData_Mixing.py
+step03_3_Preprocessing_for_ML_RawData_Mixing.py -> 03_Preprocessing_for_ML_RawData_Mixing.py
+step04_0_coverage_check.py -> 04_coverage_check.py
+step04_1_Feature_Matrix.py -> 05_Feature_Matrix.py
+_step04_1c_jsdfeat.py -> 06_jsdfeat.py
+_step04_1d_llrfeat.py -> 07_llrfeat.py
+step04_2_ML_classifier.py -> 08_ML_classifier.py
+save_best_j.py -> 09_save_best_j.py
+step04_1b_readfeat.py -> (이 저장소에 없음 — (마) 결정으로 안 씀)   ((마) 결정으로 안 씀)
+
+# 3_validate/steps · 4_report/steps 의 나머지는 이름이 그대로다
+# 운영·감시(5_운영)는 이 저장소에 없다 — 결과를 만들지 않는다
+#   (paths.py · val_single.py 는 ~/Methylation_rev1/analysis 에서 가져왔다)
+
+════════════════════════════════════════════════════════════════════
+ 산출물 이름 — 이 저장소는 전부 영어로 씁니다
+ Output names: this repository writes English names throughout
+════════════════════════════════════════════════════════════════════
+ 분석을 돌릴 때 우리 내부 트리는 산출물 폴더·파일 이름에 한글을 썼습니다.
+ 이 저장소의 코드는 **영어 이름으로 쓰고 영어 이름으로 읽습니다** — 쓰는 쪽과
+ 읽는 쪽을 함께 고쳤습니다. 처음부터 돌리는 사람은 한글을 볼 일이 없습니다.
+
+ While the analysis was run, our internal tree used Korean names for output
+ folders and files. This repository writes *and* reads English names —
+ writers and readers were changed together. A fresh run never sees Korean.
+
+   내부 트리 (분석 당시)            이 저장소 (공개본)
+   ──────────────────────────────  ──────────────────────────────────────
+   results/판/                      results/panels/
+   sample_data/판/                  sample_data/panels/
+   j_panel_dmr<GEN>_판/             j_panel_dmr<GEN>_panels/
+   bl200_d10_세포주/                bl200_d10_cellline/
+   _출처.txt                        _origin.txt
+   설정_스냅샷.txt                  config_snapshot.txt
+   배경매핑_<판>.csv                background_map_<판>.csv
+   y_prob_all_<판>_모든조합.csv     y_prob_all_<판>_all_combos.csv
+   _보완/panel_jsd보완_n200.csv     _supplement/panel_jsd_supplement_n200.csv
+   ~/tmp/결과/                      ~/tmp/results/
+   ~/tmp/락/                        ~/tmp/lock/   (하위 검증/ -> val/, 그만 -> STOP)
+
+ 왜 이것이 「그냥 찾아 바꾸기」가 아닌가
+   이름 하나하나에 **쓰는 곳과 읽는 곳**이 있습니다. 한쪽만 고치면 프로그램은
+   죽지 않고 그 파일만 못 찾은 채 끝까지 돕니다 — 채점이 결측을 평균으로 메워
+   AUC 0.500 이 나옵니다. 그래서 이름마다 쓰는 곳·읽는 곳을 짝지어 바꾸고,
+   selfcheck.sh 9번 묶음이 「경로에 한글이 남았나」를 기계로 훑습니다.
+   결함을 일부러 되넣어 FAIL 이 뜨는 것까지 확인했습니다.
+
+ 우리 내부 결과와 대조하려면
+   내부 트리에 이미 쌓인 산출물은 한글 이름입니다. 공개본 코드로 그것을 읽으려면
+   폴더 계층만 심링크로 이어 줍니다 (데이터를 복사하거나 옮기지 않습니다):
+     ln -s "판"  <뿌리>/results/panels
+   파일 «이름» 이 다른 것(y_prob_all_…_모든조합.csv 등)은 심링크로 안 되므로,
+   비교 스크립트에서 이름을 맞춰 md5 를 대조했습니다.
+
+ 로그·잠금 이름
+   ~/tmp/lock/ 은 각 드라이버가 스스로 mkdir 합니다. 내부 트리에서는 감시
+   스크립트가 만들어 주고 있었는데 그 스크립트는 이 저장소에 없습니다 —
+   그대로 두면 받아서 돌리는 사람은 첫 flock 에서 실패합니다(2026-09-29 수정).

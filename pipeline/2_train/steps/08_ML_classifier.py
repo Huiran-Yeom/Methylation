@@ -14,10 +14,10 @@
    조합: 1+2, 1+3, 1+4, 1+5
 
 변경점
-  1. **분류점수(y_prob)를 샘플마다 저장한다.** 원본은 Accuracy 하나만 남겨서 논문
+  1. 분류점수(y_prob)를 샘플마다 저장한다. 원본은 Accuracy 하나만 남겨서 논문
      피규어(비율별 점그래프·혼동행렬·ROC)를 그릴 수 없었다.
   2. 2_train/steps/08 의 read-level feature 를 조합에 포함한다.
-  3. feature 를 **샘플 id(index) 기준으로 병합**한다. 원본은 위치 기반
+  3. feature 를 샘플 id(index) 기준으로 병합한다. 원본은 위치 기반
      `pd.concat(axis=1)` 이라 파일 순서에 의존했다. id 병합이 더 안전하고,
      순서가 같으면 결과도 같다.
   4. 예외를 삼키지 않고 traceback 을 찍고 실패 목록을 요약한다.
@@ -30,11 +30,11 @@
 SVM 점수
   원본 SVC 는 probability=False 라 predict_proba 가 없다. 기본값에서는
   decision_function 을 점수로 쓴다. 원본과 학습·예측이 완전히 동일하다.
-  단 0~1 범위가 아니므로 `score_type` 열을 보고 **모델별로 따로** 문턱값을 잡아야 한다.
+  단 0~1 범위가 아니므로 `score_type` 열을 보고 모델별로 따로 문턱값을 잡아야 한다.
 """
 
-# 2026-09-26: 09-23 사고에서 가드 없는 이 부류가 importlib 로 「확인」 되다 실제로 돌았다.
-#   82개 파일이 덮였다(내용은 결정적이라 같았지만 그건 운이었다).
+# 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돌아
+# 실제 자료를 덮어쓴다. 실행은 `python <파일>` 로만 한다.
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
@@ -77,20 +77,20 @@ COMBOS = []
 # 손으로 적지 않는다. 특징이 늘어도 이 줄은 그대로 둔다.
 import glob as _g, itertools as _it
 _all = ['mean', 'entropy']
-# 2026-09-16 (마) readent·mhl 을 뺀다. 사용자 결정.
+# (마) readent·mhl 을 뺀다. 사용자 결정.
 #   채움률이 1차 지표 깊이(5k)에서 47.9% · 48.7% 다(음성 행만 보면 83.3% · 83.4%).
 #   칸 절반이 그 검체에서 잰 값이 아니라 다른 검체들의 평균이다.
-#   근거는 **채움률**이지 성능이 아니다. 성능을 근거로 삼지 않는다.
+#   근거는 채움률이지 성능이 아니다. 성능을 근거로 삼지 않는다.
 #   조합 2^7-1=127 -> 2^5-1=31. 옛 127 결과는 지우지 않는다.
 for _k in ('jsd', 'llr', 'pdr'):
     if _g.glob('%s/*_%s_%s.csv' % (C.ML_OUT, _k, C.VERSION)):
         SOURCES[_k] = (C.ML_OUT, _k)
         _all.append(_k)
-# 2026-09-14 [관문] _g.glob 이 조용히 비면 조합 수가 줄어든 채 **에러 없이** 끝난다.
+# [관문] _g.glob 이 조용히 비면 조합 수가 줄어든 채 에러 없이 끝난다.
 #   실제로 2_train/steps/08 가 jsd·pdr 이 만들어지기 16분 전에 돌아 2^5-1=31 조합만 학습했다.
 #   R109 에서 잡은 llr 비대칭(본판 63 · 대조 31)과 똑같은 구조가 판 안에서 재현됐다.
 #   세는 곳이 없으면 또 놓친다. 여기서 멈춘다.
-# 2026-09-16 (마) 이후 **5종**. 관문은 끄지 않는다 — 4종이나 6종이면 여전히 잡는다.
+# (마) 이후 5종. 관문은 끄지 않는다 — 4종이나 6종이면 여전히 잡는다.
 _want = ['mean', 'entropy', 'jsd', 'llr', 'pdr']
 if len(_all) != len(_want):
     _miss = [x for x in _want if x not in _all]
@@ -205,7 +205,7 @@ def main():
                 Xtr, Xva, ytr, yva = train_test_split(
                     X, y, test_size=C.TEST_SIZE, random_state=C.SEED, stratify=strat
                 )
-                # 결측은 **학습셋 평균으로만** 채운다. 검증셋 값을 섞으면 누출이다.
+                # 결측은 학습셋 평균으로만 채운다. 검증셋 값을 섞으면 누출이다.
                 # 행렬이 이미 채워져 온 경우에는 아무 일도 일어나지 않는다.
                 trmean = Xtr.mean()
                 if Xtr.isna().any().any() or Xva.isna().any().any():
@@ -228,7 +228,7 @@ def main():
                     # 특징 순서와 특이도 95% 문턱값을 함께 남긴다. 둘 중 하나만 없어도
                     # 같은 판정을 재현할 수 없다.
                     # 문턱은 두 가지를 남긴다.
-                    #  thr_train : 학습셋 정상군의 95백분위. **새 검체에 적용할 때 쓴다.**
+                    #  thr_train : 학습셋 정상군의 95백분위. 새 검체에 적용할 때 쓴다.
                     #  thr_val   : 검증셋 기준. 보고용이지만 같은 셋으로 평가하므로 낙관적이다.
                     sva, stype0 = get_scores(model, Xva)
                     sva = np.asarray(sva, dtype=float); yv = np.asarray(yva)
@@ -237,10 +237,10 @@ def main():
                     thr = float(np.percentile(neg, 95)) if len(neg) else float('nan')
                     sens95 = float((pos > thr).mean()) if len(neg) and len(pos) else float('nan')
 
-                    # 재사용 문턱은 **교차검증 예측(out-of-fold)** 으로 구한다.
+                    # 재사용 문턱은 교차검증 예측(out-of-fold) 으로 구한다.
                     # 학습셋 in-sample 점수를 쓰면 트리 모델이 학습셋을 외우는 탓에
                     # 문턱이 지나치게 낮아져 새 데이터에서 특이도가 무너진다.
-                    # 📊 2026-08-06 실측(v4 0.1%): RF 특이도 0.005 · XGB 0.106
+                    # 2026-08-06 실측(v4 0.1%): RF 특이도 0.005 · XGB 0.106
                     #    (로지스틱·SVM 은 0.89~0.91 로 정상: 외우지 못하기 때문)
                     try:
                         cvm = 'predict_proba' if hasattr(model, 'predict_proba') else 'decision_function'
@@ -261,7 +261,7 @@ def main():
                     joblib.dump({
                         'model': model, 'features': list(X.columns),
                         'feature_set': name, 'model_name': mname, 'score_type': stype0,
-                        'threshold_spec95': thr_cv,          # 교차검증 문턱 — **새 검체에는 이것**
+                        'threshold_spec95': thr_cv,          # 교차검증 문턱. 새 검체에는 이것을 쓴다
                         'sens_at_spec95': sens_cv,           # 그 문턱을 검증셋에 적용한 민감도
                         'spec_on_val': spec_cv,              # 실제로 지켜진 특이도 (0.95 근처여야 정상)
                         'threshold_spec95_val': thr,         # 검증셋 기준(낙관적, 보고서 수치)
@@ -280,12 +280,12 @@ def main():
                     #    최고 모델을 고르는 기준은 이 AUC 다 (2026-08-14).
                     try:
                         cm2 = 'predict_proba' if hasattr(model, 'predict_proba') else 'decision_function'
-                        # 2026-09-14 [실행차단 교정] 여기서 **안 채운 X** 를 그대로 넣고 있었다.
+                        # [실행차단 교정] 여기서 안 채운 X 를 그대로 넣고 있었다.
                         #   결측이 있는 피처(jsd·pdr·llr)가 든 조합은 sklearn 이 ValueError 를
-                        #   내고 except 로 빠져 **cv 표에 아예 안 들어갔다.** 실측: 0.1% 에서
+                        #   내고 except 로 빠져 cv 표에 아예 안 들어갔다. 실측: 0.1% 에서
                         #   127조합 중 31조합만 남았다. 사라진 96개가 전부 jsd·pdr 조합이고
                         #   거기에 1차 조합(mean|entropy|jsd|llr|pdr)이 들어 있다.
-                        #   채우기를 파이프라인 안에 넣어 **접기마다 학습 접기 평균으로만** 채운다.
+                        #   채우기를 파이프라인 안에 넣어 접기마다 학습 접기 평균으로만 채운다.
                         #   밖에서 미리 채우면 검증 접기 값이 섞여 누출이다.
                         _mdl = _Pipe([('imp', _Imputer(strategy='mean', keep_empty_features=True)),
                                       ('m', clone(model))])
@@ -299,7 +299,7 @@ def main():
                                         'cv_auc': round(float(roc_auc_score(ya, oa)), 4),
                                         'n': int(len(ya))})
                     except Exception as _e:
-                        # 2026-09-14: print 만 하면 아무도 못 읽는다. 기록한다.
+                        # print 만 하면 아무도 못 읽는다. 기록한다.
                         failures.append('교차검증 %s %s 비율%d - %s'
                                         % (name, mname, p, type(_e).__name__))
 
@@ -346,10 +346,10 @@ def main():
             CV.to_csv(f'{C.ML_OUT}/cv_{p}_{C.VERSION}.csv', index=False)
             _cvcount[p] = len(CV)
             b = CV.iloc[0]
-            print(f"   ★ 최고 {b['feature_set']} + {b['model']}  교차검증 AUC {b['cv_auc']:.4f}")
+            print(f"   최고 {b['feature_set']} + {b['model']}  교차검증 AUC {b['cv_auc']:.4f}")
             try:
                 Xb, yb = load_combo(p, tuple(b['feature_set'].split('|')))
-                # 2026-09-14 [교정] 전체 자료 평균으로 채우고 있었다.
+                # [교정] 전체 자료 평균으로 채우고 있었다.
                 #   이 CV 가 만드는 thr 이 BEST.joblib 에 실려
                 #   외부 검증 특이도를 판정한다. 출하되는 문턱이 누출이었다.
                 mb = Xb.mean()
@@ -376,7 +376,7 @@ def main():
                     'version': C.VERSION, 'mut_reads': p, 'fraction_pct': frac,
                     'depth_reads': C.TARGET_DEPTH_READS, 'seed': C.SEED,
                 }, f'{mdir}/BEST.joblib')
-                print(f'   ★ 저장 {mdir}/BEST.joblib  (문턱 {thr:.4f})')
+                print(f'   저장 {mdir}/BEST.joblib  (문턱 {thr:.4f})')
             except Exception as _e:
                 print(f'   ! 최고 모델 저장 실패 {type(_e).__name__}: {_e}')
 
@@ -404,7 +404,7 @@ def main():
     else:
         print('저장된 점수가 없습니다. step04_1 / 2_train/steps/08 출력을 확인하세요.')
 
-    # 2026-09-14: 기대 행수를 코드에서 유도한다. 숫자를 박으면 낡는다.
+    # 기대 행수를 코드에서 유도한다. 숫자를 박으면 낡는다.
     _expect = len(COMBOS) * len(make_models())
     for _p, _n in sorted(_cvcount.items()):
         if _n != _expect:
@@ -419,7 +419,7 @@ def main():
         print('\n실패 없음.')
     print('2_train/steps/08 완료.')
     if failures:
-        # 2026-09-14: 실패가 있으면 종료 코드를 0 이 아니게 한다.
+        # 실패가 있으면 종료 코드를 0 이 아니게 한다.
         sys.exit(1)
 
 

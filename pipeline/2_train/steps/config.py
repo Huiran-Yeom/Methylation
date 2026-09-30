@@ -18,7 +18,7 @@ import os as _os
 import sys as _sys
 
 # 설정은 0_setup/config.conf 에서만 읽는다. 다른 설정 기전을 두지 않는다.
-# 2026-09-25: 검증은 이 파일을 작업폴더로 「복사」 해 돌린다 — 트리 밖이라
+# 검증은 이 파일을 작업폴더로 「복사」 해 돌린다 — 트리 밖이라
 #   상위 폴더를 거슬러 올라가도 0_setup 이 없다. 그때는 METH_CONF_DIR 를 본다.
 _h = _os.path.dirname(_os.path.abspath(__file__))
 for _ in range(5):
@@ -80,7 +80,7 @@ NORMALIZE_PATTERN = True
 GENOME_FOLDER = ROOT + '/data/Bisulfite_Genome/'   # bismark 인덱스 (없으면 --genome_folder 없이 돈다)
 # ╚══════════════════════════════════════════════════════════════════╝
 
-# 2026-09-29: RAW_NORMAL_COV_DIR · RAW_GBM_COV_DIR 을 지웠다 — 트리의 어느 코드도
+# RAW_NORMAL_COV_DIR · RAW_GBM_COV_DIR 을 지웠다 — 트리의 어느 코드도
 #   읽지 않는 죽은 값이었다. 정상·암 cov 자리는 config.conf 의 NORMAL_COV_DIR ·
 #   GBM_COV_DIR 이고, 1단계가 그것을 읽는다. 여기에 또 두면 둘이 어긋난다.
 COV_SUFFIX = '.cov.gz'
@@ -88,7 +88,7 @@ TOP_N_SAMPLES = 0
 DMR_PER_GROUP = 0
 DMR_GROUP_RE = r'^([A-Za-z]+[0-9]*)[_-]'
 
-# 2026-09-30: 판마다 「자기 풀」 을 본다. 예전에는 _cellline 하나로 박혀 있었다.
+# 판마다 「자기 풀」 을 본다. 예전에는 _cellline 하나로 박혀 있었다.
 #   풀 BAM 은 패널 영역의 리드만 담는다. 귀무판은 무작위 블록이라 실판 합집합
 #   영역 밖이고, cellline 풀에는 그 자리의 리드가 없다 — 실측(09-30):
 #     rand1200  통과 블록 8 / 200
@@ -105,7 +105,7 @@ else:                          _POOLDIR = 'j_pool' + GEN + '_cellline'
 _POOL = os.environ.get('POOL_DIR') or (ROOT + '/results/dmr/' + _POOLDIR)
 FULL_NORMAL_BAM = _POOL + '/pool_normal_all.bam'
 FULL_GBM_BAM    = _POOL + '/pool_gbm_all.bam'
-# 2026-09-29: NEGCTRL_BG_BAM · NEGCTRL_MIX_BAM 을 지웠다 — 읽는 코드가 없고,
+# NEGCTRL_BG_BAM · NEGCTRL_MIX_BAM 을 지웠다 — 읽는 코드가 없고,
 #   가리키던 pool_normal_A/B.bam 을 만드는 코드도 없다(11_pool 은 *_all.bam 만 쓴다).
 
 _R = ROOT.rstrip('/\\')
@@ -138,7 +138,7 @@ MUT_READ_COUNTS = [int(r * TARGET_DEPTH_READS) for r in MUT_RATIOS]
 def ensure_dirs():
     for d in (MIX_SD, MIX_OUT, BISMARK_OUT, ML_OUT):
         os.makedirs(d, exist_ok=True)
-    # 2026-09-24 산출 폴더를 만드는 자리에서 설정을 같이 남긴다.
+    # 산출 폴더를 만드는 자리에서 설정을 같이 남긴다.
     #   이것이 없으면 「어느 설정에서 나온 숫자인가」 를 나중에 못 댄다.
     #   import 시점이 아니라 여기서 부른다. import 부작용은 만들지 않는다.
     _cfg.snapshot(ML_OUT)

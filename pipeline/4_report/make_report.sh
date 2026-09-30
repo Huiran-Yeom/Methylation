@@ -17,7 +17,7 @@ set -u
 _HERE=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)
 S=$_HERE/steps
 
-# 2026-09-28: 보관 대상을 손으로 들고 있으면 목록에 없는 키는 conf 가 환경변수를
+# 보관 대상을 손으로 들고 있으면 목록에 없는 키는 conf 가 환경변수를
 #   덮는다. meth_config.py 의 「환경변수가 이긴다」와 반대가 된다. conf 에 적힌 키를
 #   「전부」 보관한다. 목록을 유지할 필요가 없어진다.
 _CONFFILE=""
@@ -37,10 +37,10 @@ for _k in $_PREKEYS; do
 done
 unset _v
 : "${METH_CONF_DIR:?0_setup/config.conf 를 못 찾았다}"
-# 2026-09-28: 셸이 기본값을 채우면 conf 를 비웠을 때 관문이 못 잔다.
+# 셸이 기본값을 채우면 conf 를 비웠을 때 관문이 못 잔다.
 #   정본은 config.conf 와 meth_config.py 둘이다. 셸은 값을 만들지 않는다.
 : "${GEN:?GEN 이 없습니다 — 0_setup/config.conf 의 GEN 을 채우십시오}"
-# 2026-09-29: 코호트 기본값을 우리 내부 이름으로 박지 않는다. 남이 받아서
+# 코호트 기본값을 우리 내부 이름으로 박지 않는다. 남이 받아서
 #   COHORT 를 안 주면 조용히 「없는 코호트」 를 읽고 표 아홉 개가 다 비는데
 #   exit 0 으로 끝났다. 주지 않으면 멈춘다.
 : "${COHORT:?COHORT 를 주십시오 — 3단계에서 쓴 것과 같아야 합니다 (예: COHORT=<your_cohort>)}"
@@ -54,7 +54,7 @@ if [ -n "${VAL_COHORTS:-}" ]; then
   esac
 fi
 export COHORT
-# 2026-09-29: DEPTH 는 primary_metric.py --depth 에만 간다. make_tables.py 는
+# DEPTH 는 primary_metric.py --depth 에만 간다. make_tables.py 는
 #   깊이를 스스로 돌기 때문에 이 값에 영향받지 않는다. 머리글이 「표가 바뀐다」로
 #   읽히지 않게 적어 둔다.
 DEPTH=${DEPTH:-5k}
@@ -73,7 +73,7 @@ _bad=0
 for p in $LIST; do
   echo
   echo "##### $p"
-  # 2026-09-29: 종료값을 버리면 표 아홉 중 하나가 죽어도 다른 여덟에 묻힌다.
+  # 종료값을 버리면 표 아홉 중 하나가 죽어도 다른 여덟에 묻힌다.
   ( cd "$S" && python -u make_tables.py "$p" ) || { echo "!! 표 실패 $p" >&2; _bad=1; }
 done
 
@@ -81,7 +81,7 @@ echo
 echo "=== 1차 지표: 짝지은 부트스트랩 (깊이 $DEPTH) ==="
 ( cd "$S" && python -u primary_metric.py --depth "$DEPTH" ) || _bad=1
 
-# 2026-09-29: 하나라도 실패했으면 0 이 아닌 값으로 끝낸다. 표 아홉 중 하나가
+# 하나라도 실패했으면 0 이 아닌 값으로 끝낸다. 표 아홉 중 하나가
 #   죽어도 나머지 출력에 묻혀 「성공」 으로 보이던 것을 막는다.
 if [ "$_bad" -ne 0 ]; then
   echo "!! 실패한 표가 있습니다. 위 !! 줄을 보십시오" >&2

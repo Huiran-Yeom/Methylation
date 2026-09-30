@@ -1,21 +1,21 @@
 #!/usr/bin/env python
 # coding: utf-8
 """
-2_train/steps/04: 블록 커버리지 진단.  **step04_1 을 돌리기 전에 반드시 먼저 실행할 것**
+2_train/steps/04: 블록 커버리지 진단.  step04_1 을 돌리기 전에 반드시 먼저 실행할 것
 
 왜 필요한가
   원본 step04 는 feature 행렬을 만든 뒤 `dropna(axis=0, how='any')` 로 결측 블록을
-  버린다. 즉 **샘플 하나라도 커버가 없으면 그 블록은 전체에서 탈락**한다.
+  버린다. 즉 샘플 하나라도 커버가 없으면 그 블록은 전체에서 탈락한다.
   원본은 depth 가 658배였기 때문에 모든 블록이 모든 샘플에서 커버돼 문제가 없었다.
 
-  📊 실측 (옛 작업 기계의 5_base_Normal.csv: 총 5,000 reads, 5샘플)
+  실측 (옛 작업 기계의 5_base_Normal.csv: 총 5,000 reads, 5샘플)
       ※ 그 파일은 이 저장소에 없다. 숫자만 인용한 것이다.
       자리 15,418개 · 블록 1,139개 · 샘플당 커버 자리 약 76%
       5개 샘플 전부 커버한 블록 849개 = 74.5%   (샘플-블록 커버 확률 q≈0.885)
       요구 샘플 수를 늘리면  ≥1:1139  ≥2:1078  ≥3:1021  ≥4:955  ≥5:849
 
   샘플이 2,000개면 `how='any'` 로 살아남는 블록이 몇 개일지 5샘플 데이터로는 알 수 없다.
-  블록마다 커버리지 성향이 다르기 때문이다. **그래서 직접 세어봐야 한다.**
+  블록마다 커버리지 성향이 다르기 때문이다. 그래서 직접 세어봐야 한다.
 
 이 스크립트가 하는 일
   1. 커버리지 파일을 읽어 블록 x 샘플 커버 여부를 센다
@@ -28,8 +28,8 @@
       {ML_OUT}/coverage_curve_{VERSION}.csv  (요구 샘플 수별 잔존 블록)
 """
 
-# 2026-09-26: 09-23 사고에서 가드 없는 이 부류가 importlib 로 「확인」 되다 실제로 돌았다.
-#   82개 파일이 덮였다(내용은 결정적이라 같았지만 그건 운이었다).
+# 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돌아
+# 실제 자료를 덮어쓴다. 실행은 `python <파일>` 로만 한다.
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
@@ -121,7 +121,7 @@ def main():
         raise SystemExit('읽은 파일이 없습니다. 2_train/steps/03 출력 경로를 확인하세요.')
 
     N = len(per_sample)
-    # 2026-09-29: 동률 블록의 순서가 glob 순서에 달려 파일 md5 가 실행마다 달랐다
+    # 동률 블록의 순서가 glob 순서에 달려 파일 md5 가 실행마다 달랐다
     #   (내용은 같고 행 순서만 다름). 인덱스로 먼저 정렬한 뒤 안정 정렬하면 결정적이다.
     cov = (pd.Series(counts, dtype=int).sort_index()
              .sort_values(ascending=False, kind='mergesort'))
@@ -173,13 +173,13 @@ def main():
     keep_any = int((cov >= N).sum())
     print('\n' + '=' * 66)
     if keep_any == 0:
-        print('🔴 dropna(how="any") 로는 블록이 0개 남습니다.')
+        print('!! dropna(how="any") 로는 블록이 0개 남습니다.')
         print('   config.MIN_SAMPLE_COVERAGE 를 1.0 미만으로 낮추거나 depth 를 올려야 합니다.')
     elif keep_any < 30:
-        print(f'🟡 dropna(how="any") 로 {keep_any}개만 남습니다. feature 가 너무 적습니다.')
+        print(f'!  dropna(how="any") 로 {keep_any}개만 남습니다. feature 가 너무 적습니다.')
         print('   MIN_SAMPLE_COVERAGE 를 0.95 정도로 낮추는 것을 검토하세요.')
     else:
-        print(f'🟢 dropna(how="any") 로 {keep_any}개 유지됩니다. 원본 설정을 그대로 써도 됩니다.')
+        print(f'   dropna(how="any") 로 {keep_any}개 유지됩니다. 원본 설정을 그대로 써도 됩니다.')
     if len(curve) >= 3 and curve[-1]['blocks_all_covered'] == curve[-2]['blocks_all_covered']:
         print('   감쇠 곡선이 평평해졌습니다. 샘플을 더 늘려도 크게 줄지 않습니다.')
     else:

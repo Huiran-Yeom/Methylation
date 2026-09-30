@@ -26,19 +26,19 @@ try:
     ROOT = _os.path.dirname(_cfg.TRAIN_SRC.rstrip('/'))
     TRAIN_SRC = _cfg.TRAIN_SRC.rstrip('/')
     DATA = _cfg.METH_ROOT
-    # 2026-09-28: 설정을 읽는 자리는 트리에서 여기 하나다. VERSION 도 같이 내보내
+    # 설정을 읽는 자리는 트리에서 여기 하나다. VERSION 도 같이 내보내
     #   부르는 쪽(make_val_config)이 또 다른 조회 경로를 만들지 않게 한다.
     VERSION_CONF = _cfg.VERSION
-    # 2026-09-28: STEP_MAP 도 여기서 내보낸다 — 설정을 읽는 자리를 하나로 유지한다.
-    # 2026-09-29: 관문이 hasattr(_cfg, '값') 이었다 — 식별자 영어화 때 호출은
+    # STEP_MAP 도 여기서 내보낸다 — 설정을 읽는 자리를 하나로 유지한다.
+    # 관문이 hasattr(_cfg, '값') 이었다 — 식별자 영어화 때 호출은
     #   get() 으로 바꾸고 이 「이름 문자열」 은 안 바꿔서 영원히 False 였다.
     #   결과: STEP_MAP_CONF 가 항상 '' 이라 config.conf 의 STEP_MAP 이 죽어 있었다.
     STEP_MAP_CONF = _cfg.get('STEP_MAP') if hasattr(_cfg, 'get') else ''
-    # 2026-09-29: WORK_ROOT 도 여기서 내보낸다. make_val_config 가 _cfg 를 직접
+    # WORK_ROOT 도 여기서 내보낸다. make_val_config 가 _cfg 를 직접
     #   쓰려다 「import 하지 않은 이름」 을 써서 NameError 가 났다 (WORK_ROOT 가
     #   빈 값일 때만 터지는 자리였다). 설정을 읽는 자리를 하나로 유지한다.
     WORK_ROOT_CONF = getattr(_cfg, 'WORK_ROOT', '') or ''
-    # 2026-09-29: 코호트 정의 폴더도 여기서 내보낸다 (설정을 읽는 자리는 하나다).
+    # 코호트 정의 폴더도 여기서 내보낸다 (설정을 읽는 자리는 하나다).
     COHORT_DIR_CONF = _os.environ.get('COHORT_DIR') or _os.path.expanduser('~/cohorts')
 except ImportError:
     raise SystemExit(

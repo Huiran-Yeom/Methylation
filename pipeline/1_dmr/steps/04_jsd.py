@@ -40,8 +40,7 @@ except ImportError:
 import os, sys, math
 import numpy as np, pandas as pd
 
-# 2026-09-26: 기본값에 세대 접미사가 없어 「옛 세대」 를 가리켰다.
-#   09-23 사고가 옛 세대 폴더를 덮은 원인이 바로 이것이다. GEN 을 따른다.
+# 산출 폴더는 GEN(패널 세대)을 따른다. 비우면 세대 없는 옛 폴더를 가리킨다.
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:
     try:
@@ -58,7 +57,7 @@ CAND = _M + '/results/dmr/j_candidates' + _GEN
 OUT  = _M + '/results/dmr/j_jsd' + _GEN
 # ╚══════════════════════════════════════════════════════════════════╝
 K, MINR, NEED_N, NEED_G, MINREP = 3, 6, 12, 6, 2
-try:   # 2026-09-29: 04b·04c 와 같은 값을 쓰게 설정에서 읽는다 (--minr 이 이김)
+try:   # 04b·04c 와 같은 값을 쓰게 설정에서 읽는다 (--minr 이 이김)
     MINR = int(_cfg.MIN_READS_PER_WINDOW)
     K    = int(_cfg.PATTERN_K)
 except Exception:
@@ -69,7 +68,7 @@ a = sys.argv
 if '--k'    in a: K    = int(a[a.index('--k')+1])
 if '--frac' in a: FRAC = float(a[a.index('--frac')+1])
 if '--need' in a: NEED_N = int(a[a.index('--need')+1])   # 2026-09-10 정상 커버 기준을 CLI 로 (60%%)
-# 2026-09-28: '--needg' 는 「있는지」 만 보고 값을 안 읽어서, 주면
+# '--needg' 는 「있는지」 만 보고 값을 안 읽어서, 주면
 #   자동계산만 꺼지고 기본값이 남았다. 연기시험에서 --needg 1 을 줬는데
 #   「암 6종 이상」 으로 돌았다. 조용히 무시되는 인자였다.
 if '--needg' in a: NEED_G = int(a[a.index('--needg')+1])
@@ -86,7 +85,7 @@ norm  = sorted(s for s in typ if typ[s] == 'Normal')
 gbm   = sorted(s for s in typ if typ[s] == 'GBM')
 lines = {}
 for s in gbm: lines.setdefault(grp[s], []).append(s)
-# 2026-09-10 NEED 를 표본 수에서 자동 계산한다. 상수로 두면 정상 인원이 바뀔 때
+# NEED 를 표본 수에서 자동 계산한다. 상수로 두면 정상 인원이 바뀔 때
 #   기준이 저 혼자 엄격해진다 (20명의 12 = 60%, 15명의 12 = 80%).
 #   01_candidates.py:56-57 과 같은 규칙 — ceil(FRAC x 독립단위).
 if '--need' not in a: NEED_N = int(math.ceil(FRAC * len(norm)))
@@ -140,7 +139,7 @@ J = np.full(nw, np.nan, np.float32); J[ok] = jsd(P[ok], Q[ok])
 W['jsd'], W['rd'], W['nn'], W['ng'] = J, rdN + rdG, nQ, nP
 V = W[ok]
 print('쓸 수 있는 창 %d / %d (%.1f%%)' % (len(V), nw, 100.0*len(V)/nw))
-# 2026-09-28: 0 이면 여기서 멈춘다. 그대로 가면 np.percentile([]) 안에서
+# 0 이면 여기서 멈춘다. 그대로 가면 np.percentile([]) 안에서
 #   터져 numpy traceback 만 남고 「왜 0인지」 를 알 수 없다.
 if len(V) == 0:
     raise SystemExit(

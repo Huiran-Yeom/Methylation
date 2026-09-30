@@ -30,12 +30,12 @@ except ImportError:
 
 # 외부검증 표: 비율마다 그 비율의 양성/음성만 (1,780 대 1,780).
 #   검체 단위 : 행 그대로
-#   사람 단위 : **양성만** person 으로 묶는다(평균). 음성은 검체 단위로 묶는다.
+#   사람 단위 : 양성만 person 으로 묶는다(평균). 음성은 검체 단위로 묶는다.
 #               aggregate_scores.py 의 [사람 단위] 집계와 같은 규칙.
 #               (2026-09-16 정정: 앞판은 음성을 공여자로 묶어 분포를 뭉갰다)
 import pandas as pd, numpy as np, glob, os, re, sys
 import os
-# 2026-09-29: 기본값을 우리 내부 코호트 이름으로 두지 않는다. 안 주면 남이 받아
+# 기본값을 우리 내부 코호트 이름으로 두지 않는다. 안 주면 남이 받아
 #   돌릴 때 「없는 코호트」 를 읽어 표가 다 비는데도 정상 종료했다.
 COHORT = os.environ.get('COHORT') or ''
 if not COHORT:
@@ -43,7 +43,7 @@ if not COHORT:
                      '  예: COHORT=<your_cohort> python ' + os.path.basename(__file__))
 V = _M + '/%s_val' % COHORT
 NTOT = len(glob.glob(V + '/*/results'))   # 분모를 178 로 박지 않는다
-# 2026-09-26: 기본값 'j15bl200' 을 지웠다. 인자 없이 돌리면 조용히 특정
+# 기본값 'j15bl200' 을 지웠다. 인자 없이 돌리면 조용히 특정
 #   세대·특정 판을 본다. 07_panel 의 m_candidates 기본값과 같은 모양이다.
 if len(sys.argv) < 2:
     sys.exit('사용: python make_tables.py <판이름>   예) python make_tables.py %s'
@@ -73,11 +73,11 @@ def tie_width(y, s):
     """동점 때문에 정해지지 않는 AUC 폭. (최소, 최대, 고유값 수)
 
     2026-09-22: RandomForest 를 고른 칸에서 predict_proba 가 k/100 으로 양자화되고,
-      학습이 양성 90% 라 표가 몰려 **3,300행에 고유값 10개** 까지 떨어진다.
+      학습이 양성 90% 라 표가 몰려 3,300행에 고유값 10개 까지 떨어진다.
       같은 점수끼리는 누가 위인지 모르므로 AUC 가 한 점이 아니라 구간이 된다.
       보고값(auc)은 동점을 반반으로 센 구간 안의 한 점일 뿐이다.
-      폭이 판 사이 격차보다 크면 **순위를 주장할 수 없다.** 그래서 같이 낸다.
-      ★ RandomForest 에는 decision_function 이 없어 df 전환으로 못 고친다.
+      폭이 판 사이 격차보다 크면 순위를 주장할 수 없다. 그래서 같이 낸다.
+      RandomForest 에는 decision_function 이 없어 df 전환으로 못 고친다.
         값을 바꾸는 대신 폭을 함께 보고한다(사전등록 불변).
     """
     y, s = np.asarray(y, float), np.asarray(s, float)
@@ -99,21 +99,21 @@ def tie_width(y, s):
     return w(0.0), w(1.0), len(set(ss.tolist()))
 
 for depth in ('5k', '15k', '50k', '100k'):
-    # 태그 없는 단일모델 파일과 섞이지 않게 **all_combos만** 읽는다
+    # 태그 없는 단일모델 파일과 섞이지 않게 all_combos만 읽는다
     fs = glob.glob('%s/*/results/%s_%s_uni/step04_ML_classifier/y_prob_all_%s_%s_uni_all_combos.csv'
                    % (V, PAN, depth, PAN, depth))
     if not fs:
         print('\n== %s 리드: all_combos 채점 파일 없음' % depth); continue
     D = pd.concat([pd.read_csv(f) for f in fs], ignore_index=True)
     D['person'] = D['sample'].map(person)
-    # 2026-09-22 [교집합 · 비율별] 사전등록 2-2(94·256줄): 「세 패널이 모두 값을 낸 검증 검체만」.
-    #   실측(09-22): 빠짐은 **검체 전체가 아니라 (검체,비율) 칸 단위**로 일어난다.
+    # [교집합 · 비율별] 사전등록 2-2(94·256줄): 「세 패널이 모두 값을 낸 검증 검체만」.
+    #   실측(09-22): 빠짐은 검체 전체가 아니라 (검체,비율) 칸 단위로 일어난다.
     #     5k   모든 비율 178/178/178            깨끗
     #     50k  2% 부터 갈림 · 5% 164/165/165
     #     100k 1% 부터 갈림 · 5% 110/111/120 → 교집합 99 (178의 56%)
     #   높은 비율에서 종양 리드를 채우려면 원본에 그만큼 리드가 있어야 하는데 못 채우는 검체가 있다.
     #   빠짐이 커버리지와 상관하므로 무작위가 아니다 → 전수로 내면 판마다 다른 환자 집단을 비교하게 된다.
-    #   그래서 **비율마다** 세 판 공통 검체로 거른다.
+    #   그래서 비율마다 세 판 공통 검체로 거른다.
     _ISEC = {}      # 비율 -> 공통 검체 집합
     _UNI = {}
     for _p in ['j' + _cfg.GEN + _x for _x in _cfg.PANELS]:

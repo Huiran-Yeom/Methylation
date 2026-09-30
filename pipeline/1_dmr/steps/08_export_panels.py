@@ -49,7 +49,7 @@ import os
 import sys
 import pandas as pd
 
-# 2026-09-26: 세대를 박아 두면 GEN 을 바꿨을 때 「이전 세대」 후보로 패널을 내보낸다.
+# 세대를 박아 두면 GEN 을 바꿨을 때 「이전 세대」 후보로 패널을 내보낸다.
 #   그러면 실제 패널과 귀무 패널의 세대가 갈리는데, 여기가 대조의 기준선이다.
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:
@@ -76,7 +76,7 @@ SRC = {'bl200':   R + '/j_panel_dmr' + _GEN + '/bl200_d10_cellline/DMR_confirmed
        'jsd200':  R + '/j_panel' + _GEN + '/panel_jsd_jsd_mean_n200.csv',
        'jsdb200': R + '/j_panel' + _GEN + '_supplement/panel_jsd_supplement_n200.csv'}
 
-# 2026-09-28: 없는 입력에서 pandas traceback 만 남으면 「누가 만드는지」 를 모른다.
+# 없는 입력에서 pandas traceback 만 남으면 「누가 만드는지」 를 모른다.
 #   어느 단계를 먼저 돌려야 하는지 같이 말한다.
 _MADE_BY = {'bl200':   '07_panel.py  (Baseline 순위)',
             'jsd200':  '06_select.py (JSD 상위 N)',

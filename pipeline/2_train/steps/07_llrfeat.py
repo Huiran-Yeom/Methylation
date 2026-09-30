@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-# 2026-09-26: 09-23 사고에서 가드 없는 이 부류가 importlib 로 「확인」 되다 실제로 돌았다.
-#   82개 파일이 덮였다(내용은 결정적이라 같았지만 그건 운이었다).
+# 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돌아
+# 실제 자료를 덮어쓴다. 실행은 `python <파일>` 로만 한다.
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
@@ -38,7 +38,7 @@ except ImportError:
     P_mix(θ)(x) = (1 − θ) · P_Normal(x)  +  θ · P_GBM(x)
     LLR(θ)      = Σ_reads  ln [ P_mix(θ)(x) / P_Normal(x) ]
 
-  x 는 창(K자리)의 메틸 무늬. 합은 판의 **모든 창**에 걸쳐 돈다.
+  x 는 창(K자리)의 메틸 무늬. 합은 판의 모든 창에 걸쳐 돈다.
   θ 별 reference 파일은 만들지 않는다. P_Normal · P_GBM 만 두고 즉석 계산한다.
 
   나오는 열
@@ -55,7 +55,7 @@ except ImportError:
     <METH_ROOT>/results/dmr/j_llrref/llrref_K3_minr6.parquet
     열  chr blk wi pos1 pos2 pos3 wid  n0..n7(P_Normal)  g0..g7(P_GBM)  nn ng rd_n rd_g
 
-평활: 기본은 **넣지 않는다**. 이름을 정확히 적는다.
+평활: 기본은 넣지 않는다. 이름을 정확히 적는다.
 
     LLR_EPS = 0.0   (기본)   평활 없음.  P_Normal(x)=0 인 무늬의 리드는 항에서 뺀다
     LLR_EPS > 0              P_smooth = (1 − eps) · P + eps / 2^K
@@ -63,7 +63,7 @@ except ImportError:
   `~/tmp/results/llr_stability_normalLOO.csv` 의 `eps=0.0` 행이 바로 이 조건이고,
   leave-one-donor-out 정상이 −2.5 ~ −180.8 (음수 = 정상 판정)로 유지된다.
   같은 검사에서 바닥값 floor=0.0005 는 +77 ~ +863 (양성)으로 부호가 뒤집힌다.
-  → **채택한 것은 "무평활 + P_N=0 무늬 제외" 이고, 그것이 LOO 로 검증된 조건이다.**
+  → 채택한 것은 "무평활 + P_N=0 무늬 제외" 이고, 그것이 LOO 로 검증된 조건이다.
      "eps 혼합을 채택했다" 고 적었던 것은 잘못된 이름이었다 (2026-09-03 정정).
 
   주의: P_Normal(x)=0 은 "정상에서 한 번도 안 나온 무늬" 라 우도비로는 증거력이 가장 크다.
@@ -101,27 +101,27 @@ import config as C
 #   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
 #   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
 #   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
-# 2026-08-27 폴더 구조 변경 반영. 2_train/steps/06 는 아직 옛 경로라 고장나 있다.
+# 폴더 구조 변경 반영. 2_train/steps/06 는 아직 옛 경로라 고장나 있다.
 CAND = _os.environ.get('METH_ROOT', _M) + '/results/dmr/j_candidates'
 if '--cand' in sys.argv:            # 2026-09-14 판마다 후보 풀이 다르다
     CAND = sys.argv[sys.argv.index('--cand') + 1]
-# 2026-09-14: 검증(run_one_sample.sh)은 인자 없이 부른다. 환경변수로도 받는다.
+# 검증(run_one_sample.sh)은 인자 없이 부른다. 환경변수로도 받는다.
 CAND = os.environ.get('LLR_CAND', CAND)
-# 2026-09-14 [세대 검사] 인자를 빠뜨리면 **조용히 옛 후보 풀**로 돈다.
+# [세대 검사] 인자를 빠뜨리면 조용히 옛 후보 풀로 돈다.
 #   실제로 복구 스크립트가 --cand 를 빠뜨려 정상 20명 기준으로 돌기 시작했다.
 #   호출하는 쪽을 전부 맞추는 것은 계속 실패한다. 지나가는 잎에서 한 번 막는다.
-# 2026-09-26: 'j15' 를 못 박으면 다음 세대에 관문이 스스로 꺼진다. GEN 을 따른다.
+# 'j15' 를 못 박으면 다음 세대에 관문이 스스로 꺼진다. GEN 을 따른다.
 _G = getattr(C, 'GEN')
 _want = 'j_candidates' + _G
-# 2026-09-29: 06_jsdfeat 과 같은 이유로 VERSION 조건을 없앤다 — 판 이름이
+# 06_jsdfeat 과 같은 이유로 VERSION 조건을 없앤다 — 판 이름이
 #   j<GEN> 으로 시작하지 않으면 관문이 스스로 꺼지고 세대 없는 풀로 조용히 돌았다.
 if os.path.basename(CAND.rstrip('/')) != _want:
     sys.exit('중단: 세대 불일치 — VERSION=%s · GEN=%s 인데 CAND=%s (기대 %s)'
              % (C.VERSION, _G, CAND, _want))
 REF_DEFAULT = _os.environ.get('METH_ROOT', _M) + '/results/dmr/j_llrref/llrref_K3_minr6.parquet'
 
-# 2026-09-14 [자기 증명] 실행 중인 코드가 자기 소스를 해시해 찍는다.
-#   이 줄은 **이 코드를 실제로 돌려야만** 로그에 생긴다. 사후에 못 만든다.
+# [자기 증명] 실행 중인 코드가 자기 소스를 해시해 찍는다.
+#   이 줄은 이 코드를 실제로 돌려야만 로그에 생긴다. 사후에 못 만든다.
 #   해석된 입력 경로도 같이 찍는다. 참조표 두 개가 파일 이름이 같아 로그로
 #   구분이 안 됐던 일(R114)이 경로를 안 찍어서 생겼다.
 def _self_proof():
@@ -144,7 +144,7 @@ def _self_proof():
 
 
 
-# 2026-09-26: getattr 의 셋째 인자를 지웠다. 기본값이 곧 조용한 오답이다 —
+# getattr 의 셋째 인자를 지웠다. 기본값이 곧 조용한 오답이다 —
 #   MIN_READS_PER_WINDOW 의 기본값 4 는 09-14 에 6 으로 「철회된」 값이었다.
 #   복사본이 config 를 못 읽으면 06 은 4 로 세고 07 은 minr6 참조표를 읽어
 #   두 피처가 다른 문턱으로 계산된다. 파일이 따로라 아무 에러도 안 난다.
@@ -164,12 +164,12 @@ THETAS = ([float(x) for x in _env.replace(' ', '').split(',') if x]
 EPS = float(os.environ.get('LLR_EPS', 0.0))
 REF_PATH = os.environ.get('LLR_REF', REF_DEFAULT)
 # ╚══════════════════════════════════════════════════════════════════╝
-# 2026-09-15 [세대 관문 · REF] CAND 만 보던 관문이 참조표는 안 봤다.
+# [세대 관문 · REF] CAND 만 보던 관문이 참조표는 안 봤다.
 #   j_llrref (33,903창) 와 j_llrref15 (22,685창) 는 값이 다른 표다.
 #   REF_DEFAULT 는 15 가 아니므로, 러너가 LLR_REF 를 안 내보내면 조용히 옛 표를 쓴다.
 #   러너가 내보내고 있지만, 관문이 그것을 증명해야 한다.
 _wref = 'j_llrref' + _G
-# 2026-09-29: 위 CAND 관문과 같은 이유로 VERSION 조건을 없앤다. 여기가 더 위험하다 —
+# 위 CAND 관문과 같은 이유로 VERSION 조건을 없앤다. 여기가 더 위험하다 —
 #   j_llrref(33,903창) 와 j_llrref15(22,685창) 는 「파일 이름이 같다」.
 if os.path.basename(os.path.dirname(REF_PATH)) != _wref:
     sys.exit('중단: 세대 불일치 — VERSION=%s 인데 LLR_REF=%s\n'
@@ -254,7 +254,7 @@ def load_reference(nwin, blkwin):
 def scan(bam, blkwin, nwin):
     """무늬 세기. 03_jsdcount · 2_train/steps/06 의 scan 과 같은 규칙.
 
-    덤으로 **온타겟 조각 수와 고유 조각 수**를 센다 (2026-09-03 추가).
+    덤으로 온타겟 조각 수와 고유 조각 수를 센다 (2026-09-03 추가).
       이 파이프라인은 PCR 중복을 어디에서도 제거하지 않는다
       (is_duplicate · markdup · rmdup 어디에도 없다 — 실측 확인).
       중복은 새 정보가 아니므로 LLR 의 리드 합을 부풀린다.
@@ -354,7 +354,7 @@ def llr_row(Cm, PN, PG, have):
 
     # ── 리드 수. LLR 은 리드 하나하나의 합이라 리드가 2배면 LLR 도 2배다.
     #   검체마다 패널에 걸리는 리드 수가 다르면 LLR 스케일이 검체마다 달라지고,
-    #   그러면 종양 분획이 아니라 **패널 커버리지**를 먼저 재게 된다.
+    #   그러면 종양 분획이 아니라 패널 커버리지를 먼저 재게 된다.
     #   그래서 리드당 값(_pr)을 함께 낸다. 어느 쪽이 쓸모 있는지는 2_train/steps/08 가 고른다.
     #   (JSD 는 창마다 합=1 로 정규화해 이 문제에 면역이지만 LLR 은 아니다.)
     nreads = float(n.sum())
@@ -440,7 +440,7 @@ def main():
     # ── 행 이름 ↔ BAM 번호 대응 검사.
     #   GBM{i} 의 i 는 step04_1 이 bedGraph 를 numeric 정렬해 붙인 번호다.
     #   여기서는 그 i 를 sampled_reads_{i}.bam 번호로 그대로 쓴다.
-    #   복제본이 하나라도 빠지면 뒤 번호가 당겨져 **조용히 어긋난다** — 오류 없이 값만 틀린다.
+    #   복제본이 하나라도 빠지면 뒤 번호가 당겨져 조용히 어긋난다 — 오류 없이 값만 틀린다.
     #   step04_1 이 남긴 매핑 파일로 대조한다 (:86 sample_file_mapping).
     mp = '%s/sample_file_mapping_%s.csv' % (out_dir, C.VERSION)
     if os.path.exists(mp):
@@ -458,7 +458,7 @@ def main():
                      'step04_1 의 sample_file_mapping 을 보고 맞춘 뒤 다시 도세요.' % len(bad))
         print('  행↔BAM 번호 대응 %s건 확인: 모두 일치' % format(len(MP), ','))
     else:
-        print('  ⚠ 매핑 파일이 없어 대응을 검사하지 못했습니다: %s' % os.path.basename(mp))
+        print('  !! 매핑 파일이 없어 대응을 검사하지 못했습니다: %s' % os.path.basename(mp))
 
     # 원값 · 리드당(_pr) · 고유조각당(_pu) 셋을 다 낸다.
     #   원값   실제 GLRT 통계량. 학습은 행마다 깊이가 같아 이쪽이 맞다
@@ -557,10 +557,10 @@ def main():
     print('  진단 저장 %s' % os.path.basename(dp_path))
     top = D['best_theta_at_top_pct'].max() if len(D) else 0.0
     if top >= 20.0:
-        print('  ⚠ best_theta 가 격자 최댓값(%g)에 %.0f%% 몰렸습니다 — LLR_THETAS 로 넓히세요.'
+        print('  !! best_theta 가 격자 최댓값(%g)에 %.0f%% 몰렸습니다 — LLR_THETAS 로 넓히세요.'
               % (max(THETAS), top))
     if len(D) and D['dropped_reads'].sum() > 0:
-        print('  ⚠ P_Normal=0 인 무늬의 리드 %s개를 버렸습니다. LLR_EPS 로 평활을 넣으면 살릴 수 있습니다.'
+        print('  !! P_Normal=0 인 무늬의 리드 %s개를 버렸습니다. LLR_EPS 로 평활을 넣으면 살릴 수 있습니다.'
               % format(int(D['dropped_reads'].sum()), ','))
 
     print('')

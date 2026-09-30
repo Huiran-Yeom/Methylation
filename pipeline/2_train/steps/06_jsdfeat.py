@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-# 2026-09-26: 09-23 사고에서 가드 없는 이 부류가 importlib 로 「확인」 되다 실제로 돌았다.
-#   82개 파일이 덮였다(내용은 결정적이라 같았지만 그건 운이었다).
+# 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돌아
+# 실제 자료를 덮어쓴다. 실행은 `python <파일>` 로만 한다.
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
@@ -69,7 +69,7 @@ import config as C
 #   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
 #   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
 # ==== [해석 블록] 경로를 정한다. 검사는 아래 블록에서 한 번에 한다. ====
-#   2026-09-14: 앞서 JCOUNT 가 세대 검사 **뒤에** 해석되어 검사를 비켜 갔다.
+#   앞서 JCOUNT 가 세대 검사 뒤에 해석되어 검사를 비켜 갔다.
 #   CAND 때와 같은 결함이다. 해석과 검사를 갈라 사이에 아무것도 못 끼게 한다.
 CAND = _os.environ.get('METH_ROOT', _M) + '/results/dmr/j_candidates'
 if '--cand' in sys.argv:
@@ -83,15 +83,15 @@ JCOUNT = os.environ.get('JSD_JCOUNT', JCOUNT)
 # ╚══════════════════════════════════════════════════════════════════╝
 
 # ==== [검사 블록] 여기 위로 해석을 더 넣지 않는다. ====
-#   인자를 빠뜨리면 **조용히 옛 풀**로 돈다. 실제로 복구 스크립트가 --cand 를
+#   인자를 빠뜨리면 조용히 옛 풀로 돈다. 실제로 복구 스크립트가 --cand 를
 #   빠뜨려 정상 20명 기준으로 돌기 시작했다. 호출하는 쪽을 전부 맞추는 것은
 #   계속 실패한다. 지나가는 잎에서 한 번 막는다.
-# 2026-09-26: 관문이 'j15' 로 못 박혀 있어 **다음 세대에 스스로 꺼졌다.**
+# 관문이 'j15' 로 못 박혀 있어 다음 세대에 스스로 꺼졌다.
 #   GEN=16 이면 VERSION 이 j16… 이 되고 이 if 가 아예 안 돈다. 보호 장치가 자기를 끈다.
 #   또 「포함」(in)이라 j_candidates150 같은 것도 통과했다. 「같음」으로 바꾼다.
-# 2026-09-29: 조건을 없앤다. 'j'+GEN 으로 시작하는 VERSION 에서만 검사하면
+# 조건을 없앤다. 'j'+GEN 으로 시작하는 VERSION 에서만 검사하면
 #   이름을 다르게 지은 판(panelA_5k_uni 등)에서 관문이 또 스스로 꺼진다 —
-#   09-26 에 'j15' 못 박기를 고치면서 남겨 둔 같은 모양의 구멍이다.
+#   에 'j15' 못 박기를 고치면서 남겨 둔 같은 모양의 구멍이다.
 #   검사의 뜻은 「풀이 설정된 GEN 과 맞는가」 이고, 그건 VERSION 이름과 무관하다.
 #   GEN 이 비면 'j_candidates' + '' = 'j_candidates' 라 옛 세대도 그대로 통과한다.
 _G = getattr(C, 'GEN')
@@ -102,20 +102,20 @@ for _name, _val, _want in (('CAND', CAND, 'j_candidates' + _G),
                  % (C.VERSION, _G, _name, _val, _want)
                  + '\n  검증 러너가 JSD_CAND/JSD_JCOUNT 를 내보내는지 보십시오'
                    ' (3_validate/steps/run_one_sample.sh).')
-# 2026-09-26: getattr 의 셋째 인자를 지웠다. 기본값이 곧 조용한 오답이다 —
+# getattr 의 셋째 인자를 지웠다. 기본값이 곧 조용한 오답이다 —
 #   MIN_READS_PER_WINDOW 의 기본값 4 는 09-14 에 6 으로 「철회된」 값이었다.
 #   복사본이 config 를 못 읽으면 06 은 4 로 세고 07 은 minr6 참조표를 읽어
 #   두 피처가 다른 문턱으로 계산된다. 파일이 따로라 아무 에러도 안 난다.
 K = getattr(C, 'PATTERN_K')
-# 08-21: 환경변수 JSD_MINR 로 덮어쓸 수 있게 했다. 안 주면 config 그대로다.
+# 환경변수 JSD_MINR 로 덮어쓸 수 있게 했다. 안 주면 config 그대로다.
 #        결측 70% 를 낮출 수 있는지 시험하려는 것: 되돌릴 필요가 없는 방식.
 MINR = int(os.environ.get('JSD_MINR', 0)) or getattr(C, 'MIN_READS_PER_WINDOW')
-# 08-21 소영 확정: 결측이 이 값 이상인 칸은 버린다.
+# 소영 확정: 결측이 이 값 이상인 칸은 버린다.
 #   실측: 200칸 중 136칸이 80~100% 결측이고 61칸은 10% 아래다. 가운데가 비어 있다.
 #   버린 칸은 원래도 값이 없던 칸이라, 없는 것을 없다고 인정하는 것이다.
 #   JSD_MAXNA=1 을 주면 안 거른다.
 MAXNA = float(os.environ.get('JSD_MAXNA', 0.30))
-# 08-24: JSD_COLS 에 학습이 고른 칸 목록 파일을 주면 그대로 쓴다.
+# JSD_COLS 에 학습이 고른 칸 목록 파일을 주면 그대로 쓴다.
 #   검증에서 칸을 다시 고르면 학습과 열이 달라져 모델을 못 쓴다.
 #   규칙: 학습이 고른 것을 그대로 들고 간다. 검증 자료를 보고 정하지 않는다.
 COLS_FILE = os.environ.get('JSD_COLS', '')
@@ -123,8 +123,8 @@ BLOCK = C.BLOCK_SIZE
 _a = sys.argv
 LIMIT = int(_a[_a.index('--limit') + 1]) if '--limit' in _a else 0
 
-# 2026-09-14 [자기 증명] 실행 중인 코드가 자기 소스를 해시해 찍는다.
-#   이 줄은 **이 코드를 실제로 돌려야만** 로그에 생긴다. 사후에 못 만든다.
+# [자기 증명] 실행 중인 코드가 자기 소스를 해시해 찍는다.
+#   이 줄은 이 코드를 실제로 돌려야만 로그에 생긴다. 사후에 못 만든다.
 #   해석된 입력 경로도 같이 찍는다. 참조표 두 개가 파일 이름이 같아 로그로
 #   구분이 안 됐던 일(R114)이 경로를 안 찍어서 생겼다.
 def _self_proof():
@@ -158,7 +158,7 @@ def _save_cols(save_dir, keep_cols, why):
       BEST.joblib 의 열과 어긋난 자리를 채점이 학습 평균으로 메워 AUC 0.500 이 났다.
       이제 검증은 이 파일이 없으면 「멈춘다」: 그래서 거르든 안 거르든 남겨야 한다.
     """
-    # 2026-09-29: 빈 목록을 쓰지 않는다. 0바이트 파일은 검증 관문을 통과해
+    # 빈 목록을 쓰지 않는다. 0바이트 파일은 검증 관문을 통과해
     #   피처가 빈 채 완주하게 만든다. 없느니만 못하다. 멈춰서 알린다.
     if not keep_cols:
         sys.exit('중단: 남은 칸이 0개입니다 (MAXNA=%s). 커버리지나 JSD_MAXNA 를 '
@@ -283,7 +283,7 @@ def sample_jsd(bam, blkwin, nwin, P, have, wid2blk, blocks):
         return {}, {}
     Q = Cm[use] / tot[use, None]
     j = jsd_rows(Q, P[use])
-    # 2026-09-14 PDR (Landau 2014): 같은 Cm · 같은 use · 같은 창(K=3).
+    # PDR (Landau 2014): 같은 Cm · 같은 use · 같은 창(K=3).
     #   학습쪽 2_train/steps/06 와 정의를 맞춘다. BAM 을 다시 읽지 않는다.
     d = 1.0 - (Cm[use, 0] + Cm[use, (1 << K) - 1]) / tot[use].astype(float)
     acc, acd = {}, {}
@@ -300,7 +300,7 @@ def main():
     C.guard_not_original()
     C.banner('2_train/steps/06  JSD feature   [VERSION=%s . PANEL=%s]' % (C.VERSION, C.PANEL))
     out_dir = C.ML_OUT
-    # 08-21: JSD_OUT 을 주면 결과만 그 폴더에 쓴다. mean CSV 는 원래 자리에서 읽는다.
+    # JSD_OUT 을 주면 결과만 그 폴더에 쓴다. mean CSV 는 원래 자리에서 읽는다.
     #        시험용: 진짜 파일을 덮어쓰지 않으려는 것.
     save_dir = os.environ.get('JSD_OUT') or out_dir
     if save_dir != out_dir:
@@ -372,7 +372,7 @@ def main():
             names.append(name)
             if LIMIT and len(rows) >= LIMIT:
                 break
-        # 2026-09-14: jsd 와 pdr 두 벌을 같은 규칙으로 낸다.
+        # jsd 와 pdr 두 벌을 같은 규칙으로 낸다.
         #   keep_cols 는 jsd 에서 정해지고 pdr 이 그대로 쓴다 — 두 벌의 칸이 같아야 한다.
         for _slot, _tag in ((0, 'jsd'), (1, 'pdr')):
             F = pd.DataFrame(index=names, columns=cols, dtype=float)
@@ -383,7 +383,7 @@ def main():
                 for c_i, b in enumerate(colblk):
                     if b is not None and b in v:
                         F.iat[r_i, c_i] = v[b]
-            # 08-21: 블록이 아닌 열(Type 등)은 mean CSV 에서 값째로 옮긴다.
+            # 블록이 아닌 열(Type 등)은 mean CSV 에서 값째로 옮긴다.
             #        이름만 복사하면 Type 이 비어 2_train/steps/08 의 astype(int) 가 터진다.
             for _c, _b in zip(cols, colblk):
                 if _b is None and _c in M.columns:
@@ -398,7 +398,7 @@ def main():
                           % (100 * MAXNA, len(keep_cols), len(_blk)))
                     if not COLS_FILE:
                         _save_cols(save_dir, keep_cols, '결측 %.0f%% 미만' % (100 * MAXNA))
-                # 08-24: 학습이 고른 칸이 검증 검체에 없을 수 있다 (커버리지가 얕다).
+                # 학습이 고른 칸이 검증 검체에 없을 수 있다 (커버리지가 얕다).
                 #   F[...] 는 KeyError 를 내지만 reindex 는 없는 칸을 빈 값으로 만든다.
                 #   빈 값은 뒤에서 학습셋 평균(train_mean)으로 채운다. 검증 자료 평균이 아니다.
                 _want = keep_cols + _oth
@@ -407,7 +407,7 @@ def main():
                     print('    학습 칸 중 이 검체에 없는 것 %d개: 빈 값으로 둡니다' % len(_lack))
                 F = F.reindex(columns=_want)
             elif keep_cols is not None:
-                # 2026-09-29: JSD_MAXNA=1 일 때도 「학습이 고른 칸」 을 적용한다.
+                # JSD_MAXNA=1 일 때도 「학습이 고른 칸」 을 적용한다.
                 #   예전에는 적용(_want/reindex)이 `if MAXNA < 1.0` 안에만 있어서,
                 #   JSD_COLS 를 읽어 놓고 쓰지 않았다. 검증 열이 학습과 어긋나
                 #   채점이 학습 평균으로 메우고 AUC 0.500 이 났다.
@@ -418,7 +418,7 @@ def main():
                     print('    학습 칸 중 이 검체에 없는 것 %d개: 빈 값으로 둡니다' % len(_lack))
                 F = F.reindex(columns=_want)
             elif not COLS_FILE:
-                # 2026-09-29: JSD_MAXNA=1 (거르지 않음)에서도 남긴다. 위 쓰기는
+                # JSD_MAXNA=1 (거르지 않음)에서도 남긴다. 위 쓰기는
                 #   `if MAXNA < 1.0` 안에 있어서, 안 거르면 파일이 안 생겼다 —
                 #   그런데 검증은 이제 그 파일이 없으면 멈춘다. 문서에 있는
                 #   JSD_MAXNA=1 을 쓰면 학습은 되고 검증은 못 도는 상태가 됐다.

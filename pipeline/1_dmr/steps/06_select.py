@@ -40,8 +40,7 @@ import numpy as np, pandas as pd
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from moderated_t import moderated_ttest, bh
 
-# 2026-09-26: 기본값에 세대 접미사가 없어 「옛 세대」 를 가리켰다.
-#   09-23 사고가 옛 세대 폴더를 덮은 원인이 바로 이것이다. GEN 을 따른다.
+# 산출 폴더는 GEN(패널 세대)을 따른다. 비우면 세대 없는 옛 폴더를 가리킨다.
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:
     try:
@@ -53,7 +52,7 @@ if not _GEN:
 #   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
 #   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
 #   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
-# 2026-09-26: 기본값이 `j_candidates_d5` · `jsd_K3_minr4` 였다 — **깊이5 감도 변종**이고
+# 기본값이 `j_candidates_d5` · `jsd_K3_minr4` 였다 — 깊이5 감도 변종이고
 #   minr 도 4 다. 실제로 쓴 것은 `j_candidates<GEN>` 과 `jsd_K3_minr6` 다.
 #   그대로 두면 인자를 빠뜨린 사람이 「다른 JSD 표」로 패널을 고른다. 필수로 바꾼다.
 CAND = _M + '/results/dmr/j_candidates' + _GEN
@@ -67,7 +66,7 @@ if '--jsd'  in a: JSD  = a[a.index('--jsd')+1]
 if '--out'  in a: OUT  = a[a.index('--out')+1]
 if '--n'    in a: N    = int(a[a.index('--n')+1])
 if '--col'  in a: COL  = a[a.index('--col')+1]
-# 2026-09-29: `is None` 이면 드라이버가 넘기는 빈 문자열(--jsd "")이 관문을 비켜간다.
+# `is None` 이면 드라이버가 넘기는 빈 문자열(--jsd "")이 관문을 비켜간다.
 #   run_dmr.sh 는 `ls ... | head -1` 로 만들어 파일이 없으면 빈 값을 넘긴다.
 if not JSD:
     sys.exit('사용: python 06_select.py --jsd <jsd_K?_minr?.parquet> [--cand ..] [--out ..] [--n N]'
@@ -100,7 +99,7 @@ Z = T.merge(J, on=['chr', 'blk'], how='inner')
 print('JSD 계산된 블록 %d / 후보 %d (%.1f%%)'
       % (len(Z), len(T), 100.0 * len(Z) / len(T)))
 
-# 2026-09-29: 기본 quicksort 는 불안정해 동률 블록의 N=200 경계가 빌드에 달린다.
+# 기본 quicksort 는 불안정해 동률 블록의 N=200 경계가 빌드에 달린다.
 #   04_coverage_check 와 같은 방식으로 인덱스 먼저·안정 정렬로 결정적으로 만든다.
 Z = (Z.sort_values(['chr', 'blk'])
        .sort_values(COL, ascending=False, kind='mergesort').reset_index(drop=True))

@@ -45,8 +45,7 @@ import numpy as np, pandas as pd
 #   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
 ND   = _M + '/sample_data/_input/normal_pub15'
 GD   = _D + '/training/GBM_cell-line/cov'
-# 2026-09-26: 기본값에 세대 접미사가 없어 「옛 세대」 를 가리켰다.
-#   09-23 사고가 옛 세대 폴더를 덮은 원인이 바로 이것이다. GEN 을 따른다.
+# 산출 폴더는 GEN(패널 세대)을 따른다. 비우면 세대 없는 옛 폴더를 가리킨다.
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:
     try:

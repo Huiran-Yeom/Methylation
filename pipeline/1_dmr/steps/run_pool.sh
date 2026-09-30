@@ -18,7 +18,7 @@ _HERE=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)
 #   conf 를 그냥 source 하면 환경변수를 덮어써서, 환경변수로 격리한 실행이
 #   조용히 실 경로로 넘어간다(09-26 에 실제로 났다). 미리 보관하고 되돌린다.
 #   값은 eval 에 태우지 않는다. 이름만 고정 목록으로 돈다.
-# 2026-09-28: 보관 대상을 손으로 들고 있으면 목록에 없는 키는 conf 가 환경변수를
+# 보관 대상을 손으로 들고 있으면 목록에 없는 키는 conf 가 환경변수를
 #   덮는다. meth_config.py 의 「환경변수가 이긴다」와 반대가 된다. conf 에 적힌 키를
 #   「전부」 보관한다. 목록을 유지할 필요가 없어진다.
 _CONFFILE=""
@@ -39,11 +39,11 @@ done
 unset _v
 : "${METH_CONF_DIR:?config.conf 를 못 찾았다 — 트리 밖에서 돌리려면 METH_CONF_DIR 를 직접 주라}"
 : "${METH_ROOT:=/ssd_data/Methylation}"
-# 2026-09-28: 셸이 기본값을 채우면 conf 를 비웠을 때 관문이 못 잔다.
+# 셸이 기본값을 채우면 conf 를 비웠을 때 관문이 못 잔다.
 #   정본은 config.conf 와 meth_config.py 둘이다. 셸은 값을 만들지 않는다.
 : "${GEN:?GEN 이 없습니다 — 0_setup/config.conf 의 GEN 을 채우십시오}"
 : "${DMR_OUT:=$METH_ROOT/results/dmr}"
-# 2026-09-29: use15_* 로 「세대 15」 를 박고 있었다. GEN=16 이면 16세대 풀을
+# use15_* 로 「세대 15」 를 박고 있었다. GEN=16 이면 16세대 풀을
 #   15세대 목록으로 만든다. 09-23 사고와 같은 세대 섞임이고 아무 말도 안 난다.
 : "${USE_NORMAL:=$HOME/tmp/use${GEN}_normal.txt}"   # 쓸 정상 BAM 목록
 : "${USE_GBM:=$HOME/tmp/use${GEN}_gbm.txt}"         # 쓸 암 BAM 목록

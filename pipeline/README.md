@@ -4,16 +4,17 @@ Code for building a methylation-pattern classifier for glioblastoma (GBM) from
 cfDNA and validating it on an external cohort. This folder contains only the code
 that produces the numbers reported in the paper.
 
-> **Quick check.** `bash selfcheck.sh` prints a PASS/FAIL table over 12 groups and
-> writes nothing. It currently reports **PASS 26 · FAIL 0**. The groups cover
-> structure, step counts, syntax of every `.py` and `.sh`, config resolution, naming,
-> cross-references, publishable identifiers, heredoc exports, output paths,
-> the step-name map, stray files, and where paths are declared.
+> **Structural check.** Before publishing we ran a read-only audit of this tree over
+> 12 groups: structure, step counts, syntax of every `.py` and `.sh`, config
+> resolution, naming, cross-references, publishable identifiers, heredoc exports,
+> output paths, the step-name map, stray files, and where paths are declared. It
+> reported 26 passes and no failures. The audit script is a development tool and is
+> not part of the pipeline, so it is not included here.
 >
-> Groups 6, 8, 9 and 10 exist because each caught a defect that had already shipped:
+> Four of those groups exist because each caught a defect that had already shipped:
 > a driver calling a renamed file, a variable unexported into a here-document, a
 > Korean path fragment, and a step-name map that had silently stopped being read.
-> Each was re-broken on purpose to confirm the group turns red.
+> Each was re-broken on purpose to confirm the group turned red.
 
 ---
 
@@ -288,7 +289,7 @@ retype the folder name (`OVERWRITE=<folder>`), which cannot be done by reflex.
 **Output names are all ASCII.** Folders, files, and identifiers are English
 throughout, including the names of everything the pipeline writes. Our internal
 tree used Korean output names while the analysis was run; writers and readers were
-changed together, and `selfcheck.sh` group 9 checks that none are left.
+changed together, and the structural audit confirmed none are left.
 `0_setup/RENAMES.txt` gives the old↔new table so the paper's methods can be traced.
 
 > Code comments are in Korean. They record *why* each choice was made — including
@@ -299,11 +300,10 @@ changed together, and `selfcheck.sh` group 9 checks that none are left.
 
 ## Layout
 
-47 files. The four you run are marked ★.
+46 files. The four you run are marked ★.
 
 ```
-selfcheck.sh                one command: PASS/FAIL table (read-only)
-README.md  requirements.txt  .gitignore
+README.md  requirements.txt  .gitignore  .gitattributes
 0_setup/                    config.conf  <- the only file you edit
                             meth_config.py  IO.md  ENVIRONMENT.md  RENAMES.txt
 1_dmr/     ★ run_dmr.sh     steps/  01_candidates  02_blockcpg  03_jsdcount  04_jsd

@@ -3,7 +3,7 @@
   필터  JSD > t_null   (귀무 백분위 · 규칙: 99.9% 기본 · 200 미달이면 99.5% · 그래도 미달이면 99%)
   정렬  freq 내림  ->  JSD 내림          (freq = 복원추출 100회 중 JSD 상위 TOPN 에 든 횟수)
   컷    상위 N
-  ★ 규칙은 결과를 보기 전에 정했다. q·dbeta 는 보고용으로만 계산한다.
+  규칙은 결과를 보기 전에 정했다. q·dbeta 는 보고용으로만 계산한다.
 """
 
 if __name__ != '__main__':
@@ -36,8 +36,7 @@ except ImportError:
 import os, sys, math
 import numpy as np, pandas as pd
 
-# 2026-09-26: 기본값에 세대 접미사가 없어 「옛 세대」 를 가리켰다.
-#   09-23 사고가 옛 세대 폴더를 덮은 원인이 바로 이것이다. GEN 을 따른다.
+# 산출 폴더는 GEN(패널 세대)을 따른다. 비우면 세대 없는 옛 폴더를 가리킨다.
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:
     try:
@@ -45,7 +44,7 @@ if not _GEN:
     except Exception:
         raise SystemExit('GEN(패널 세대)을 못 읽었습니다 — config.conf 의 GEN 을 채우거나 '
                          '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
-# 2026-09-29: 표준 머리글을 끼울 때 04_jsd 의 D·OUT·K,MINR 대입이 함께 붙어왔다.
+# 표준 머리글을 끼울 때 04_jsd 의 D·OUT·K,MINR 대입이 함께 붙어왔다.
 #   아래에서 다시 대입하므로 동작에는 영향이 없었지만, OUT 이 한때 j_jsd 를
 #   가리키는 것은 읽는 사람을 속인다. 이 파일은 j_panel<GEN>_supplement 에 쓴다.
 #   경로·상수는 아래 한 곳에서만 정한다.

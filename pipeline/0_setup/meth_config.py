@@ -14,7 +14,7 @@ import os
 import re
 import sys
 
-# 2026-09-29: 코드가 있는 자리에서 기본값을 만든다. 예전에는 우리 서버의
+# 코드가 있는 자리에서 기본값을 만든다. 예전에는 우리 서버의
 #   ~/Methylation_rev1/... 을 기본값으로 박아 두었는데, 받아서 돌리는 사람에게는
 #   없는 경로다. 검증이 「학습 스크립트를 못 찾은 채」 돌아 그 피처만 빠진다.
 #   저장소 안을 가리키면 내려받은 그대로 동작한다.
@@ -109,7 +109,7 @@ METH_ROOT = get_path('METH_ROOT')
 DATASET_ROOT = get_path('DATASET_ROOT')
 WORK_ROOT = get_path('WORK_ROOT')
 TMP_ROOT = get_path('TMP_ROOT')
-# 2026-09-29: conf 안의 $METH_ROOT·$DATASET_ROOT 를 여기서 푼다.
+# conf 안의 $METH_ROOT·$DATASET_ROOT 를 여기서 푼다.
 #   셸은 `set -a; . config.conf` 로 풀지만, 파이썬이 conf 를 직접 읽을 때는
 #   그 둘이 「환경변수가 아니라서」 expandvars 가 못 푼다 — 문자 그대로 남는다.
 def _expand(v):
@@ -124,7 +124,7 @@ ANALYSIS_DIR = get_path('ANALYSIS_DIR')
 GEN = get('GEN')
 VAL_COHORTS = [x.strip() for x in get('VAL_COHORTS').split(',') if x.strip()]
 PANELS = [x.strip() for x in get('PANELS').split(',') if x.strip()]
-# 2026-09-29: 자체점검이 「conf 에 있는데 모듈 속성으로 없다」 를 잡았다.
+# 자체점검이 「conf 에 있는데 모듈 속성으로 없다」 를 잡았다.
 #   paths.py 는 값('STEP_MAP') 으로 읽어 동작은 했지만, 다른 키와 다루는 법이
 #   달라 읽는 사람이 헷갈린다. 노출 방식을 하나로 맞춘다.
 STEP_MAP = get('STEP_MAP')

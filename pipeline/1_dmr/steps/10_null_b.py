@@ -3,7 +3,7 @@
 
 귀무A 만 두면 bl200 이 못 넘겼을 때 「bl200 블록이 쓸모없다」와
 「bl200 은 칸이 절반이다」를 구별할 수 없다. 귀무B 는 bl200 의 칸 수 불리함을
-**그대로 진다**: 그래서 bl200 의 잣대다. jsd/jsdb 의 잣대는 귀무A. 사전등록 3-1절.
+그대로 진다: 그래서 bl200 의 잣대다. jsd/jsdb 의 잣대는 귀무A. 사전등록 3-1절.
 
 모집단은 `blocks_frac060.csv` 23,532칸: Baseline 이 고르는 그 모집단이다.
 CpG 수로 버킷을 만들고(8 이상은 한 칸으로 묶음) bl200 의 분포를 그대로 따라 뽑는다.
@@ -50,7 +50,7 @@ import sys
 import numpy as np
 import pandas as pd
 
-# 2026-09-26: 세대를 박아 두면 GEN 을 바꿨을 때 「이전 세대」 후보로 귀무를 만든다.
+# 세대를 박아 두면 GEN 을 바꿨을 때 「이전 세대」 후보로 귀무를 만든다.
 #   그러면 실제 패널과 귀무 패널의 세대가 갈리는데, 여기가 대조의 기준선이다.
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:
@@ -83,7 +83,7 @@ for (c, b), n in B.groupby(['chr', 'blk']).size().items():
     cnt[(str(c), int(b))] = int(n)
 
 # bl200 의 CpG 수 분포를 그대로 베낀다. 그래야 칸 수 불리함이 같아진다
-# 2026-09-28: bl200 의 CpG 수 분포를 베끼는 것이 이 판의 핵심이다.
+# bl200 의 CpG 수 분포를 베끼는 것이 이 판의 핵심이다.
 #   그 파일이 없으면 「누가 만드는지」 를 말하고 멈춘다.
 _bl = '%s/bl200/DMR_confirmed_bl200.csv' % OUT
 if not os.path.isfile(_bl):

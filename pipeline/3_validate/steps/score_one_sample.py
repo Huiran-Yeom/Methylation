@@ -59,7 +59,7 @@ import config as C
 
 a = sys.argv
 WANT = a[a.index('--model') + 1] if '--model' in a else None
-# 2026-09-14: 모든 조합을 한 번에 채점한다. 검체 피처는 한 번만 읽는다.
+# 모든 조합을 한 번에 채점한다. 검체 피처는 한 번만 읽는다.
 ALL = '--allmodels' in a
 import glob as _glob
 
@@ -76,13 +76,13 @@ TRAIN = _M + '/results/panels/%s/%s/step04_ML_classifier/models' % (V.split('_')
 SM = os.path.basename(os.getcwd())
 RATIOS = [r for r in C.MUT_RATIOS if r > 0]
 
-# ─── 2026-09-15 [이미 된 일 관문] 잎에 한 번 두어 런처마다 기억하지 않는다 ───
+# ─── [이미 된 일 관문] 잎에 한 번 두어 런처마다 기억하지 않는다 ───
 #   오늘 이미 끝난 5k 178검체를 다시 채점시켜 3~6시간을 버릴 뻔했다.
 #   런처들에는 건너뛰기가 있는데
 #   잎에는 하나도 없었다. 호출하는 쪽을 전부 고치는 방식은 계속 실패한다.
 #
-#   "파일 있으면 건너뛰기" 가 아니라 **지문이 현재 모델과 같으면** 건너뛴다.
-#   모델을 다시 굳히면 지문이 달라져 **스스로 다시 채점한다.**
+#   "파일 있으면 건너뛰기" 가 아니라 지문이 현재 모델과 같으면 건너뛴다.
+#   모델을 다시 굳히면 지문이 달라져 스스로 다시 채점한다.
 def _already_done():
     if not ALL:
         return False                      # 조합 하나만 채점할 때는 건너뛰지 않는다
@@ -113,8 +113,8 @@ def have(key, p):
 
 def pick():
     """검체에 있는 행렬만으로 쓸 수 있는 모델을 고른다."""
-    # 2026-08-24: j 판은 조합마다 폴더가 따로다. jsd 가 든 것을 먼저 본다.
-    # 2026-09-14 [실행차단 교정] 기본 후보에 1차 조합이 없었다.
+    # j 판은 조합마다 폴더가 따로다. jsd 가 든 것을 먼저 본다.
+    # [실행차단 교정] 기본 후보에 1차 조합이 없었다.
     #   --model 을 안 주면 영원히 'mean|entropy|jsd' 로 검증한다.
     #   그러면 사전등록의 1차 지표(mean|entropy|jsd|llr|pdr)가 통째로 안 나온다.
     #   검증이 다 돌아간 뒤에야 드러날 자리였다. 긴 것부터 본다.
@@ -138,7 +138,7 @@ def pick():
 
 name, B, keys = (None, None, None) if ALL else pick()
 if B is None and not ALL:
-    # 2026-09-14 [교정] cands 는 pick() 지역변수라 여기서 NameError 가 났다.
+    # [교정] cands 는 pick() 지역변수라 여기서 NameError 가 났다.
     #   진짜 원인 메시지가 그 예외에 덮였다. 목록을 밖에 둔다.
     _cands = [WANT] if WANT else ['mean|entropy|jsd|llr|pdr', 'mean|entropy|jsd|llr',
                                   'mean|entropy|jsd', 'mean|entropy']
@@ -185,13 +185,13 @@ def run_model(name, B, keys, rows):
         X = X0.reindex(columns=feats).fillna(tm).fillna(0.0)
         miss = 100.0 * (len(feats) - have_n) / len(feats)
 
-        # 2026-09-22 [포화 우회] predict_proba 가 float64 한계로 1.0 에 붙으면
+        # [포화 우회] predict_proba 가 float64 한계로 1.0 에 붙으면
         #   검체마다 값이 같아져 AUC 가 정확히 0.500 이 된다(순위 소멸).
         #   원인: LLR 원값이 리드 수에 비례해 깊은 판에서 decision_function 이 60~106 까지 간다.
         #   z>36 이면 1/(1+e^-z) 는 1.0 과 구별되지 않는다.
         #   실측 09-22: bl200 50k z=106 · jsd200 100k z=60 → 전 검체 proba 1.0 → AUC 0.500
         #              bl200 5k z=8 → 0.9997 (정상) · jsd200 50k z=29 → 0.992 (아슬아슬)
-        #   AUC 는 순위만 보므로 **뭉친 것이 확인되면 decision_function 으로 바꾼다.**
+        #   AUC 는 순위만 보므로 뭉친 것이 확인되면 decision_function 으로 바꾼다.
         #   모델은 그대로다. 같은 z 를 다른 방식으로 읽을 뿐이라 판정 규칙을 안 바꾼다.
         _sat = ''
         _thr_z = None      # 포화로 df 를 쓸 때의 문턱 (z 공간)
@@ -205,10 +205,10 @@ def run_model(name, B, keys, rows):
             if len(X) > 1 and _rng < 1e-6 and hasattr(m, 'decision_function'):
                 sc = m.decision_function(X)
                 _sat = '+df(포화)'
-                # 2026-09-22 [문턱도 옮긴다] proba 문턱을 그냥 버리면 y_pred 가 공백이 되고,
+                # [문턱도 옮긴다] proba 문턱을 그냥 버리면 y_pred 가 공백이 되고,
                 #   사전등록이 요구하는 특이도·위양성(⑪·②)을 그 칸에서 못 낸다.
                 #   로지스틱은 predict_proba = sigmoid(decision_function) 이므로
-                #   **logit(thr) 이 정확히 같은 지점**이다. 재학습도 재보정도 필요 없다.
+                #   logit(thr) 이 정확히 같은 지점이다. 재학습도 재보정도 필요 없다.
                 #   (다섯 칸 전부 LogisticRegression 임을 09-22 에 확인했다.
                 #    다른 모형은 이 등식이 안 서므로 그대로 공백으로 둔다.)
                 _e = m
@@ -235,7 +235,7 @@ def run_model(name, B, keys, rows):
     return rows
 
 # ---- 어느 모델들을 채점할지 ----
-# 2026-09-14: --allmodels 면 굳혀 둔 조합을 **전부** 채점한다.
+# --allmodels 면 굳혀 둔 조합을 전부 채점한다.
 #   검체 피처 CSV 는 _load 가 캐시하므로 조합이 늘어도 파일을 다시 읽지 않는다.
 _models = []
 if ALL:
@@ -267,10 +267,10 @@ if not rows:
     print('%s: 채점할 것이 없습니다 — val04_1 이 행렬을 만들었는지 확인' % SM); sys.exit(1)
 T = pd.DataFrame(rows)
 os.makedirs(ML, exist_ok=True)
-# 08-25: --model 을 주면 파일명에 넣어 나눈다. 안 그러면 +JSD 결과를 덮어쓴다.
+# --model 을 주면 파일명에 넣어 나눈다. 안 그러면 +JSD 결과를 덮어쓴다.
 _tag = '_all_combos' if ALL else (('_' + name.replace('|', '-')) if WANT else '')
 out = '%s/y_prob_all_%s%s.csv' % (ML, V, _tag)
-# 2026-09-15 원자적 쓰기. 중간에 죽으면 머리줄만 남은 표가 생기고,
+# 원자적 쓰기. 중간에 죽으면 머리줄만 남은 표가 생기고,
 #   score_parallel.sh 의 "머리에 model_md5 있으면 건너뛴다"가 그걸 완료로 본다.
 _tmp = out + '.writing'   # 2026-09-29: 산출 이름은 ASCII 로 (한글 파일명 금지)
 T.to_csv(_tmp, index=False)

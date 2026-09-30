@@ -20,7 +20,7 @@ _HERE=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)
 S=$_HERE/steps
 ONE=${1:-}
 
-# 2026-09-28: 보관 대상을 손으로 들고 있으면 목록에 없는 키는 conf 가 환경변수를
+# 보관 대상을 손으로 들고 있으면 목록에 없는 키는 conf 가 환경변수를
 #   덮는다. meth_config.py 의 「환경변수가 이긴다」와 반대가 된다. conf 에 적힌 키를
 #   「전부」 보관한다. 목록을 유지할 필요가 없어진다.
 _CONFFILE=""
@@ -43,7 +43,7 @@ unset _v
 
 say(){ echo "[$(date +%H:%M:%S)] $*"; }
 step(){  # step <번호> <제목> <파일> [인자...]
-  # 2026-09-29: $3 만 쓰면 뒤에 붙인 플래그가 「조용히 버려진다」.
+  # $3 만 쓰면 뒤에 붙인 플래그가 「조용히 버려진다」.
   #   09 에 --allcombos --pooled 를 붙였는데 그대로 사라졌다. 전부 넘긴다.
   local no=$1 title=$2; shift 2
   if [ -n "$ONE" ] && [ "$ONE" != "$no" ]; then return 0; fi
@@ -51,12 +51,12 @@ step(){  # step <번호> <제목> <파일> [인자...]
   ( cd "$S" && python -u "$@" ) || { say "!! 실패 $no"; exit 1; }
 }
 
-# 2026-09-29: 아래 export 가 GEN·METH_ROOT 를 처음 읽는 자리다. 없으면 set -u 로
+# 아래 export 가 GEN·METH_ROOT 를 처음 읽는 자리다. 없으면 set -u 로
 #   맨 「unbound variable」 이 난다. 다른 드라이버처럼 뜻이 있는 말로 멈춘다.
 : "${GEN:?GEN 이 없습니다 — 0_setup/config.conf 의 GEN 을 채우십시오}"
 : "${METH_ROOT:=/ssd_data/Methylation}"
 
-# 2026-09-29: 06·07 이 보는 후보·참조 경로를 「여기서」 내보낸다.
+# 06·07 이 보는 후보·참조 경로를 「여기서」 내보낸다.
 #   예전에는 아무것도 안 내보내서 둘이 자기 기본값(세대 없는 j_candidates 등)으로
 #   내려갔고, 그 둘의 세대 관문이 즉시 멈췄다. 문서대로 돌리면 06 에서 끝났다.
 #   검증 러너(3_validate/steps/run_one_sample.sh)와 「같은 값」 이어야 한다.
@@ -76,7 +76,7 @@ step 05 "mean · entropy 행렬"        05_Feature_Matrix.py
 step 06 "jsd · pdr 행렬"             06_jsdfeat.py
 step 07 "llr 행렬 (theta 별 · LLR_max)" 07_llrfeat.py
 step 08 "조합별 모델 넷 교차검증"    08_ML_classifier.py
-# 2026-09-29: 인자 없이 부르면 09 는 조합 「둘」(mean|entropy, +jsd)만 굳히고,
+# 인자 없이 부르면 09 는 조합 「둘」(mean|entropy, +jsd)만 굳히고,
 #   판 목록을 results/panels/* 에서 「모든 세대에 걸쳐」 훑어 덮어쓴다.
 #   그러면 사전등록 1차 조합 mean|entropy|jsd|llr|pdr 이 아예 안 만들어져
 #   4단계가 「조합이 없음」 으로 죽는다. 실제 실행은 --allcombos --pooled 였다

@@ -47,8 +47,7 @@ except ImportError:
 import os, sys, math
 import numpy as np, pandas as pd
 
-# 2026-09-26: 기본값에 세대 접미사가 없어 「옛 세대」 를 가리켰다.
-#   09-23 사고가 옛 세대 폴더를 덮은 원인이 바로 이것이다. GEN 을 따른다.
+# 산출 폴더는 GEN(패널 세대)을 따른다. 비우면 세대 없는 옛 폴더를 가리킨다.
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:
     try:
@@ -64,7 +63,7 @@ D    = _M + '/results/dmr/j_jsdcount' + _GEN
 CAND = _M + '/results/dmr/j_candidates' + _GEN
 OUT  = _M + '/results/dmr/j_jsd' + _GEN
 # ╚══════════════════════════════════════════════════════════════════╝
-# 2026-09-29: 기본값이 4 였다. 실제 실행은 6 이고(서버의 boot_K3_minr6.parquet),
+# 기본값이 4 였다. 실제 실행은 6 이고(서버의 boot_K3_minr6.parquet),
 #   06b 가 설정의 MIN_READS_PER_WINDOW(=6)로 파일을 찾는다. 기본값을 설정에서
 #   읽어 세 자리(04·04b·04c)가 같은 값을 쓰게 한다. --minr 로 덮을 수 있다.
 K, MINR, NEED_N, NEED_G, MINREP, NPERM, SEED = 3, 6, 12, 6, 2, 100, 42
@@ -83,7 +82,7 @@ a = sys.argv
 if '--k'     in a: K     = int(a[a.index('--k')+1])
 if '--frac' in a: FRAC = float(a[a.index('--frac')+1])
 if '--need'  in a: NEED_N = int(a[a.index('--need')+1])  # 2026-09-10 정상 커버 기준을 CLI 로
-# 2026-09-28: '--needg' 가 「있는지」 만 보고 값을 안 읽었다. 주면 자동계산만
+# '--needg' 가 「있는지」 만 보고 값을 안 읽었다. 주면 자동계산만
 #   꺼지고 기본값 6 이 남았다. 연기시험에서 --needg 1 을 줬는데 「암 6종」 으로 돌았다.
 if '--needg' in a: NEED_G = int(a[a.index('--needg')+1])
 if '--minr'  in a: MINR  = int(a[a.index('--minr')+1])
@@ -102,7 +101,7 @@ W  = pd.read_parquet(D + '/windows_K%d.parquet' % K)
 nw, m = len(W), 1 << K
 pc = ['p%d' % i for i in range(m)]
 NN, NG = len(norm), len(lines)
-# 2026-09-10 NEED 를 표본 수에서 자동 계산 (01_candidates.py:56-57 과 같은 규칙)
+# NEED 를 표본 수에서 자동 계산 (01_candidates.py:56-57 과 같은 규칙)
 if '--need' not in a: NEED_N = int(math.ceil(FRAC * NN))
 if '--needg' not in a: NEED_G = int(math.ceil(FRAC * NG))
 print('커버 %.0f%% -> 정상 %d명 이상 · 암 %d종 이상' % (FRAC*100, NEED_N, NEED_G))
@@ -158,7 +157,7 @@ print('관측 칸JSD  중앙 %.3f · 95%% %.3f · 99%% %.3f · 최대 %.3f'
       % tuple(np.percentile(Bo, [50, 95, 99]).tolist() + [Bo.max()]))
 
 
-# ── 2026-09-10 안정성. 0d 와 같은 적재를 쓰되 딱지는 두고 단위를 복원추출한다.
+# ── 안정성. 0d 와 같은 적재를 쓰되 딱지는 두고 단위를 복원추출한다.
 #   Baseline stability() 와 같은 형태: 매 회 JSD 상위 TOPN 에 든 칸에 +1.
 TOPN = int(a[a.index('--topn') + 1]) if '--topn' in a else 1000
 rs = np.random.RandomState(SEED)

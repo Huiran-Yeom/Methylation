@@ -55,9 +55,9 @@ from moderated_t import moderated_ttest, bh, efp
 #   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
 #   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
 #   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
-# 2026-09-26: 기본값이 `m_candidates`·`m_panel` 이었다 — **옛 m 판**이다.
+# 기본값이 `m_candidates`·`m_panel` 이었다 — 옛 m 판이다.
 #   `m_candidates` 는 서버에 아직 있고 `blocks_frac060.csv` 도 들어 있다. 그래서
-#   인자 없이 돌리면 죽지 않고 **옛 세대 후보로 새 패널을 만든다.** 조용히.
+#   인자 없이 돌리면 죽지 않고 옛 세대 후보로 새 패널을 만든다. 조용히.
 #   이 파일은 원래 손으로 인자를 줘서 돌렸으므로(드라이버에 없다) 필수로 바꾼다.
 CAND  = None
 OUT   = None
@@ -78,7 +78,7 @@ if CAND is None or OUT is None:
              '  09-14 에 쓴 값: --cand %s/results/dmr/j_candidates15\n'
              '                 --out  %s/results/dmr/j_panel_dmr15/bl200_d10_cellline' % (_M, _M))
 # 세대가 어긋나면 멈춘다. 07_llrfeat 이 쓰는 것과 같은 관문이다.
-# 2026-09-29: 06_jsdfeat·07_llrfeat 과 같은 꼴로 맞춘다. 두 구멍이 있었다 —
+# 06_jsdfeat·07_llrfeat 과 같은 꼴로 맞춘다. 두 구멍이 있었다 —
 #   ① 「포함」(in)이라 j_candidates150 이 GEN=15 를 통과했다
 #   ② `if _gen and` 라서 환경에 GEN 이 없으면 관문이 통째로 꺼졌다(손으로 돌릴 때).
 _gen = _os.environ.get('GEN', '') or getattr(_cfg, 'GEN', '')
@@ -91,10 +91,10 @@ B = pd.read_parquet(CAND + '/beta_matrix.parquet')
 M = pd.read_csv(CAND + '/samples.csv')
 X0 = B.T.reindex(M['sample']).values.astype(np.float32)
 y0 = (M['type'] == 'GBM').astype(int).values
-# 2026-09-14: **세포주 단위**로 묶는다. 문서와 코드를 맞추는 교정이다.
-#   j판_DMR선정_20260820.md:441 "② 조정 t검정  정상 20 vs 암 **10**"
-#                          :442 "④ |Δβ|  **세포주 평균끼리의 차이**"
-#                          :449 "⑦ 부트스트랩 … (**세포주 단위 재추출**)"
+# 세포주 단위로 묶는다. 문서와 코드를 맞추는 교정이다.
+#   j판_DMR선정_20260820.md:441 "② 조정 t검정  정상 20 vs 암 10"
+#                          :442 "④ |Δβ|  세포주 평균끼리의 차이"
+#                          :449 "⑦ 부트스트랩 … (세포주 단위 재추출)"
 #   그런데 여기는 45파일을 독립으로 세고 있었다. SNU3-1·-2·-3 은 같은 세포주다.
 #   :1345 가 m 판이 부풀려진 원인으로 "파일 단위로 세서" 를 이미 지목했는데
 #   같은 구조가 j 판 Baseline 에 남아 있었다.
@@ -145,7 +145,7 @@ print('  효과크기 뒤 %d개 중 기대 위양성 %.0f개(%.1f%%) · 상한 %
       % (len(sig), e2, 100.0 * e2 / max(1, len(sig)), u2))
 if len(sig) < TOPN:
     print('! 유의 블록 %d 개가 N=%d 보다 적다. 전부 사용' % (len(sig), TOPN))
-# 2026-09-28: 0 이면 여기서 멈춘다. 그대로 가면 stability() 안의 sklearn 이
+# 0 이면 여기서 멈춘다. 그대로 가면 stability() 안의 sklearn 이
 #   'Found array with 0 feature(s)' 로 터져 「왜 0인지」 를 알 수 없다.
 #   연기시험(작은 표본)에서 실제로 그 traceback 만 남았다.
 if len(sig) == 0:

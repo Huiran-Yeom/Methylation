@@ -54,8 +54,7 @@ except ImportError:
 import os, sys
 import numpy as np, pandas as pd
 
-# 2026-09-26: 기본값에 세대 접미사가 없어 「옛 세대」 를 가리켰다.
-#   09-23 사고가 옛 세대 폴더를 덮은 원인이 바로 이것이다. GEN 을 따른다.
+# 산출 폴더는 GEN(패널 세대)을 따른다. 비우면 세대 없는 옛 폴더를 가리킨다.
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:
     try:
@@ -71,13 +70,13 @@ D    = _M + '/results/dmr/j_jsdcount' + _GEN
 CAND = _M + '/results/dmr/j_candidates' + _GEN
 OUT  = _M + '/results/dmr/j_llrref' + _GEN
 K, MINR, NEED_N, NEED_G, MINREP = 3, 6, None, None, 2
-try:   # 2026-09-29: 04b·04c 와 같은 값을 쓰게 설정에서 읽는다 (--minr 이 이김)
+try:   # 04b·04c 와 같은 값을 쓰게 설정에서 읽는다 (--minr 이 이김)
     MINR = int(_cfg.MIN_READS_PER_WINDOW)
     K    = int(_cfg.PATTERN_K)
 except Exception:
     pass
-# 2026-09-14: NEED_N=12 는 정상 20 기준 60% 였다. 정상 15 에서는 80% 가 되어 버린다.
-#   상수 대신 비율로 잡고, 후보 풀 기준(60%)과 같게 맞춘다. 04_jsd/0d 와 동일.
+# 창 채택 기준은 인원수가 아니라 비율로 잡는다. 후보 풀과 같은 60% 이고,
+#   04_jsd·04b 와 같은 값이다. 상수로 두면 정상 인원이 바뀔 때 기준이 함께 움직인다.
 FRAC = 0.60
 
 a = sys.argv
@@ -142,7 +141,7 @@ PN = np.zeros((nw, m)); PG = np.zeros((nw, m))
 PN[ok] = Qs[ok] / nQ[ok, None]
 PG[ok] = Ps[ok] / nP[ok, None]
 
-# 2026-09-28 [가드 자리 교정] 이 가드가 PG 를 「만들기 전」 에 있었다.
+# [가드 자리 교정] 이 가드가 PG 를 「만들기 전」 에 있었다.
 #   암이 하나라도 있으면 np.isfinite(PG) 가 평가돼 NameError 로 죽는다 —
 #   가드를 넣은 09-14 08:52 이후로 이 코드는 돌 수 없었다
 #   (참조표는 08:38 산출, 즉 가드 전이다). 검사 내용은 그대로 두고 자리만 옮긴다.

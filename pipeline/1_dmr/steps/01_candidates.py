@@ -39,8 +39,7 @@ import numpy as np, pandas as pd
 #   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
 ND  = _M + '/sample_data/_input/normal_pub15'
 GD  = _D + '/training/GBM_cell-line/cov'
-# 2026-09-26: 기본값에 세대 접미사가 없어 「옛 세대」 를 가리켰다.
-#   09-23 사고가 옛 세대 폴더를 덮은 원인이 바로 이것이다. GEN 을 따른다.
+# 산출 폴더는 GEN(패널 세대)을 따른다. 비우면 세대 없는 옛 폴더를 가리킨다.
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:
     try:
@@ -85,10 +84,10 @@ files = [(f,'Normal') for f in sorted(glob.glob(ND+'/*.cov.gz'))] + \
         [(f,'GBM')    for f in sorted(glob.glob(GD+'/*.cov.gz'))]
 if not files: sys.exit('cov 파일 없음')
 if DRY: files = files[:1] + files[-1:]   # 2026-08-20: 정상 1 + 암 1 (암 경로도 지나가게)
-# 2026-08-20: 커버 기준을 집단별로 나눈다.
+# 커버 기준을 집단별로 나눈다.
 #   한 덩어리로 세면 한쪽으로 몰린 블록이 통과해 t검정에서 NaN 이 된다.
 #   검체 수가 바뀔 때 문턱이 요동치는 문제도 같이 없앤다.
-# 2026-08-20: 문턴을 파일 수가 아니라 독립단위 수로 잡는다.
+# 문턴을 파일 수가 아니라 독립단위 수로 잡는다.
 #   SNU 30파일 = 세포주 10종 x 3복제. 파일로 세면 암 표본이 3배로 부푼다.
 n_norm = sum(1 for _, t in files if t == 'Normal')
 n_gbm  = len(files) - n_norm
@@ -113,7 +112,7 @@ for i,(p,t) in enumerate(files,1):
     print('  [%2d/%d] %-16s %8d' % (i,len(files),s,len(g)))
 
 A = pd.concat(parts, ignore_index=True)
-# 2026-08-20: 커버를 파일이 아니라 독립단위로 센다.
+# 커버를 파일이 아니라 독립단위로 센다.
 #   한 세포주는 파일 MINREP개 이상 관측돼야 '관측된 종'으로 친다.
 _gmap = {m['sample']: m['group'] for m in meta}
 _nset = {m['sample'] for m in meta if m['type'] == 'Normal'}

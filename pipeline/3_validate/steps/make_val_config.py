@@ -14,8 +14,8 @@ make_snu_config.py 를 일반화한 것. 코호트 정의를 COHORT_DIR(기본 ~
 
 사용: python make_val_config.py <코호트> <검체> <version> [반복수]
 """
-# 2026-09-26: 아무도 import 하지 않는다 (run_one_sample.sh 가 인자를 주고 부른다).
-#   09-23 사고가 가드 없는 스크립트를 importlib 로 부른 데서 났다.
+# 아무도 import 하지 않는다 (run_one_sample.sh 가 인자를 주고 부른다).
+#   사고가 가드 없는 스크립트를 importlib 로 부른 데서 났다.
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
@@ -25,7 +25,7 @@ import shutil
 _LAYOUT = [None]   # 코호트 리드 방식 자동 감지 (2026-08-11)
 import sys
 
-# 2026-08-10: 폴더가 runs/<그룹>/<버전> 으로 옮겨졌고, e·f·g 세트도
+# 폴더가 runs/<그룹>/<버전> 으로 옮겨졌고, e·f·g 세트도
 # 검증에 써야 해서 고정 딕셔너리를 없앴다. 찾는 규칙은 paths.py 한 곳에 있다.
 from paths import (script_dir, script_dir_abs, VERSION_CONF, WORK_ROOT_CONF,
                    COHORT_DIR_CONF)
@@ -33,7 +33,7 @@ from paths import (script_dir, script_dir_abs, VERSION_CONF, WORK_ROOT_CONF,
 
 # 본 실행과 이름을 다르게 복사한다. 러너들이 pgrep 으로 프로세스를 세어
 # 동시 실행을 제한하는데, 이름이 같으면 검증이 본 실행의 자리를 빼앗는다.
-# 2026-09-28: STEPS 를 config.conf 의 STEP_MAP 에서 만든다. 두 정본이면 어긋난다.
+# STEPS 를 config.conf 의 STEP_MAP 에서 만든다. 두 정본이면 어긋난다.
 #   STEP_MAP 형식:  <검체폴더에 놓일 이름>:<원본 파일명>;...
 #   못 읽으면 아래 기본값으로 간다(그 값이 09-14 이후 실제로 쓴 목록이다).
 _STEPS_DEFAULT = {'01_Preprocessing_for_ML_RawData_Mixing.py': 'val03_1.py',
@@ -41,15 +41,15 @@ _STEPS_DEFAULT = {'01_Preprocessing_for_ML_RawData_Mixing.py': 'val03_1.py',
          '03_Preprocessing_for_ML_RawData_Mixing.py': 'val03_3.py',
          '04_coverage_check.py': 'val04_0.py',
          '05_Feature_Matrix.py': 'val04_1.py',
-         # 2026-08-14: 리드 엔트로피·MHL 을 검증에서도 만들 수 있게 추가.
+         # 리드 엔트로피·MHL 을 검증에서도 만들 수 있게 추가.
          # 없는 버전에서는 위 복사 루프가 조용히 넘어간다.
-         # 2026-09-25 readent·mhl 은 (마) 결정으로 안 쓴다. 복사하지 않는다.
+         # readent·mhl 은 (마) 결정으로 안 쓴다. 복사하지 않는다.
          #   되살리려면 그 파일을 2_train/steps/ 에 먼저 두어야 한다 — 이 저장소에는 없다.
          # 'step04_1b_readfeat.py': 'val04_1b.py',
-         # 2026-08-24: JSD 피처. 08-21 에 새로 만든 것이 이 목록에 없어
+         # JSD 피처. 08-21 에 새로 만든 것이 이 목록에 없어
          #   검증에서 JSD-2 를 못 쟀다. 파일은 판 폴더가 아니라 한 단계 위에 있다.
          '06_jsdfeat.py': 'val04_1c.py',
-         # 2026-09-14 [실행차단 교정] LLR 이 이 목록에 없어 **검증이 llr 을 아예 안 만들었다.**
+         # [실행차단 교정] LLR 이 이 목록에 없어 검증이 llr 을 아예 안 만들었다.
          #   사전등록 1차 조합 mean|entropy|jsd|llr|pdr 이 통째로 계산될 수 없는 상태였다.
          #   옛 판은 별도 드라이버로 따로 깔아 돌렸다. 그래서 안 보였다.
          '07_llrfeat.py': 'val04_1d.py'}
@@ -84,7 +84,7 @@ DMR_SOURCE_VERSION = VERSION      # step02 는 돌리지 않는다
 NUM_FILES = %(nrep)d              # 비율당 반복
 %(ratios)s
 
-# 2026-08-14: 중복 추출로 채우지 않는다.
+# 중복 추출로 채우지 않는다.
 #   학습은 암이 세포주라 풀이 깊어 이 경로를 탄 적이 없다(계획표·로그로 확인).
 #   검증에서 중복으로 채우면 그 비율의 복제본 10판이 서로 독립이 아니게 되고,
 #   판 사이 흩어짐이 작아져 성능이 실제보다 좋게 보인다.
@@ -93,7 +93,7 @@ ALLOW_REPLACEMENT = False
 SKIP_SHORT_RATIOS = True
 
 FULL_NORMAL_BAM = '%(normal)s'
-# 2026-09-14: 음성 배경을 공여자별로 가른다. 반복 i 가 배경 i 를 쓴다.
+# 음성 배경을 공여자별로 가른다. 반복 i 가 배경 i 를 쓴다.
 #   비어 있으면 예전처럼 병합본 하나에서 전부 뽑는다.
 NORMAL_BAMS = %(normals)s
 FULL_GBM_BAM = '%(cancer)s'
@@ -127,21 +127,21 @@ def _find_dmr(*_vs):
                      + ' , '.join(_seen))
 
 
-# 2026-08-24: j 판 패널은 results/j_panel_dmr/<PANEL>/ 에 있다.
+# j 판 패널은 results/j_panel_dmr/<PANEL>/ 에 있다.
 #   _find_dmr 은 step02_DMR 폴더만 찾으므로 j 판에서는 못 찾는다.
 #   PANEL 이 있고 그 자리에 파일이 있으면 그것을 쓰고, 없으면 옛 방식으로 간다.
 import os as _os2
 _pj = ''
 if 'PANEL' in dir():
-    # 2026-09-14 [실행차단 교정] 자리가 'j_panel_dmr' 하나로 박혀 있었다.
+    # [실행차단 교정] 자리가 'j_panel_dmr' 하나로 박혀 있었다.
     #   새 판(j15*)의 패널은 'j_panel_dmr15_panels' 에 있는데, 옛 자리에 같은 이름의
-    #   **옛 파일**이 남아 있어서 검증이 조용히 옛 패널을 읽었다.
-    #   실측: 옛 bl200 과 새 bl200 은 200칸 중 **35칸만 겹친다** (열에 여덟이 다르다).
+    #   옛 파일이 남아 있어서 검증이 조용히 옛 패널을 읽었다.
+    #   실측: 옛 bl200 과 새 bl200 은 200칸 중 35칸만 겹친다 (열에 여덟이 다르다).
     #   그대로 뒀으면 학습은 새 패널, 검증은 옛 패널이 된다.
     #   자리를 VERSION 으로 가른다. 추측하지 않는다.
-    # 2026-09-26: 'j15' 를 못 박으면 GEN 을 바꿨을 때 「옛 자리」(j_panel_dmr)로 내려간다.
+    # 'j15' 를 못 박으면 GEN 을 바꿨을 때 「옛 자리」(j_panel_dmr)로 내려간다.
     #   그 자리에 같은 이름의 옛 파일이 남아 있어 09-14 에 조용히 옛 패널을 읽었다.
-    # 2026-09-29: 이 줄은 「생성되는 config.py 안에서」 돈다. 그 파일은
+    # 이 줄은 「생성되는 config.py 안에서」 돈다. 그 파일은
     #   meth_config 를 _cfg 로 import 하므로 이름이 맞아야 한다.
     #   토큰 치환은 문자열 안을 못 건드려서 영어화 때 여기만 남았다.
     _g = _cfg.GEN
@@ -162,9 +162,9 @@ if _pj and _os2.path.exists(_pj):
 else:
     DMR_CSV = _find_dmr(VERSION, _S)
 
-# 2026-09-14: 학습 판의 SHARE_FROM 이 그대로 복사돼 들어온다. 아래에서 MIX_SD 를
+# 학습 판의 SHARE_FROM 이 그대로 복사돼 들어온다. 아래에서 MIX_SD 를
 #   덮어쓰므로 지금도 맞게 돌지만, 변수가 남아 있으면 읽는 사람이 헷갈리고
-#   누가 아래 줄을 지우면 **검증이 조용히 학습 판의 조각 풀을 읽는다.** 못 박는다.
+#   누가 아래 줄을 지우면 검증이 조용히 학습 판의 조각 풀을 읽는다. 못 박는다.
 SHARE_FROM = None
 _S = VERSION
 MIX_SD = f'{SD}/step03_Preprocessing_for_ML'
@@ -197,9 +197,9 @@ if _os.path.exists(_skip_f):
 
 def load_conf(cohort):
     """COHORT_DIR 의 <이름>.conf 를 읽는다 (기본은 홈의 cohorts). KEY=값 한 줄씩, # 은 주석."""
-    # 2026-09-28: 조회 자리가 run_validate.sh 와 갈려 있었다. 같은 순서로 맞춘다 —
+    # 조회 자리가 run_validate.sh 와 갈려 있었다. 같은 순서로 맞춘다 —
     #   ~/cohorts 먼저(기관 자료), 없으면 저장소의 cohorts/ (예시·동봉본).
-    # 2026-09-29: COHORT_CONF 로 못 박을 수 있게 한다. 작성자 기계에서는
+    # COHORT_CONF 로 못 박을 수 있게 한다. 작성자 기계에서는
     #   ~/cohorts 가 먼저라 저장소의 예시가 「검사된 적 없는 파일」 로 남는다.
     _env = os.environ.get('COHORT_CONF')
     if _env:
@@ -233,7 +233,7 @@ def main():
         sys.exit(__doc__)
     cohort, sample, v = sys.argv[1], sys.argv[2], sys.argv[3]
     conf = load_conf(cohort)
-    # 2026-09-14: 깊이마다 배경 목록과 반복 수가 다르다. 판 이름에서 깊이를 읽는다.
+    # 깊이마다 배경 목록과 반복 수가 다르다. 판 이름에서 깊이를 읽는다.
     #   얕은 공여자는 깊은 판을 혼자 못 채운다. 섞으면 '사람' 과 '병합본' 이 한 표에 섞인다.
     _dep = next((x for x in ('5k', '15k', '50k', '100k') if ('_%s_' % x) in v), '')
     _dk = {'5k': '5K', '15k': '15K', '50k': '50K', '100k': '100K'}.get(_dep, '')
@@ -245,14 +245,14 @@ def main():
     if sample not in conf['SAMPLES'].split():
         sys.exit('%s 코호트에 없는 검체: %s' % (cohort, sample))
 
-    # 2026-09-29: WORK_ROOT 를 따른다 (config.conf 가 「검체 작업 폴더의 부모」 로
+    # WORK_ROOT 를 따른다 (config.conf 가 「검체 작업 폴더의 부모」 로
     #   안내하는 값이다). 여기만 ~ 를 박아 두면 run_validate.sh 의 채점 루프가
     #   다른 자리를 보고 전 검체를 조용히 건너뛴다.
     home = os.environ.get('WORK_ROOT') or WORK_ROOT_CONF or os.path.expanduser('~')
-    # 2026-09-25: ~/Methylation_rev1 로 되짚지 않는다 — paths 가 이미 절대경로를 안다.
+    # ~/Methylation_rev1 로 되짚지 않는다 — paths 가 이미 절대경로를 안다.
     #   되짚으면 TRAIN_SRC 를 딴 데로 옮겼을 때 조용히 옛 코드를 복사한다.
     src = script_dir_abs(v)
-    # ── 2026-09-28 [★ 판이름 ↔ VERSION] ────────────────────────────────
+    # ── [판이름 ↔ VERSION] ────────────────────────────────
     #   평평 배치(steps/ 에 config.py 하나)에서는 어떤 v 를 줘도 같은 config.py 를
     #   복사한다. 그 config.py 의 VERSION·깊이는 config.conf 에서 온다.
     #   작업 폴더는 v 로 만들고 산출 자리는 VERSION 으로 만들기 때문에, 둘이
@@ -271,7 +271,7 @@ def main():
         s, d = os.path.join(src, f), os.path.join(work, newname)
         if os.path.islink(d) or os.path.exists(d):
             os.remove(d)
-        # 2026-09-25: 없는 파일을 조용히 넘기면 그 피처만 빠진 채 끝까지 돌고,
+        # 없는 파일을 조용히 넘기면 그 피처만 빠진 채 끝까지 돌고,
         #   채점이 결측을 평균으로 메워 AUC 0.500 이 된다. 09-21 에 나흘 썼던 그 증상이다.
         #   피처를 빼는 것은 STEPS 항목을 지워서 한다. 여기 있는데 파일이 없으면 항상 설정 오류다.
         if not os.path.exists(s):

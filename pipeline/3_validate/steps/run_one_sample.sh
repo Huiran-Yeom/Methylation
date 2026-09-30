@@ -195,7 +195,7 @@ if [ ! -f val04_1d.py ]; then
   cp -f "$TRAIN_SRC/07_llrfeat.py" val04_1d.py 2>/dev/null     || echo "!! val04_1d 원본 없음" >> "$L"
 fi
 # 참조표와 후보 풀은 판 세대를 따라간다. 기본값에 기대면 학습/적용이 어긋난다.
-#   학습(돌리기_j15.sh)은 llrref15 + j_candidates15 를 쓴다. 검증도 같아야 한다.
+#   학습(2_train/run_train.sh)은 llrref15 + j_candidates15 를 쓴다. 검증도 같아야 한다.
 # 세대를 못 박지 않는다. 박으면 GEN 을 바꿨을 때 세대 없는 폴더로 내려간다.
 # 판 이름과 무관하게 GEN 을 따른다. 판 이름으로 분기하면 그 밖의 이름이
 #   세대 없는 폴더로 내려가고, JSD_CAND·JSD_JCOUNT 가 안 실려 06_jsdfeat 이

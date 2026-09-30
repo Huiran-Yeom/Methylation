@@ -9,8 +9,8 @@
 #
 #   사용
 #     bash run_pool.sh cellline     # 실제 패널 (panel_union3_cellline.csv -> j_pool<GEN>_cellline)
-#     bash 돌리기_풀.sh rand       # 귀무A    (panel_union_rand3.csv     -> j_pool<GEN>_rand)
-#     bash 돌리기_풀.sh randb      # 귀무B    (panel_union_randb3.csv    -> j_pool<GEN>_randb)
+#     bash run_pool.sh rand       # 귀무A    (panel_union_rand3.csv     -> j_pool<GEN>_rand)
+#     bash run_pool.sh randb      # 귀무B    (panel_union_randb3.csv    -> j_pool<GEN>_randb)
 set -eu
 
 _HERE=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)

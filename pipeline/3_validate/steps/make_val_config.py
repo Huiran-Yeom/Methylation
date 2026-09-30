@@ -6,7 +6,7 @@ make_snu_config.py 를 일반화한 것. 코호트 정의를 COHORT_DIR(기본 ~
 읽으므로 SNU 말고 다른 데이터(EGAD 등)도 같은 코드로 돌릴 수 있다.
 
 버전의 config.py 를 그대로 읽어 뒤에 오버라이드 블록만 붙인다.
-깊이·믹싱 방식·엔트로피 계산은 손대지 않는다 — 학습 때와 같아야 하기 때문이다.
+깊이·믹싱 방식·엔트로피 계산은 손대지 않는다. 학습 때와 같아야 하기 때문이다.
 바꾸는 것은 입력 BAM 과 출력 경로뿐이다.
 
 경로는 {코호트}_val/{검체}/... 로 잡는다. 코호트가 snu 면 기존 snu_val/... 과
@@ -66,14 +66,14 @@ if _SM:
         _left, _right = _pair.split(':', 1)
         STEPS[_right.strip()] = _left.strip() + '.py'
     if not STEPS:
-        sys.exit('STEP_MAP 을 읽었지만 항목이 없습니다 — config.conf 를 보십시오.')
+        sys.exit('STEP_MAP 을 읽었지만 항목이 없습니다. config.conf 를 보십시오.')
 else:
     STEPS = _STEPS_DEFAULT
 
 OVERRIDE = '''
 
 # =====================================================================
-# 외부검증 오버라이드 — make_val_config.py 자동 생성. 손대지 말 것.
+# 외부검증 오버라이드: make_val_config.py 자동 생성. 손대지 말 것.
 #
 # 학습에 쓰지 않은 정상 검체를 배경으로, 암 검체 1종을 학습 때와 똑같은
 # 비율·깊이·믹싱 방식으로 섞는다. 조건이 같아야 결과를 비교할 수 있다.
@@ -88,7 +88,7 @@ NUM_FILES = %(nrep)d              # 비율당 반복
 #   학습은 암이 세포주라 풀이 깊어 이 경로를 탄 적이 없다(계획표·로그로 확인).
 #   검증에서 중복으로 채우면 그 비율의 복제본 10판이 서로 독립이 아니게 되고,
 #   판 사이 흩어짐이 작아져 성능이 실제보다 좋게 보인다.
-#   대신 '부족한 비율만' 건너뛴다 — 검체 전체를 버리지 않는다.
+#   대신 '부족한 비율만' 건너뛴다. 검체 전체를 버리지 않는다.
 ALLOW_REPLACEMENT = False
 SKIP_SHORT_RATIOS = True
 
@@ -105,10 +105,10 @@ SD = f'{_VAL}/sample_data/panels/{VERSION.split("_")[0]}/{VERSION}'
 RS = f'{_VAL}/results/{VERSION}'
 
 DMR_DIR = f'{RS}/step02_DMR'
-# 본 실행에서 확정한 목록을 그대로 읽는다 — 검증용으로 다시 뽑지 않는다
+# 본 실행에서 확정한 목록을 그대로 읽는다. 검증용으로 다시 뽑지 않는다
 def _find_dmr(*_vs):
     """DMR 파일을 찾는다. 이름 후보를 순서대로, 자리 후보를 순서대로.
-    2026-08-14 — 폴더를 보관함으로 옮겼다고 검증이 끊기던 것을 막는다.
+    2026-08-14: 폴더를 보관함으로 옮겼다고 검증이 끊기던 것을 막는다.
     SHARE_FROM 으로 패널을 공유하는 버전은 자기 이름의 파일이 없으므로
     VERSION 다음에 _S 도 본다."""
     import glob as _g
@@ -139,9 +139,9 @@ if 'PANEL' in dir():
     #   실측: 옛 bl200 과 새 bl200 은 200칸 중 **35칸만 겹친다** (열에 여덟이 다르다).
     #   그대로 뒀으면 학습은 새 패널, 검증은 옛 패널이 된다.
     #   자리를 VERSION 으로 가른다. 추측하지 않는다.
-    # 2026-09-26: 'j15' 를 못 박으면 GEN 을 바꿨을 때 «옛 자리»(j_panel_dmr)로 내려간다.
+    # 2026-09-26: 'j15' 를 못 박으면 GEN 을 바꿨을 때 「옛 자리」(j_panel_dmr)로 내려간다.
     #   그 자리에 같은 이름의 옛 파일이 남아 있어 09-14 에 조용히 옛 패널을 읽었다.
-    # 2026-09-29: 이 줄은 «생성되는 config.py 안에서» 돈다. 그 파일은
+    # 2026-09-29: 이 줄은 「생성되는 config.py 안에서」 돈다. 그 파일은
     #   meth_config 를 _cfg 로 import 하므로 이름이 맞아야 한다.
     #   토큰 치환은 문자열 안을 못 건드려서 영어화 때 여기만 남았다.
     _g = _cfg.GEN
@@ -200,7 +200,7 @@ def load_conf(cohort):
     # 2026-09-28: 조회 자리가 run_validate.sh 와 갈려 있었다. 같은 순서로 맞춘다 —
     #   ~/cohorts 먼저(기관 자료), 없으면 저장소의 cohorts/ (예시·동봉본).
     # 2026-09-29: COHORT_CONF 로 못 박을 수 있게 한다. 작성자 기계에서는
-    #   ~/cohorts 가 먼저라 저장소의 예시가 «검사된 적 없는 파일» 로 남는다.
+    #   ~/cohorts 가 먼저라 저장소의 예시가 「검사된 적 없는 파일」 로 남는다.
     _env = os.environ.get('COHORT_CONF')
     if _env:
         if not os.path.exists(_env):
@@ -213,7 +213,7 @@ def load_conf(cohort):
         p = next((c for c in _cands if os.path.exists(c)), None)
     if p is None:
         sys.exit('코호트 정의 없음: ' + ' 또는 '.join(_cands))
-    # 어느 파일을 읽었는지 «절대경로로» 남긴다 — 둘 중 어디였나가 나중에 문제가 된다.
+    # 어느 파일을 읽었는지 「절대경로로」 남긴다. 둘 중 어디였나가 나중에 문제가 된다.
     print('  코호트 정의  %s' % os.path.abspath(p))
     d = {}
     for ln in io.open(p, encoding='utf-8'):
@@ -234,7 +234,7 @@ def main():
     cohort, sample, v = sys.argv[1], sys.argv[2], sys.argv[3]
     conf = load_conf(cohort)
     # 2026-09-14: 깊이마다 배경 목록과 반복 수가 다르다. 판 이름에서 깊이를 읽는다.
-    #   얕은 공여자는 깊은 판을 혼자 못 채운다 — 섞으면 '사람' 과 '병합본' 이 한 표에 섞인다.
+    #   얕은 공여자는 깊은 판을 혼자 못 채운다. 섞으면 '사람' 과 '병합본' 이 한 표에 섞인다.
     _dep = next((x for x in ('5k', '15k', '50k', '100k') if ('_%s_' % x) in v), '')
     _dk = {'5k': '5K', '15k': '15K', '50k': '50K', '100k': '100K'}.get(_dep, '')
     _nrep_key = 'NREP_' + _dk if _dk and ('NREP_' + _dk) in conf else 'NREP'
@@ -245,7 +245,7 @@ def main():
     if sample not in conf['SAMPLES'].split():
         sys.exit('%s 코호트에 없는 검체: %s' % (cohort, sample))
 
-    # 2026-09-29: WORK_ROOT 를 따른다 (config.conf 가 «검체 작업 폴더의 부모» 로
+    # 2026-09-29: WORK_ROOT 를 따른다 (config.conf 가 「검체 작업 폴더의 부모」 로
     #   안내하는 값이다). 여기만 ~ 를 박아 두면 run_validate.sh 의 채점 루프가
     #   다른 자리를 보고 전 검체를 조용히 건너뛴다.
     home = os.environ.get('WORK_ROOT') or WORK_ROOT_CONF or os.path.expanduser('~')
@@ -256,7 +256,7 @@ def main():
     #   평평 배치(steps/ 에 config.py 하나)에서는 어떤 v 를 줘도 같은 config.py 를
     #   복사한다. 그 config.py 의 VERSION·깊이는 config.conf 에서 온다.
     #   작업 폴더는 v 로 만들고 산출 자리는 VERSION 으로 만들기 때문에, 둘이
-    #   어긋나면 «50k 폴더에서 5k 깊이로 섞어 5k 자리에 쓰는» 일이 조용히 일어난다.
+    #   어긋나면 「50k 폴더에서 5k 깊이로 섞어 5k 자리에 쓰는」 일이 조용히 일어난다.
     #   meth_config.py 의 깊이 가드는 conf 안의 VERSION↔깊이만 보므로 이걸 못 잡는다.
     _flat = os.path.isfile(os.path.join(src, 'config.py'))
     if _flat and v != VERSION_CONF:
@@ -273,7 +273,7 @@ def main():
             os.remove(d)
         # 2026-09-25: 없는 파일을 조용히 넘기면 그 피처만 빠진 채 끝까지 돌고,
         #   채점이 결측을 평균으로 메워 AUC 0.500 이 된다. 09-21 에 나흘 썼던 그 증상이다.
-        #   피처를 빼는 것은 STEPS 항목을 지워서 한다 — 여기 있는데 파일이 없으면 항상 설정 오류다.
+        #   피처를 빼는 것은 STEPS 항목을 지워서 한다. 여기 있는데 파일이 없으면 항상 설정 오류다.
         if not os.path.exists(s):
             sys.exit('복사할 파일이 없다: %s — STEPS 에는 있는데 TRAIN_SRC 에 없다. '
                      '이름을 바꿨거나 TRAIN_SRC 가 딴 데를 가리킨다.' % s)

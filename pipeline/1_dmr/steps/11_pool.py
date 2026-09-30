@@ -13,7 +13,7 @@ if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
 import os as _os, sys as _sys
-# 0_setup 을 찾는다. 이 파일이 «복사되어» 정리본 밖에서 돌 수도 있으므로
+# 0_setup 을 찾는다. 이 파일이 「복사되어」 정리본 밖에서 돌 수도 있으므로
 #   ① 자기 위에서 위로 올라가며 찾고 ② 환경변수 METH_CONF_DIR ③ 그래도 없으면
 #   meth_config 없이 돌 수 있게 기본값으로 간다(검증이 검체 폴더로 복사해 쓰는 경로다).
 _h = _os.path.dirname(_os.path.abspath(__file__))
@@ -31,7 +31,7 @@ try:
     _M, _D = _cfg.METH_ROOT, _cfg.DATASET_ROOT
 except ImportError:
     raise SystemExit(
-        '설정을 못 찾았습니다 — 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
+        '설정을 못 찾았습니다. 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
         '  이 파일은 정리본 안에서 도는 것이라 기본값으로 넘어가지 않습니다.\n'
         '  트리 밖에서 돌리려면 METH_CONF_DIR 로 0_setup 자리를 주십시오.')
 
@@ -40,9 +40,9 @@ import os, sys, glob, subprocess
 import pandas as pd, pysam
 
 # ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
-#   배치가 다르면 «여기만» 고칩니다. 0_setup/config.conf 에는 뿌리 둘
-#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 있습니다.
-#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수도 있습니다(아래 참조).
+#   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
+#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
+#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
 NB = _D + '/for_in_silico_test/normal_cfDNA_public/aligned_bam'
 GB = _D + '/training/GBM_cell-line/aligned_bam'
 BLOCK = 100

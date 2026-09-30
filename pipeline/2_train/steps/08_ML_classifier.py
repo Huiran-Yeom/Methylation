@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 """
-2_train/steps/08 — ML 분류 + 분류점수(y_prob) 저장.  step04_1 과 2_train/steps/08 의 feature 를 통합한다.
+2_train/steps/08: ML 분류 + 분류점수(y_prob) 저장.  step04_1 과 2_train/steps/08 의 feature 를 통합한다.
 
 원본 : Methylation/scripts/step04_ML_classifier.py 의 `3) 모델링`
 
@@ -29,11 +29,11 @@
 
 SVM 점수
   원본 SVC 는 probability=False 라 predict_proba 가 없다. 기본값에서는
-  decision_function 을 점수로 쓴다 — 원본과 학습·예측이 완전히 동일하다.
+  decision_function 을 점수로 쓴다. 원본과 학습·예측이 완전히 동일하다.
   단 0~1 범위가 아니므로 `score_type` 열을 보고 **모델별로 따로** 문턱값을 잡아야 한다.
 """
 
-# 2026-09-26: 09-23 사고에서 가드 없는 이 부류가 importlib 로 «확인» 되다 실제로 돌았다.
+# 2026-09-26: 09-23 사고에서 가드 없는 이 부류가 importlib 로 「확인」 되다 실제로 돌았다.
 #   82개 파일이 덮였다(내용은 결정적이라 같았지만 그건 운이었다).
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
@@ -73,11 +73,11 @@ SOURCES = {
 
 COMBOS = []
 
-# 모든 조합 — 있는 특징의 공집합 아닌 부분집합 전부 (2026-08-13)
+# 모든 조합: 있는 특징의 공집합 아닌 부분집합 전부 (2026-08-13)
 # 손으로 적지 않는다. 특징이 늘어도 이 줄은 그대로 둔다.
 import glob as _g, itertools as _it
 _all = ['mean', 'entropy']
-# 2026-09-16 (마) readent·mhl 을 뺀다 — 사용자 결정.
+# 2026-09-16 (마) readent·mhl 을 뺀다. 사용자 결정.
 #   채움률이 1차 지표 깊이(5k)에서 47.9% · 48.7% 다(음성 행만 보면 83.3% · 83.4%).
 #   칸 절반이 그 검체에서 잰 값이 아니라 다른 검체들의 평균이다.
 #   근거는 **채움률**이지 성능이 아니다. 성능을 근거로 삼지 않는다.
@@ -241,7 +241,7 @@ def main():
                     # 학습셋 in-sample 점수를 쓰면 트리 모델이 학습셋을 외우는 탓에
                     # 문턱이 지나치게 낮아져 새 데이터에서 특이도가 무너진다.
                     # 📊 2026-08-06 실측(v4 0.1%): RF 특이도 0.005 · XGB 0.106
-                    #    (로지스틱·SVM 은 0.89~0.91 로 정상 — 외우지 못하기 때문)
+                    #    (로지스틱·SVM 은 0.89~0.91 로 정상: 외우지 못하기 때문)
                     try:
                         cvm = 'predict_proba' if hasattr(model, 'predict_proba') else 'decision_function'
                         oof = cross_val_predict(
@@ -276,14 +276,14 @@ def main():
                         'stratify': bool(C.STRATIFY),
                         'n_pos_val': int((yva == 1).sum()), 'n_neg_val': int((yva == 0).sum()),
                     }, f'{mdir}/{name.replace("|", "_")}__{mname.replace(" ", "")}.joblib')
-                    # ── 5-fold 교차검증(전체 200개) — 한 번 나눈 것에 결과가 달리지 않게.
+                    # ── 5-fold 교차검증(전체 200개): 한 번 나눈 것에 결과가 달리지 않게.
                     #    최고 모델을 고르는 기준은 이 AUC 다 (2026-08-14).
                     try:
                         cm2 = 'predict_proba' if hasattr(model, 'predict_proba') else 'decision_function'
                         # 2026-09-14 [실행차단 교정] 여기서 **안 채운 X** 를 그대로 넣고 있었다.
                         #   결측이 있는 피처(jsd·pdr·llr)가 든 조합은 sklearn 이 ValueError 를
                         #   내고 except 로 빠져 **cv 표에 아예 안 들어갔다.** 실측: 0.1% 에서
-                        #   127조합 중 31조합만 남았다 — 사라진 96개가 전부 jsd·pdr 조합이고
+                        #   127조합 중 31조합만 남았다. 사라진 96개가 전부 jsd·pdr 조합이고
                         #   거기에 1차 조합(mean|entropy|jsd|llr|pdr)이 들어 있다.
                         #   채우기를 파이프라인 안에 넣어 **접기마다 학습 접기 평균으로만** 채운다.
                         #   밖에서 미리 채우면 검증 접기 값이 섞여 누출이다.

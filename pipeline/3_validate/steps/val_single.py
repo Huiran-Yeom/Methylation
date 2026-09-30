@@ -2,8 +2,8 @@
 # 학습 스크립트는 건드리지 않는다.
 import io, os
 
-# 2026-09-29: detect_layout 정의가 두 번 있었다. 둘 다 같은 일을 하고 «뒤의 것이»
-#   앞의 것을 덮고 있었다 — 앞의 것은 죽은 코드다. 지워도 동작은 그대로다.
+# 2026-09-29: detect_layout 정의가 두 번 있었다. 둘 다 같은 일을 하고 「뒤의 것이」
+#   앞의 것을 덮고 있었다. 앞의 것은 죽은 코드다. 지워도 동작은 그대로다.
 #   (지운 쪽 독스트링이 짧아, 아래 남긴 쪽이 더 설명이 낫다.)
 
 def to_single(path):
@@ -42,7 +42,7 @@ def to_single(path):
         io.open(path, 'w', encoding='utf-8').write(s)
         print('  [single] %-11s %s' % (b, ' · '.join(hits)))
     elif b in ('val03_1.py', 'val03_2.py', 'val03_3.py'):
-        print('  [single] %-11s ⚠ 바꾼 것 없음 — 코드가 다를 수 있음' % b)
+        print('  [single] %-11s ⚠ 바꾼 것 없음. 코드가 다를 수 있음' % b)
 
 
 def detect_layout(*bams):

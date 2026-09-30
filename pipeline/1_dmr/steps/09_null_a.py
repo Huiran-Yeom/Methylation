@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""귀무A 세 판 — K=3 창이 서는 블록에서 200칸 균등 추출 (2026-09-14 · 파일로 굳힘 2026-09-26)
+"""귀무A 세 판: K=3 창이 서는 블록에서 200칸 균등 추출 (2026-09-14 · 파일로 굳힘 2026-09-26)
 
 되돌림 조건 ㉠ 의 실측 귀무다. 암과 무관하게 골랐다.
-창이 서는 블록에서만 고르므로 리드 기반 피처를 200칸 «전부» 받는다 —
+창이 서는 블록에서만 고르므로 리드 기반 피처를 200칸 「전부」 받는다 —
 칸이 104개뿐인 bl200 에게는 **넘기 어려운(보수적인)** 귀무가 된다.
 그래서 bl200 의 잣대는 귀무B(10_null_b.py)를 쓴다. 사전등록 3-1절.
 
@@ -36,7 +36,7 @@ try:
     _M = _cfg.METH_ROOT
 except ImportError:
     raise SystemExit(
-        '설정을 못 찾았습니다 — 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
+        '설정을 못 찾았습니다. 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
         '  이 파일은 정리본 안에서 도는 것이라 기본값으로 넘어가지 않습니다.\n'
         '  트리 밖에서 돌리려면 METH_CONF_DIR 로 0_setup 자리를 주십시오.')
 
@@ -46,7 +46,7 @@ import sys
 import numpy as np
 import pandas as pd
 
-# 2026-09-26: 세대를 박아 두면 GEN 을 바꿨을 때 «이전 세대» 후보로 귀무를 만든다.
+# 2026-09-26: 세대를 박아 두면 GEN 을 바꿨을 때 「이전 세대」 후보로 귀무를 만든다.
 #   그러면 실제 패널과 귀무 패널의 세대가 갈리는데, 여기가 대조의 기준선이다.
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:
@@ -56,9 +56,9 @@ if not _GEN:
         raise SystemExit('GEN(패널 세대)을 못 읽었습니다 — config.conf 의 GEN 을 채우거나 '
                          '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
 # ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
-#   배치가 다르면 «여기만» 고칩니다. 0_setup/config.conf 에는 뿌리 둘
-#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 있습니다.
-#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수도 있습니다(아래 참조).
+#   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
+#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
+#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
 R = _M + '/results/dmr'
 OUT = R + '/j_panel_dmr' + _GEN + '_panels'
 CAND = R + '/j_candidates' + _GEN
@@ -88,7 +88,7 @@ for i in (1, 2, 3):
     os.makedirs(o, exist_ok=True)
     d.to_csv('%s/DMR_confirmed_rand%d200.csv' % (o, i), index=False)
     with open(o + '/_origin.txt', 'w') as h:
-        h.write('무작위 패널 씨앗 %d — 2026-09-14\n'
+        h.write('무작위 패널 씨앗 %d: 2026-09-14\n'
                 '  K=3 창이 서는 블록 %d개에서 200개를 비복원 추출.\n'
                 '  암과 무관하게 골랐다. 되돌림 조건 ㉠ 의 실측 귀무로 쓴다.\n'
                 '  창이 서는 블록에서 고르므로 리드 기반 피처를 200칸 전부 받는다 —\n'

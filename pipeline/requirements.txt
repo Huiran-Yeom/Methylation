@@ -1,5 +1,5 @@
 # 실제로 쓴 버전입니다 (2026-09-25 서버에서 측정).
-# 자세한 목록과 «왜 그 버전이 중요한가» 는 0_setup/ENVIRONMENT.md 에 있습니다.
+# 자세한 목록과 「왜 그 버전이 중요한가」 는 0_setup/ENVIRONMENT.md 에 있습니다.
 #
 # python 3.9  (conda env)
 #   conda create -n meth python=3.9 && conda activate meth && pip install -r requirements.txt
@@ -22,5 +22,5 @@ openpyxl
 #   bowtie2   2.5.1       bismark 가 내부에서 부릅니다
 #   samtools  1.5         정렬·색인·병합
 #
-# sklearn 버전이 특히 중요합니다 — RandomForest·SVC 의 기본값이 버전 사이에
+# sklearn 버전이 특히 중요합니다. RandomForest·SVC 의 기본값이 버전 사이에
 # 바뀌어서 다른 버전에서는 같은 숫자가 안 나옵니다.

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
-"""2_train/steps/03 (PE·SE 혼합판) — 2026-08-20
+"""2_train/steps/03 (PE·SE 혼합판): 2026-08-20
 
 m 판은 학습 자료가 전부 페어드엔드라 `--paired-end` 하나로 끝났다.
 j 판은 정상 20명 중 7명(GSM 5 · SRR 2)이 단일말단이라 그 방법을 못 쓴다.
@@ -11,7 +11,7 @@ j 판은 정상 20명 중 7명(GSM 5 · SRR 2)이 단일말단이라 그 방법�
 
   그래서 섞인 BAM 을 flag 로 나눠 두 번 돌리고 cov 를 자리별로 합친다.
 """
-# 2026-09-26: 09-23 사고에서 가드 없는 이 부류가 importlib 로 «확인» 되다 실제로 돌았다.
+# 2026-09-26: 09-23 사고에서 가드 없는 이 부류가 importlib 로 「확인」 되다 실제로 돌았다.
 #   82개 파일이 덮였다(내용은 결정적이라 같았지만 그건 운이었다).
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
@@ -48,7 +48,7 @@ def split_pe_se(bam, tmp):
     pe = os.path.join(tmp, _b + '_pe.bam')
     se = os.path.join(tmp, _b + '_se.bam')
 
-    # 페어드 관련 비트 — paired · proper · mate_unmapped · mate_reverse · read1 · read2
+    # 페어드 관련 비트: paired · proper · mate_unmapped · mate_reverse · read1 · read2
     PAIRBITS = 0x1 | 0x2 | 0x8 | 0x20 | 0x40 | 0x80
 
     n_pe = n_se = 0
@@ -188,7 +188,7 @@ def main():
             parts[i] = split_pe_se(bam, tmp)
         pes = [v[0] for v in parts.values() if v[0]]
         ses = [v[1] for v in parts.values() if v[1]]
-        print('  나눔 — 페어드엔드 %d개 · 단일말단 %d개' % (len(pes), len(ses)))
+        print('  나눔: 페어드엔드 %d개 · 단일말단 %d개' % (len(pes), len(ses)))
 
         for lst, paired in ((pes, True), (ses, False)):
             for s in range(0, len(lst), BATCH_SIZE):

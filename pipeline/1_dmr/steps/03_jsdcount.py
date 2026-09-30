@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""S0b 리드 무늬 세기 (2026-08-20) — 라벨을 쓰지 않는다.
+"""S0b 리드 무늬 세기 (2026-08-20): 라벨을 쓰지 않는다.
 
 표준 CpG 자리(02_blockcpg)로 창을 만들고 BAM 을 통째로 훑는다.
 창을 모두 덮은 리드의 무늬를 센다. 리드를 버리지 않고 전부 센다.
@@ -15,7 +15,7 @@ if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
 import os as _os, sys as _sys
-# 0_setup 을 찾는다. 이 파일이 «복사되어» 정리본 밖에서 돌 수도 있으므로
+# 0_setup 을 찾는다. 이 파일이 「복사되어」 정리본 밖에서 돌 수도 있으므로
 #   ① 자기 위에서 위로 올라가며 찾고 ② 환경변수 METH_CONF_DIR ③ 그래도 없으면
 #   설정 없이 돌 수 있게 기본값으로 간다(검증이 검체 폴더로 복사해 쓰는 경로다).
 _h = _os.path.dirname(_os.path.abspath(__file__))
@@ -33,7 +33,7 @@ try:
     _M, _D = _cfg.METH_ROOT, _cfg.DATASET_ROOT
 except ImportError:
     raise SystemExit(
-        '설정을 못 찾았습니다 — 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
+        '설정을 못 찾았습니다. 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
         '  이 파일은 정리본 안에서 도는 것이라 기본값으로 넘어가지 않습니다.\n'
         '  트리 밖에서 돌리려면 METH_CONF_DIR 로 0_setup 자리를 주십시오.')
 
@@ -41,7 +41,7 @@ except ImportError:
 import os, sys, glob
 import numpy as np, pandas as pd, pysam
 
-# 2026-09-26: 기본값에 세대 접미사가 없어 «옛 세대» 를 가리켰다.
+# 2026-09-26: 기본값에 세대 접미사가 없어 「옛 세대」 를 가리켰다.
 #   09-23 사고가 옛 세대 폴더를 덮은 원인이 바로 이것이다. GEN 을 따른다.
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:
@@ -51,9 +51,9 @@ if not _GEN:
         raise SystemExit('GEN(패널 세대)을 못 읽었습니다 — config.conf 의 GEN 을 채우거나 '
                          '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
 # ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
-#   배치가 다르면 «여기만» 고칩니다. 0_setup/config.conf 에는 뿌리 둘
-#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 있습니다.
-#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수도 있습니다(아래 참조).
+#   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
+#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
+#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
 CAND = _M + '/results/dmr/j_candidates' + _GEN
 OUT  = _M + '/results/dmr/j_jsdcount' + _GEN
 NB   = _D + '/for_in_silico_test/normal_cfDNA_public/aligned_bam'
@@ -150,7 +150,7 @@ if not jobs: sys.exit('대상 검체 없음')
 for i, (s, bd, ty) in enumerate(jobs, 1):
     hit = [f for f in glob.glob(bd+'/*.bam') if sid(f) == s]
     if len(hit) != 1:
-        print('  [%2d/%d] %-16s BAM %d개 — 건너뜀' % (i, len(jobs), s, len(hit))); continue
+        print('  [%2d/%d] %-16s BAM %d개: 건너뜀' % (i, len(jobs), s, len(hit))); continue
     nr, nh = scan(hit[0])
     msg = []
     for K in KS:

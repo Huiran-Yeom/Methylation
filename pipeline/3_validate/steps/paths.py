@@ -31,18 +31,18 @@ try:
     VERSION_CONF = _cfg.VERSION
     # 2026-09-28: STEP_MAP 도 여기서 내보낸다 — 설정을 읽는 자리를 하나로 유지한다.
     # 2026-09-29: 관문이 hasattr(_cfg, '값') 이었다 — 식별자 영어화 때 호출은
-    #   get() 으로 바꾸고 이 «이름 문자열» 은 안 바꿔서 영원히 False 였다.
+    #   get() 으로 바꾸고 이 「이름 문자열」 은 안 바꿔서 영원히 False 였다.
     #   결과: STEP_MAP_CONF 가 항상 '' 이라 config.conf 의 STEP_MAP 이 죽어 있었다.
     STEP_MAP_CONF = _cfg.get('STEP_MAP') if hasattr(_cfg, 'get') else ''
     # 2026-09-29: WORK_ROOT 도 여기서 내보낸다. make_val_config 가 _cfg 를 직접
-    #   쓰려다 «import 하지 않은 이름» 을 써서 NameError 가 났다 (WORK_ROOT 가
+    #   쓰려다 「import 하지 않은 이름」 을 써서 NameError 가 났다 (WORK_ROOT 가
     #   빈 값일 때만 터지는 자리였다). 설정을 읽는 자리를 하나로 유지한다.
     WORK_ROOT_CONF = getattr(_cfg, 'WORK_ROOT', '') or ''
     # 2026-09-29: 코호트 정의 폴더도 여기서 내보낸다 (설정을 읽는 자리는 하나다).
     COHORT_DIR_CONF = _os.environ.get('COHORT_DIR') or _os.path.expanduser('~/cohorts')
 except ImportError:
     raise SystemExit(
-        '설정을 못 찾았습니다 — 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
+        '설정을 못 찾았습니다. 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
         '  이 파일은 정리본 안에서 도는 것이라 기본값으로 넘어가지 않습니다.\n'
         '  트리 밖에서 돌리려면 METH_CONF_DIR 로 0_setup 자리를 주십시오.')
 
@@ -58,9 +58,9 @@ def _first(pats, want_dir=True):
 
 
 def script_dir_abs(v):
-    """버전의 스크립트 폴더 — 절대경로. 없으면 None."""
+    """버전의 스크립트 폴더: 절대경로. 없으면 None."""
     # 정리본: 학습 코드가 한 폴더에 평평하게 있으면 그 폴더가 곧 답이다.
-    #   단 «버전 폴더» 를 TRAIN_SRC 로 잡으면 안 된다 — 거기도 config.py 가 있어서
+    #   단 「버전 폴더」 를 TRAIN_SRC 로 잡으면 안 된다. 거기도 config.py 가 있어서
     #   v 가 무엇이든 같은 폴더를 돌려준다. jsd200 검증이 bl200 스크립트를 복사한다.
     if os.path.isfile(os.path.join(TRAIN_SRC, 'config.py')):
         if re.match(r'^j.*_\d+k_', os.path.basename(TRAIN_SRC)):
@@ -82,7 +82,7 @@ def script_dir_abs(v):
 
 
 def script_dir(v):
-    """예전 이름 그대로 — ROOT 기준 상대경로."""
+    """예전 이름 그대로: ROOT 기준 상대경로."""
     h = script_dir_abs(v)
     return os.path.relpath(h, ROOT) if h else None
 

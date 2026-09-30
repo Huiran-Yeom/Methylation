@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 """
-2_train/steps/01 — DMR 영역 리드만 추출해 가벼운 BAM 을 만든다.
+2_train/steps/01: DMR 영역 리드만 추출해 가벼운 BAM 을 만든다.
 
 원본 : Methylation/scripts/01_Preprocessing_for_ML_RawData_Mixing.py
 변경 : 경로를 config.py 로 옮긴 것뿐. **계산 로직은 원본과 동일**하다.
@@ -12,7 +12,7 @@
 출력은 전부 v3 폴더로 간다. 원본 v1/v2 는 건드리지 않는다.
 """
 
-# 2026-09-26: 09-23 사고에서 가드 없는 이 부류가 importlib 로 «확인» 되다 실제로 돌았다.
+# 2026-09-26: 09-23 사고에서 가드 없는 이 부류가 importlib 로 「확인」 되다 실제로 돌았다.
 #   82개 파일이 덮였다(내용은 결정적이라 같았지만 그건 운이었다).
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
@@ -38,7 +38,7 @@ def load_dmr():
 
 
 def main():
-    import pysam  # 지연 임포트 — 서버에만 있으면 됨
+    import pysam  # 지연 임포트: 서버에만 있으면 됨
 
     C.guard_not_original()
     C.banner('2_train/steps/01  DMR 영역 리드 추출')
@@ -113,7 +113,7 @@ def main():
     _bgs = getattr(C, 'NORMAL_BAMS', None)
     if _bgs:
         print('')
-        print('배경별 정상 추출 — %d개' % len(_bgs))
+        print('배경별 정상 추출: %d개' % len(_bgs))
         _blocks = [(r['chr'], int(r['blk']) * n) for _, r in g.iterrows()]
         for _k, _bp in enumerate(_bgs, 1):
             _out = C.WT_SORTED.replace('.bam', '_bg%02d.bam' % _k)
@@ -142,7 +142,7 @@ def main():
         subprocess.run(['samtools', 'index', sorted_path], check=True)
         print(f'  {sorted_path}')
 
-    # 2_train/steps/02 가 쓰는 쿼리 이름 목록 — 짝이 정확히 2개인 것만 남긴다
+    # 2_train/steps/02 가 쓰는 쿼리 이름 목록: 짝이 정확히 2개인 것만 남긴다
     print('\n리드쌍 이름 목록 생성 (짝 2개인 것만)...')
     for bam_path, out_txt, label in (
         (C.MUT_SORTED, C.MUT_NAMES, '암'),

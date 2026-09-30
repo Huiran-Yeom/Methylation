@@ -12,37 +12,37 @@
 
   ** 최고 조합을 고르지 않는다. ** 전수 표는 부차이고 여기서는 박은 조합만 본다.
 
-  [2026-09-22 ★ 세 곳을 고쳤다 — 앞의 둘은 **조용히 틀린 값을 내고 있었다**]
+  [2026-09-22 ★ 세 곳을 고쳤다. 앞의 둘은 **조용히 틀린 값을 내고 있었다**]
 
   (1) 읽는 곳이 죽은 경로였다. `~/tmp/results/` 는 09-16 혼합 이전 세대의 자리다.
-      지금 원점수는 make_tables.py 와 **같은 곳** — 검증 산출 트리 안에 있다.
+      지금 원점수는 make_tables.py 와 **같은 곳**: 검증 산출 트리 안에 있다.
       같은 원본을 읽어야 표의 숫자와 여기 숫자가 어긋나지 않는다.
 
-  (2) ★ 음성 «공여자 층화» 가 유령 축이었다. 09-16 혼합 뒤로 음성 한 검체에
+  (2) ★ 음성 「공여자 층화」 가 유령 축이었다. 09-16 혼합 뒤로 음성 한 검체에
       정상 10명이 리드 수준에서 다 들어간다. 그런데 음성 행의 `rep` 은 여전히
       `Normal1`..`Normal10` 이고 이것은 **공여자가 아니라 반복본 번호**다.
-      옛 코드는 그 숫자를 공여자로 읽어 EGAD=[1,2,3] · GSE=[4..10] 로 «층화» 했다.
+      옛 코드는 그 숫자를 공여자로 읽어 EGAD=[1,2,3] · GSE=[4..10] 로 「층화」 했다.
       **둘 다 안 비므로 경고도 안 떴다. 없는 축으로 재표본하고 층화했다고 적었다.**
       09-22 에 넣은 가드도 `COHORT` 가 정의된 적이 없어 NameError -> except 로
       삼켜져 **한 번도 발동하지 않았다.** 문법이 맞는 것과 도는 것은 다르다.
 
       고침: 혼합판이면 음성 축을 **아예 만들지 않는다.** 양성만 사람 단위로
       재표본하고 음성은 고정한다(사전등록 3절 09-16 21:10 사용자 결정).
-      그 대가를 출력에 **매번 박는다** — 산출 구간에 음성 축 불확실성이 0 이므로
+      그 대가를 출력에 **매번 박는다**: 산출 구간에 음성 축 불확실성이 0 이므로
       **새 정상인에서의 위양성 변동은 이 구간에 없다.**
 
   (3) 특이도의 EGAD/GSE 분리도 같은 유령 축이었다. 혼합판에서는 합본만 낸다.
 
 사용:  primary_metric.py [--depth 5k] [--ratio 0.005] [--combo "..."] [--nboot 2000]
-       COHORT 는 환경변수이고 «반드시» 주어야 한다 (기본값을 두지 않는다).
+       COHORT 는 환경변수이고 「반드시」 주어야 한다 (기본값을 두지 않는다).
 """
-# 2026-09-26: 09-23 사고에서 가드 없는 이 부류가 importlib 로 «확인» 되다 실제로 돌았다.
+# 2026-09-26: 09-23 사고에서 가드 없는 이 부류가 importlib 로 「확인」 되다 실제로 돌았다.
 #   82개 파일이 덮였다(내용은 결정적이라 같았지만 그건 운이었다).
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
 import os as _os, sys as _sys
-# 0_setup 을 찾는다. 이 파일이 «복사되어» 정리본 밖에서 돌 수도 있으므로
+# 0_setup 을 찾는다. 이 파일이 「복사되어」 정리본 밖에서 돌 수도 있으므로
 #   ① 자기 위에서 위로 올라가며 찾고 ② 환경변수 METH_CONF_DIR ③ 그래도 없으면
 #   설정 없이 돌 수 있게 기본값으로 간다(검증이 검체 폴더로 복사해 쓰는 경로다).
 _h = _os.path.dirname(_os.path.abspath(__file__))
@@ -60,7 +60,7 @@ try:
     _M, _D = _cfg.METH_ROOT, _cfg.DATASET_ROOT
 except ImportError:
     raise SystemExit(
-        '설정을 못 찾았습니다 — 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
+        '설정을 못 찾았습니다. 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
         '  이 파일은 정리본 안에서 도는 것이라 기본값으로 넘어가지 않습니다.\n'
         '  트리 밖에서 돌리려면 METH_CONF_DIR 로 0_setup 자리를 주십시오.')
 
@@ -80,10 +80,10 @@ try:   # 2026-09-29: SEED 가 config.conf 에 있는데 여기서만 박혀 있�
 except Exception:
     pass
 # 2026-09-29: 기본값을 우리 내부 코호트 이름으로 두지 않는다. 안 주면 남이 받아
-#   돌릴 때 «없는 코호트» 를 읽어 표가 다 비는데도 정상 종료했다.
+#   돌릴 때 「없는 코호트」 를 읽어 표가 다 비는데도 정상 종료했다.
 COHORT = os.environ.get('COHORT') or ''
 if not COHORT:
-    raise SystemExit('COHORT 를 주십시오 — 3단계에서 쓴 것과 같아야 합니다.'
+    raise SystemExit('COHORT 를 주십시오: 3단계에서 쓴 것과 같아야 합니다.'
                      '  예: COHORT=<your_cohort> python ' + os.path.basename(__file__))
 LIVE = _M + '/%s_val' % COHORT
 # 2026-09-26: 판 명단을 config.conf 한 곳에서 읽는다. 여기 복사본이 있으면
@@ -102,7 +102,7 @@ def person(s):
 
 def donor(rep):
     """혼합 **이전** 판에서만 뜻이 있다. 음성 행의 rep 'Normal7' -> 7.
-       혼합판에서는 이 숫자가 반복본 번호이지 공여자가 아니다 — is_mixed() 로 가른다."""
+       혼합판에서는 이 숫자가 반복본 번호이지 공여자가 아니다. is_mixed() 로 가른다."""
     m = re.search(r'(\d+)$', str(rep))
     return int(m.group(1)) if m else 0
 
@@ -113,7 +113,7 @@ def val_dir(panel):
 
 def is_mixed():
     """혼합판이면 참. background_map CSV 의 `take` 열이 NEW_MIX 만 내는 서명이다.
-       못 찾으면 **참으로 본다** — 모르는데 층화하는 쪽이 훨씬 나쁘다."""
+       못 찾으면 **참으로 본다**: 모르는데 층화하는 쪽이 훨씬 나쁘다."""
     for p in PANELS:
         fs = glob.glob(val_dir(p) + '/step03_Preprocessing_for_ML/*/background_map*.csv')
         if fs:
@@ -142,7 +142,7 @@ def load(panel, combo):
 
 
 def a1(pos, neg):
-    """사전등록의 a1 — 검체·복제본 전체."""
+    """사전등록의 a1: 검체·복제본 전체."""
     if not len(pos) or not len(neg):
         return float('nan')
     y = np.r_[np.zeros(len(neg)), np.ones(len(pos))]
@@ -150,7 +150,7 @@ def a1(pos, neg):
     return float(roc_auc_score(y, s))
 
 
-GATE = 0.70   # 사전등록 되돌림 ㉠ — 셋 다 이것을 못 넘으면 순위를 매기지 않는다
+GATE = 0.70   # 사전등록 되돌림 ㉠: 셋 다 이것을 못 넘으면 순위를 매기지 않는다
 
 
 def run(combo, mixed):
@@ -163,9 +163,9 @@ def run(combo, mixed):
 
     읽는 것
       <뿌리>/<코호트>_val/*/results/<판>/step04_ML_classifier/
-        y_prob_all_<판>_all_combos.csv      <- make_tables.py 와 «같은 원본»
+        y_prob_all_<판>_all_combos.csv      <- make_tables.py 와 「같은 원본」
 
-    내는 것 (파일 없음 — 표준출력만)
+    내는 것 (파일 없음. 표준출력만)
       판별 AUC 표 · 동점폭 · 쌍별 차이 구간 · 특이도
 
     구역
@@ -176,7 +176,7 @@ def run(combo, mixed):
       5) 특이도       합본만. 혼합판이라 플랫폼별로 못 가른다
 
     ※ 음성을 고정하므로 구간에 **음성 축 불확실성이 0 으로 들어간다.**
-      새 정상인에서의 위양성 변동은 이 구간에 없다 — 각주로 표에 박는다.
+      새 정상인에서의 위양성 변동은 이 구간에 없다. 각주로 표에 박는다.
     """
     print('')
     print('=' * 74)
@@ -186,7 +186,7 @@ def run(combo, mixed):
     for p in PANELS:
         d, err = load(p, combo)
         if err:
-            print('  !! %s — %s' % (p, err))
+            print('  !! %s: %s' % (p, err))
             return 1
         D[p] = d
     common = set.intersection(*[set(d['sample']) for d in D.values()])
@@ -207,7 +207,7 @@ def run(combo, mixed):
     aucs = [out[p][2] for p in PANELS]
     if all(v == v for v in aucs) and max(aucs) < GATE:
         print('')
-        print('  ★ 되돌림 ㉠ 발동 — 셋 중 어느 것도 %.2f 을 못 넘었다 (최고 %.4f).'
+        print('  ★ 되돌림 ㉠ 발동: 셋 중 어느 것도 %.2f 을 못 넘었다 (최고 %.4f).'
               % (GATE, max(aucs)))
         print('    사전등록은 이 조건에서 **순위를 매기지 않는다** 고 결과 전에 정했다.')
         print('    아래 구간은 순위를 내려는 것이 아니라 **구간을 보고하려고** 낸다.')
@@ -224,9 +224,9 @@ def run(combo, mixed):
         dn = sorted({int(x) for x in pd.concat([out[p][1]['donor'] for p in PANELS]) if x})
         eg = [x for x in dn if x in EGAD_REPS]
         gs = [x for x in dn if x not in EGAD_REPS]
-        print('  음성 공여자 %d명 — EGAD %s · GSE %s' % (len(dn), eg, gs))
+        print('  음성 공여자 %d명: EGAD %s · GSE %s' % (len(dn), eg, gs))
         if not eg or not gs:
-            print('  (알림) 한쪽 플랫폼이 없습니다 — 층화 없이 공여자 전체를 재표본합니다.')
+            print('  (알림) 한쪽 플랫폼이 없습니다. 층화 없이 공여자 전체를 재표본합니다.')
 
     rs = np.random.RandomState(SEED)
     people = sorted({person(s) for s in common})
@@ -267,7 +267,7 @@ def run(combo, mixed):
     # ── 특이도 ────────────────────────────────────────────────────────
     print('')
     if mixed:
-        print('  특이도 (합본만 — 혼합판이라 플랫폼별로 가를 수 없다)')
+        print('  특이도 (합본만: 혼합판이라 플랫폼별로 가를 수 없다)')
     else:
         print('  특이도 (플랫폼별 · 낮은 쪽을 주장값으로 쓴다 — 조항 (2))')
     for p in PANELS:
@@ -295,13 +295,13 @@ def run(combo, mixed):
         print('    %-8s EGAD %.4f · GSE %.4f · 합본 %.4f  -> 주장 %.4f  '
               '(위양성 %d개 · 한쪽 쏠림 %.0f%%%s)'
               % (p, se, sg, sa, lo, len(fp), sh * 100 if sh == sh else float('nan'),
-                 '  ★70% 초과 — 합본으로 주장하지 않는다' if (sh == sh and sh > 0.70) else ''))
+                 '  ★70% 초과: 합본으로 주장하지 않는다' if (sh == sh and sh > 0.70) else ''))
     return 0
 
 
 def main():
     mixed = is_mixed()
-    print('1차 지표 — 코호트 %s · 깊이 %s · 비율 %g%% · %s'
+    print('1차 지표: 코호트 %s · 깊이 %s · 비율 %g%% · %s'
           % (COHORT, DEPTH, RATIO * 100, '혼합판' if mixed else '혼합 이전 판'))
     rc = run(COMBO, mixed)
     if rc:

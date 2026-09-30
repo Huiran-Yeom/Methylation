@@ -1,11 +1,11 @@
 #!/usr/bin/env python
-# 2026-09-26: 09-23 사고에서 가드 없는 이 부류가 importlib 로 «확인» 되다 실제로 돌았다.
+# 2026-09-26: 09-23 사고에서 가드 없는 이 부류가 importlib 로 「확인」 되다 실제로 돌았다.
 #   82개 파일이 덮였다(내용은 결정적이라 같았지만 그건 운이었다).
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
 import os as _os, sys as _sys
-# 0_setup 을 찾는다. 이 파일이 «복사되어» 정리본 밖에서 돌 수도 있으므로
+# 0_setup 을 찾는다. 이 파일이 「복사되어」 정리본 밖에서 돌 수도 있으므로
 #   ① 자기 위에서 위로 올라가며 찾고 ② 환경변수 METH_CONF_DIR ③ 그래도 없으면
 #   설정 없이 돌 수 있게 기본값으로 간다(검증이 검체 폴더로 복사해 쓰는 경로다).
 _h = _os.path.dirname(_os.path.abspath(__file__))
@@ -22,7 +22,7 @@ try:
     import meth_config as _cfg
     _M, _D = _cfg.METH_ROOT, _cfg.DATASET_ROOT
 except ImportError:
-    # 검증이 이 파일을 검체 폴더로 «복사» 해 돌린다. 그때는 0_setup 이 없다.
+    # 검증이 이 파일을 검체 폴더로 「복사」 해 돌린다. 그때는 0_setup 이 없다.
     #   조용히 넘어가면 어느 뿌리를 썼는지 로그에 안 남는다. 알리고 넘어간다.
     _M = _os.environ.get('METH_ROOT', '/ssd_data/Methylation').rstrip('/')
     _D = _os.environ.get('DATASET_ROOT', '/ssd_data/dataset').rstrip('/')
@@ -39,7 +39,7 @@ except ImportError:
     LLR(θ)      = Σ_reads  ln [ P_mix(θ)(x) / P_Normal(x) ]
 
   x 는 창(K자리)의 메틸 무늬. 합은 판의 **모든 창**에 걸쳐 돈다.
-  θ 별 reference 파일은 만들지 않는다 — P_Normal · P_GBM 만 두고 즉석 계산한다.
+  θ 별 reference 파일은 만들지 않는다. P_Normal · P_GBM 만 두고 즉석 계산한다.
 
   나오는 열
     LLR_<θ> …        θ 마다 하나
@@ -49,13 +49,13 @@ except ImportError:
 
 참조표는 새로 만들지 않는다
   `_dmr/05_llrref.py` 가 2026-09-02 에 만들어 둔 것을 그대로 읽는다.
-  그쪽이 더 정확하다 — P_GBM 을 세포주 안에서 먼저 평균 낸 뒤 세포주끼리 평균하므로
+  그쪽이 더 정확하다. P_GBM 을 세포주 안에서 먼저 평균 낸 뒤 세포주끼리 평균하므로
   반복 수가 많은 세포주에 치우치지 않는다.
 
     <METH_ROOT>/results/dmr/j_llrref/llrref_K3_minr6.parquet
     열  chr blk wi pos1 pos2 pos3 wid  n0..n7(P_Normal)  g0..g7(P_GBM)  nn ng rd_n rd_g
 
-평활 — 기본은 **넣지 않는다**. 이름을 정확히 적는다.
+평활: 기본은 **넣지 않는다**. 이름을 정확히 적는다.
 
     LLR_EPS = 0.0   (기본)   평활 없음.  P_Normal(x)=0 인 무늬의 리드는 항에서 뺀다
     LLR_EPS > 0              P_smooth = (1 − eps) · P + eps / 2^K
@@ -66,7 +66,7 @@ except ImportError:
   → **채택한 것은 "무평활 + P_N=0 무늬 제외" 이고, 그것이 LOO 로 검증된 조건이다.**
      "eps 혼합을 채택했다" 고 적었던 것은 잘못된 이름이었다 (2026-09-03 정정).
 
-  주의 — P_Normal(x)=0 은 "정상에서 한 번도 안 나온 무늬" 라 우도비로는 증거력이 가장 크다.
+  주의: P_Normal(x)=0 은 "정상에서 한 번도 안 나온 무늬" 라 우도비로는 증거력이 가장 크다.
   그것을 빼는 것은 보수적인 선택이다. 뺀 리드 수를 진단 파일에 남기므로 크기를 확인할 것.
   실측(jjsd200_50k_uni)에서는 검체당 4 / 12,606 리드 수준이었다.
 
@@ -83,7 +83,7 @@ except ImportError:
 환경변수
   LLR_REF     참조 parquet 경로 (기본 위 경로)
   LLR_THETAS  쉼표로 구분한 θ 목록
-  LLR_EPS     평활 상수 (기본 0.0 — 안정성 검사에서 무한 0건이었다)
+  LLR_EPS     평활 상수 (기본 0.0: 안정성 검사에서 무한 0건이었다)
   LLR_OUT     결과만 다른 폴더에 쓴다 (시험용)
 
 명령줄:  --limit N (비율마다 앞 N개만, 시험용)
@@ -98,9 +98,9 @@ import pysam
 import config as C
 
 # ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
-#   배치가 다르면 «여기만» 고칩니다. 0_setup/config.conf 에는 뿌리 둘
-#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 있습니다.
-#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수도 있습니다(아래 참조).
+#   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
+#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
+#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
 # 2026-08-27 폴더 구조 변경 반영. 2_train/steps/06 는 아직 옛 경로라 고장나 있다.
 CAND = _os.environ.get('METH_ROOT', _M) + '/results/dmr/j_candidates'
 if '--cand' in sys.argv:            # 2026-09-14 판마다 후보 풀이 다르다
@@ -122,7 +122,7 @@ REF_DEFAULT = _os.environ.get('METH_ROOT', _M) + '/results/dmr/j_llrref/llrref_K
 
 # 2026-09-14 [자기 증명] 실행 중인 코드가 자기 소스를 해시해 찍는다.
 #   이 줄은 **이 코드를 실제로 돌려야만** 로그에 생긴다. 사후에 못 만든다.
-#   해석된 입력 경로도 같이 찍는다 — 참조표 두 개가 파일 이름이 같아 로그로
+#   해석된 입력 경로도 같이 찍는다. 참조표 두 개가 파일 이름이 같아 로그로
 #   구분이 안 됐던 일(R114)이 경로를 안 찍어서 생겼다.
 def _self_proof():
     import hashlib as _h
@@ -145,7 +145,7 @@ def _self_proof():
 
 
 # 2026-09-26: getattr 의 셋째 인자를 지웠다. 기본값이 곧 조용한 오답이다 —
-#   MIN_READS_PER_WINDOW 의 기본값 4 는 09-14 에 6 으로 «철회된» 값이었다.
+#   MIN_READS_PER_WINDOW 의 기본값 4 는 09-14 에 6 으로 「철회된」 값이었다.
 #   복사본이 config 를 못 읽으면 06 은 4 로 세고 07 은 minr6 참조표를 읽어
 #   두 피처가 다른 문턱으로 계산된다. 파일이 따로라 아무 에러도 안 난다.
 K = getattr(C, 'PATTERN_K')
@@ -154,7 +154,7 @@ M_PAT = 1 << K
 
 # 미팅 화면의 θ 다섯(0.0005~0.01)에 0.02 · 0.05 를 더한 것.
 #   실제 혼합비가 5% 까지 있어 그대로 두면 2~5% 검체가 전부 best_theta=0.01 에 뭉친다.
-#   θ=0 은 목록에 넣지 않는다 — LLR(0)≡0 이라 열로 두면 쓸모가 없다.
+#   θ=0 은 목록에 넣지 않는다. LLR(0)≡0 이라 열로 두면 쓸모가 없다.
 #   대신 LLR_max · best_theta 계산에는 0 을 후보로 참여시킨다.
 THETAS_DEFAULT = [0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05]
 
@@ -170,7 +170,7 @@ REF_PATH = os.environ.get('LLR_REF', REF_DEFAULT)
 #   러너가 내보내고 있지만, 관문이 그것을 증명해야 한다.
 _wref = 'j_llrref' + _G
 # 2026-09-29: 위 CAND 관문과 같은 이유로 VERSION 조건을 없앤다. 여기가 더 위험하다 —
-#   j_llrref(33,903창) 와 j_llrref15(22,685창) 는 «파일 이름이 같다».
+#   j_llrref(33,903창) 와 j_llrref15(22,685창) 는 「파일 이름이 같다」.
 if os.path.basename(os.path.dirname(REF_PATH)) != _wref:
     sys.exit('중단: 세대 불일치 — VERSION=%s 인데 LLR_REF=%s\n'
              '  러너가 LLR_REF 를 내보내는지 보십시오 (3_validate/steps/run_one_sample.sh).'
@@ -233,12 +233,12 @@ def load_reference(nwin, blkwin):
                 if tuple(int(x) for x in coords) != r:
                     bad += 1
                     if bad <= 3:
-                        print('  !! wid %d 좌표 불일치 — 재구성 %s / 참조 %s'
+                        print('  !! wid %d 좌표 불일치: 재구성 %s / 참조 %s'
                               % (w, tuple(int(x) for x in coords), r))
         if bad:
             sys.exit('창 번호가 참조표와 어긋납니다 (%d/%d). blocks_cpg 가 바뀐 것입니다.'
                      % (bad, chk))
-        print('  창 좌표 정합성 %s개 확인 — 모두 일치' % format(chk, ','))
+        print('  창 좌표 정합성 %s개 확인: 모두 일치' % format(chk, ','))
 
     # ── 평활. 참조표는 날 확률이므로 여기서 넣는다.
     if EPS > 0:
@@ -401,7 +401,7 @@ def main():
       5) 저장
 
     ※ LLR(0) ≡ 0 이므로 LLR_max 는 0 에서 바닥을 친다. 중앙값 0.00 은
-      «없음» 이 아니라 «바닥» 이다.
+      「없음」 이 아니라 「바닥」 이다.
     """
     C.guard_not_original()
     C.banner('2_train/steps/07  Multi-theta LLR   [VERSION=%s . PANEL=%s]' % (C.VERSION, C.PANEL))
@@ -409,7 +409,7 @@ def main():
     save_dir = os.environ.get('LLR_OUT') or out_dir
     if save_dir != out_dir:
         os.makedirs(save_dir, exist_ok=True)
-        print('  시험 모드 — 결과를 %s 에 씁니다' % save_dir)
+        print('  시험 모드: 결과를 %s 에 씁니다' % save_dir)
 
     means = sorted(glob.glob(out_dir + '/*_mean_%s.csv' % C.VERSION),
                    key=lambda p: int(re.search(r'[/\\](\d+)_mean_', p).group(1)))
@@ -456,7 +456,7 @@ def main():
                 print('  !! %s 가 %s 에 붙어 있습니다' % (s, f))
             sys.exit('행 이름과 BAM 번호가 어긋납니다 (%d건). '
                      'step04_1 의 sample_file_mapping 을 보고 맞춘 뒤 다시 도세요.' % len(bad))
-        print('  행↔BAM 번호 대응 %s건 확인 — 모두 일치' % format(len(MP), ','))
+        print('  행↔BAM 번호 대응 %s건 확인: 모두 일치' % format(len(MP), ','))
     else:
         print('  ⚠ 매핑 파일이 없어 대응을 검사하지 못했습니다: %s' % os.path.basename(mp))
 
@@ -464,7 +464,7 @@ def main():
     #   원값   실제 GLRT 통계량. 학습은 행마다 깊이가 같아 이쪽이 맞다
     #   _pr    검체마다 커버리지가 다를 때 (검증에서 필요)
     #   _pu    PCR 중복까지 보정. 중복 배수가 1 이면 _pr 과 같아진다
-    #   어느 것이 뽑혔는지 반드시 보고할 것 — 원값이 뽑히면 커버리지를 잰 것일 수 있다
+    #   어느 것이 뽑혔는지 반드시 보고할 것: 원값이 뽑히면 커버리지를 잰 것일 수 있다
     cols = ([c for t in THETAS
              for c in ('LLR_%g' % t, 'LLR_%g_pr' % t, 'LLR_%g_pu' % t)]
             + ['LLR_max', 'LLR_max_pr', 'LLR_max_pu', 'best_theta'])

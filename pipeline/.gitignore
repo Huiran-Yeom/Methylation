@@ -1,5 +1,5 @@
 # ── 올리지 않는 것 ──────────────────────────────────────────────────
-# 실제 코호트 정의 — 검체 식별자 목록과 참여자 이름이 들어갑니다.
+# 실제 코호트 정의: 검체 식별자 목록과 참여자 이름이 들어갑니다.
 #   예시만 올립니다: 3_validate/steps/cohorts/sample_cohort.conf.example
 3_validate/steps/cohorts/*.conf
 !3_validate/steps/cohorts/*.conf.example
@@ -34,5 +34,5 @@ Thumbs.db
 .idea/
 .vscode/
 
-# 작업 메모 — 공개 대상 아님
+# 작업 메모: 공개 대상 아님
 _DEPLOY_HOLD.txt

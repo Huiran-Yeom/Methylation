@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""최종 DMR 패널 — 74검체 전체로 1회 (2026-08-13)
+"""최종 DMR 패널: 74검체 전체로 1회 (2026-08-13)
 
   조각을 나누지 않는다. dmr_nested_cv.py 의 fold 안 절차와 같되
   학습 자료가 74검체 전부다.
@@ -20,7 +20,7 @@ if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
 import os as _os, sys as _sys
-# 0_setup 을 찾는다. 이 파일이 «복사되어» 정리본 밖에서 돌 수도 있으므로
+# 0_setup 을 찾는다. 이 파일이 「복사되어」 정리본 밖에서 돌 수도 있으므로
 #   ① 자기 위에서 위로 올라가며 찾고 ② 환경변수 METH_CONF_DIR ③ 그래도 없으면
 #   설정 없이 돌 수 있게 기본값으로 간다(검증이 검체 폴더로 복사해 쓰는 경로다).
 _h = _os.path.dirname(_os.path.abspath(__file__))
@@ -38,7 +38,7 @@ try:
     _M, _D = _cfg.METH_ROOT, _cfg.DATASET_ROOT
 except ImportError:
     raise SystemExit(
-        '설정을 못 찾았습니다 — 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
+        '설정을 못 찾았습니다. 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
         '  이 파일은 정리본 안에서 도는 것이라 기본값으로 넘어가지 않습니다.\n'
         '  트리 밖에서 돌리려면 METH_CONF_DIR 로 0_setup 자리를 주십시오.')
 
@@ -52,9 +52,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from moderated_t import moderated_ttest, bh, efp
 
 # ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
-#   배치가 다르면 «여기만» 고칩니다. 0_setup/config.conf 에는 뿌리 둘
-#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 있습니다.
-#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수도 있습니다(아래 참조).
+#   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
+#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
+#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
 # 2026-09-26: 기본값이 `m_candidates`·`m_panel` 이었다 — **옛 m 판**이다.
 #   `m_candidates` 는 서버에 아직 있고 `blocks_frac060.csv` 도 들어 있다. 그래서
 #   인자 없이 돌리면 죽지 않고 **옛 세대 후보로 새 패널을 만든다.** 조용히.
@@ -74,12 +74,12 @@ if '--cand'  in a: CAND  = a[a.index('--cand')      + 1]   # 2026-09-10 후보 �
 if '--out'   in a: OUT   = a[a.index('--out')       + 1]
 if CAND is None or OUT is None:
     sys.exit('사용: python 07_panel.py --cand <후보폴더> --out <산출폴더> [--topn N] [--dbeta X]\n'
-             '  기본값을 두지 않는다 — 옛 세대 후보로 조용히 새 패널을 만든 적이 있다.\n'
+             '  기본값을 두지 않는다. 옛 세대 후보로 조용히 새 패널을 만든 적이 있다.\n'
              '  09-14 에 쓴 값: --cand %s/results/dmr/j_candidates15\n'
              '                 --out  %s/results/dmr/j_panel_dmr15/bl200_d10_cellline' % (_M, _M))
-# 세대가 어긋나면 멈춘다 — 07_llrfeat 이 쓰는 것과 같은 관문이다.
+# 세대가 어긋나면 멈춘다. 07_llrfeat 이 쓰는 것과 같은 관문이다.
 # 2026-09-29: 06_jsdfeat·07_llrfeat 과 같은 꼴로 맞춘다. 두 구멍이 있었다 —
-#   ① «포함»(in)이라 j_candidates150 이 GEN=15 를 통과했다
+#   ① 「포함」(in)이라 j_candidates150 이 GEN=15 를 통과했다
 #   ② `if _gen and` 라서 환경에 GEN 이 없으면 관문이 통째로 꺼졌다(손으로 돌릴 때).
 _gen = _os.environ.get('GEN', '') or getattr(_cfg, 'GEN', '')
 _want_cand = 'j_candidates' + _gen
@@ -144,13 +144,13 @@ print('  다중검정  q<0.05 %d개 중 기대 위양성 %.0f개(%.1f%%) · 상�
 print('  효과크기 뒤 %d개 중 기대 위양성 %.0f개(%.1f%%) · 상한 %.0f개'
       % (len(sig), e2, 100.0 * e2 / max(1, len(sig)), u2))
 if len(sig) < TOPN:
-    print('! 유의 블록 %d 개가 N=%d 보다 적다 — 전부 사용' % (len(sig), TOPN))
+    print('! 유의 블록 %d 개가 N=%d 보다 적다. 전부 사용' % (len(sig), TOPN))
 # 2026-09-28: 0 이면 여기서 멈춘다. 그대로 가면 stability() 안의 sklearn 이
-#   'Found array with 0 feature(s)' 로 터져 «왜 0인지» 를 알 수 없다.
+#   'Found array with 0 feature(s)' 로 터져 「왜 0인지」 를 알 수 없다.
 #   연기시험(작은 표본)에서 실제로 그 traceback 만 남았다.
 if len(sig) == 0:
     raise SystemExit(
-        '유의 블록이 0 입니다 — q<0.05 이고 |dbeta|>=%.0f 인 블록이 없습니다. '
+        '유의 블록이 0 입니다. q<0.05 이고 |dbeta|>=%.0f 인 블록이 없습니다. '
         '(q<0.05 는 %d개였습니다.)  DBETA 를 낮추거나(--dbeta) 입력을 늘리십시오.'
         % (DBETA, len(s1)))
 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""보완판 JSD 패널 — 2026-09-10
+"""보완판 JSD 패널: 2026-09-10
   필터  JSD > t_null   (귀무 백분위 · 규칙: 99.9% 기본 · 200 미달이면 99.5% · 그래도 미달이면 99%)
   정렬  freq 내림  ->  JSD 내림          (freq = 복원추출 100회 중 JSD 상위 TOPN 에 든 횟수)
   컷    상위 N
@@ -10,7 +10,7 @@ if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
 import os as _os, sys as _sys
-# 0_setup 을 찾는다. 이 파일이 «복사되어» 정리본 밖에서 돌 수도 있으므로
+# 0_setup 을 찾는다. 이 파일이 「복사되어」 정리본 밖에서 돌 수도 있으므로
 #   ① 자기 위에서 위로 올라가며 찾고 ② 환경변수 METH_CONF_DIR ③ 그래도 없으면
 #   설정 없이 돌 수 있게 기본값으로 간다(검증이 검체 폴더로 복사해 쓰는 경로다).
 _h = _os.path.dirname(_os.path.abspath(__file__))
@@ -28,7 +28,7 @@ try:
     _M, _D = _cfg.METH_ROOT, _cfg.DATASET_ROOT
 except ImportError:
     raise SystemExit(
-        '설정을 못 찾았습니다 — 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
+        '설정을 못 찾았습니다. 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
         '  이 파일은 정리본 안에서 도는 것이라 기본값으로 넘어가지 않습니다.\n'
         '  트리 밖에서 돌리려면 METH_CONF_DIR 로 0_setup 자리를 주십시오.')
 
@@ -36,7 +36,7 @@ except ImportError:
 import os, sys, math
 import numpy as np, pandas as pd
 
-# 2026-09-26: 기본값에 세대 접미사가 없어 «옛 세대» 를 가리켰다.
+# 2026-09-26: 기본값에 세대 접미사가 없어 「옛 세대」 를 가리켰다.
 #   09-23 사고가 옛 세대 폴더를 덮은 원인이 바로 이것이다. GEN 을 따른다.
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:
@@ -47,16 +47,16 @@ if not _GEN:
                          '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
 # 2026-09-29: 표준 머리글을 끼울 때 04_jsd 의 D·OUT·K,MINR 대입이 함께 붙어왔다.
 #   아래에서 다시 대입하므로 동작에는 영향이 없었지만, OUT 이 한때 j_jsd 를
-#   가리키는 것은 읽는 사람을 속인다 — 이 파일은 j_panel<GEN>_supplement 에 쓴다.
+#   가리키는 것은 읽는 사람을 속인다. 이 파일은 j_panel<GEN>_supplement 에 쓴다.
 #   경로·상수는 아래 한 곳에서만 정한다.
 
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # moderated_t 는 형제다
 from moderated_t import moderated_ttest, bh
 # ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
-#   배치가 다르면 «여기만» 고칩니다. 0_setup/config.conf 에는 뿌리 둘
-#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 있습니다.
-#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수도 있습니다(아래 참조).
+#   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
+#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
+#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
 R = _M + "/results/dmr"
 CAND = R + "/j_candidates" + _GEN
 K    = int(_os.environ.get("PATTERN_K", 0) or _cfg.PATTERN_K)
@@ -96,7 +96,7 @@ T = pd.DataFrame({"chr": B.index.get_level_values(0).astype(str),
 P = P.merge(T, on=["chr", "blk"], how="left")
 os.makedirs(OUT, exist_ok=True)
 P.to_csv("%s/panel_jsd_supplement_n%d.csv" % (OUT, N), index=False)
-print("\n상위 %d — freq %d~%d · JSD %.3f~%.3f" % (N, P.freq.min(), P.freq.max(), P.jsd_obs.min(), P.jsd_obs.max()))
+print("\n상위 %d: freq %d~%d · JSD %.3f~%.3f" % (N, P.freq.min(), P.freq.max(), P.jsd_obs.min(), P.jsd_obs.max()))
 print("  기존 기준(선정에 안 씀): q<0.05 %d (%.1f%%) · |dbeta|>=30 %d (%.1f%%)"
       % (int((P.q < 0.05).sum()), 100 * (P.q < 0.05).mean(),
          int((P.dbeta.abs() >= 30).sum()), 100 * (P.dbeta.abs() >= 30).mean()))

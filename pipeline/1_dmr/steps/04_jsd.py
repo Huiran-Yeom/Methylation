@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""S0c JSD 계산 (2026-08-20) — 여기서 처음으로 암/정상 표지를 쓴다.
+"""S0c JSD 계산 (2026-08-20): 여기서 처음으로 암/정상 표지를 쓴다.
 
 저장해둔 무늬 카운트로 창마다 JSD 를 잰다. 칸의 JSD 는 창들의 평균(기본).
 최종 선정에서는 조각마다 다시 계산해야 한다. 이 실행은 문턱을 정하기 위한 진단이다.
@@ -14,7 +14,7 @@ if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
 import os as _os, sys as _sys
-# 0_setup 을 찾는다. 이 파일이 «복사되어» 정리본 밖에서 돌 수도 있으므로
+# 0_setup 을 찾는다. 이 파일이 「복사되어」 정리본 밖에서 돌 수도 있으므로
 #   ① 자기 위에서 위로 올라가며 찾고 ② 환경변수 METH_CONF_DIR ③ 그래도 없으면
 #   설정 없이 돌 수 있게 기본값으로 간다(검증이 검체 폴더로 복사해 쓰는 경로다).
 _h = _os.path.dirname(_os.path.abspath(__file__))
@@ -32,7 +32,7 @@ try:
     _M, _D = _cfg.METH_ROOT, _cfg.DATASET_ROOT
 except ImportError:
     raise SystemExit(
-        '설정을 못 찾았습니다 — 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
+        '설정을 못 찾았습니다. 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
         '  이 파일은 정리본 안에서 도는 것이라 기본값으로 넘어가지 않습니다.\n'
         '  트리 밖에서 돌리려면 METH_CONF_DIR 로 0_setup 자리를 주십시오.')
 
@@ -40,7 +40,7 @@ except ImportError:
 import os, sys, math
 import numpy as np, pandas as pd
 
-# 2026-09-26: 기본값에 세대 접미사가 없어 «옛 세대» 를 가리켰다.
+# 2026-09-26: 기본값에 세대 접미사가 없어 「옛 세대」 를 가리켰다.
 #   09-23 사고가 옛 세대 폴더를 덮은 원인이 바로 이것이다. GEN 을 따른다.
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:
@@ -50,9 +50,9 @@ if not _GEN:
         raise SystemExit('GEN(패널 세대)을 못 읽었습니다 — config.conf 의 GEN 을 채우거나 '
                          '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
 # ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
-#   배치가 다르면 «여기만» 고칩니다. 0_setup/config.conf 에는 뿌리 둘
-#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 있습니다.
-#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수도 있습니다(아래 참조).
+#   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
+#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
+#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
 D    = _M + '/results/dmr/j_jsdcount' + _GEN
 CAND = _M + '/results/dmr/j_candidates' + _GEN
 OUT  = _M + '/results/dmr/j_jsd' + _GEN
@@ -69,9 +69,9 @@ a = sys.argv
 if '--k'    in a: K    = int(a[a.index('--k')+1])
 if '--frac' in a: FRAC = float(a[a.index('--frac')+1])
 if '--need' in a: NEED_N = int(a[a.index('--need')+1])   # 2026-09-10 정상 커버 기준을 CLI 로 (60%%)
-# 2026-09-28: '--needg' 는 «있는지» 만 보고 값을 안 읽어서, 주면
+# 2026-09-28: '--needg' 는 「있는지」 만 보고 값을 안 읽어서, 주면
 #   자동계산만 꺼지고 기본값이 남았다. 연기시험에서 --needg 1 을 줬는데
-#   «암 6종 이상» 으로 돌았다. 조용히 무시되는 인자였다.
+#   「암 6종 이상」 으로 돌았다. 조용히 무시되는 인자였다.
 if '--needg' in a: NEED_G = int(a[a.index('--needg')+1])
 if '--minr' in a: MINR = int(a[a.index('--minr')+1])
 if '--dir'  in a: D    = a[a.index('--dir')+1]
@@ -141,10 +141,10 @@ W['jsd'], W['rd'], W['nn'], W['ng'] = J, rdN + rdG, nQ, nP
 V = W[ok]
 print('쓸 수 있는 창 %d / %d (%.1f%%)' % (len(V), nw, 100.0*len(V)/nw))
 # 2026-09-28: 0 이면 여기서 멈춘다. 그대로 가면 np.percentile([]) 안에서
-#   터져 numpy traceback 만 남고 «왜 0인지» 를 알 수 없다.
+#   터져 numpy traceback 만 남고 「왜 0인지」 를 알 수 없다.
 if len(V) == 0:
     raise SystemExit(
-        '쓸 수 있는 창이 0 입니다 — 기준을 채운 창이 없습니다.'
+        '쓸 수 있는 창이 0 입니다. 기준을 채운 창이 없습니다.'
         '  정상 %d명 / 암 %d종 이 있고 기준은 정상 %d명 이상 · 암 %d종 이상입니다.'
         % (len(norm), len(lines), NEED_N, NEED_G)
         + '  --need · --needg 로 낮추거나 입력을 늘리십시오.')

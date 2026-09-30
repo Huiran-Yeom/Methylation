@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-"""귀무B 세 판 — bl200 의 CpG 수 분포에 맞춰 층화 추출 (2026-09-14 · 파일로 굳힘 2026-09-26)
+"""귀무B 세 판: bl200 의 CpG 수 분포에 맞춰 층화 추출 (2026-09-14 · 파일로 굳힘 2026-09-26)
 
 귀무A 만 두면 bl200 이 못 넘겼을 때 「bl200 블록이 쓸모없다」와
 「bl200 은 칸이 절반이다」를 구별할 수 없다. 귀무B 는 bl200 의 칸 수 불리함을
-**그대로 진다** — 그래서 bl200 의 잣대다. jsd/jsdb 의 잣대는 귀무A. 사전등록 3-1절.
+**그대로 진다**: 그래서 bl200 의 잣대다. jsd/jsdb 의 잣대는 귀무A. 사전등록 3-1절.
 
-모집단은 `blocks_frac060.csv` 23,532칸 — Baseline 이 고르는 그 모집단이다.
+모집단은 `blocks_frac060.csv` 23,532칸: Baseline 이 고르는 그 모집단이다.
 CpG 수로 버킷을 만들고(8 이상은 한 칸으로 묶음) bl200 의 분포를 그대로 따라 뽑는다.
 실측으로 세 씨앗 모두 창 서는 칸 104 · CpG<3 인 칸 96 — bl200 과 정확히 일치한다.
 
@@ -39,7 +39,7 @@ try:
     _M = _cfg.METH_ROOT
 except ImportError:
     raise SystemExit(
-        '설정을 못 찾았습니다 — 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
+        '설정을 못 찾았습니다. 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
         '  이 파일은 정리본 안에서 도는 것이라 기본값으로 넘어가지 않습니다.\n'
         '  트리 밖에서 돌리려면 METH_CONF_DIR 로 0_setup 자리를 주십시오.')
 
@@ -50,7 +50,7 @@ import sys
 import numpy as np
 import pandas as pd
 
-# 2026-09-26: 세대를 박아 두면 GEN 을 바꿨을 때 «이전 세대» 후보로 귀무를 만든다.
+# 2026-09-26: 세대를 박아 두면 GEN 을 바꿨을 때 「이전 세대」 후보로 귀무를 만든다.
 #   그러면 실제 패널과 귀무 패널의 세대가 갈리는데, 여기가 대조의 기준선이다.
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:
@@ -60,9 +60,9 @@ if not _GEN:
         raise SystemExit('GEN(패널 세대)을 못 읽었습니다 — config.conf 의 GEN 을 채우거나 '
                          '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
 # ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
-#   배치가 다르면 «여기만» 고칩니다. 0_setup/config.conf 에는 뿌리 둘
-#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 있습니다.
-#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수도 있습니다(아래 참조).
+#   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
+#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
+#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
 R = _M + '/results/dmr'
 OUT = R + '/j_panel_dmr' + _GEN + '_panels'
 CAND = R + '/j_candidates' + _GEN
@@ -82,9 +82,9 @@ cnt = collections.Counter()
 for (c, b), n in B.groupby(['chr', 'blk']).size().items():
     cnt[(str(c), int(b))] = int(n)
 
-# bl200 의 CpG 수 분포를 그대로 베낀다 — 그래야 칸 수 불리함이 같아진다
+# bl200 의 CpG 수 분포를 그대로 베낀다. 그래야 칸 수 불리함이 같아진다
 # 2026-09-28: bl200 의 CpG 수 분포를 베끼는 것이 이 판의 핵심이다.
-#   그 파일이 없으면 «누가 만드는지» 를 말하고 멈춘다.
+#   그 파일이 없으면 「누가 만드는지」 를 말하고 멈춘다.
 _bl = '%s/bl200/DMR_confirmed_bl200.csv' % OUT
 if not os.path.isfile(_bl):
     raise SystemExit(
@@ -116,7 +116,7 @@ for i in (1, 2, 3):
     os.makedirs(o, exist_ok=True)
     d.to_csv('%s/DMR_confirmed_randb%d200.csv' % (o, i), index=False)
     with open(o + '/_origin.txt', 'w') as h:
-        h.write('무작위 패널 귀무B 씨앗 %d — 2026-09-14\n'
+        h.write('무작위 패널 귀무B 씨앗 %d: 2026-09-14\n'
                 '  모집단: blocks_frac060.csv 23,532칸 (Baseline 이 고르는 그 모집단)\n'
                 '  bl200 의 CpG 수 분포에 맞춰 층화 추출. bl200 의 칸 수 불리함을 그대로 진다.\n'
                 '  bl200 의 잣대로 쓴다. jsd/jsdb 의 잣대는 귀무A(rand*200).\n' % i)

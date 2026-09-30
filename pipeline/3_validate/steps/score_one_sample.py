@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""학습에서 저장한 모델을 환자 검체에 적용 — j 판용 (2026-08-24)
+"""학습에서 저장한 모델을 환자 검체에 적용: j 판용 (2026-08-24)
 
   ~/tools/bin/val04_2_apply.py 를 j 판 모델 구조에 맞춘 것.
   바꾼 것은 모델을 찾는 자리뿐이다.
@@ -10,7 +10,7 @@
 
 
   다시 학습하지 않는다. joblib 의 모델·특징순서·문턱·학습셋평균을 그대로 쓴다.
-  모델은 비율을 합쳐 학습한 것이라 하나뿐이다 — 검체의 암 비율을 몰라도 쓸 수 있다.
+  모델은 비율을 합쳐 학습한 것이라 하나뿐이다. 검체의 암 비율을 몰라도 쓸 수 있다.
 
   모델 고르기
     BEST_POOL      특징 전부. 검체에 그 행렬이 다 있어야 쓴다
@@ -27,7 +27,7 @@ if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
 import os as _os, sys as _sys
-# 0_setup 을 찾는다. 이 파일이 «복사되어» 정리본 밖에서 돌 수도 있으므로
+# 0_setup 을 찾는다. 이 파일이 「복사되어」 정리본 밖에서 돌 수도 있으므로
 #   ① 자기 위에서 위로 올라가며 찾고 ② 환경변수 METH_CONF_DIR ③ 그래도 없으면
 #   설정 없이 돌 수 있게 기본값으로 간다(검증이 검체 폴더로 복사해 쓰는 경로다).
 _h = _os.path.dirname(_os.path.abspath(__file__))
@@ -45,7 +45,7 @@ try:
     _M, _D = _cfg.METH_ROOT, _cfg.DATASET_ROOT
 except ImportError:
     raise SystemExit(
-        '설정을 못 찾았습니다 — 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
+        '설정을 못 찾았습니다. 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
         '  이 파일은 정리본 안에서 도는 것이라 기본값으로 넘어가지 않습니다.\n'
         '  트리 밖에서 돌리려면 METH_CONF_DIR 로 0_setup 자리를 주십시오.')
 
@@ -64,7 +64,7 @@ ALL = '--allmodels' in a
 import glob as _glob
 
 def _md5f(p):
-    """2026-09-15 채점 행에 모델 파일 지문을 남긴다 — 어느 모델이 이 점수를 냈는지."""
+    """2026-09-15 채점 행에 모델 파일 지문을 남긴다. 어느 모델이 이 점수를 냈는지."""
     import hashlib
     h = hashlib.md5()
     with open(p, 'rb') as _fh:
@@ -131,7 +131,7 @@ def pick():
         keys = B['feature_set'].split('|')
         miss = [k for k in keys if not have(k, p0)]
         if miss:
-            print('  %s 못 씀 — 검체에 %s 행렬 없음' % (name, ','.join(miss)))
+            print('  %s 못 씀: 검체에 %s 행렬 없음' % (name, ','.join(miss)))
             continue
         return name, B, keys
     return None, None, None
@@ -192,12 +192,12 @@ def run_model(name, B, keys, rows):
         #   실측 09-22: bl200 50k z=106 · jsd200 100k z=60 → 전 검체 proba 1.0 → AUC 0.500
         #              bl200 5k z=8 → 0.9997 (정상) · jsd200 50k z=29 → 0.992 (아슬아슬)
         #   AUC 는 순위만 보므로 **뭉친 것이 확인되면 decision_function 으로 바꾼다.**
-        #   모델은 그대로다 — 같은 z 를 다른 방식으로 읽을 뿐이라 판정 규칙을 안 바꾼다.
+        #   모델은 그대로다. 같은 z 를 다른 방식으로 읽을 뿐이라 판정 규칙을 안 바꾼다.
         _sat = ''
         _thr_z = None      # 포화로 df 를 쓸 때의 문턱 (z 공간)
         if st == 'predict_proba' and hasattr(m, 'predict_proba'):
             sc = m.predict_proba(X)[:, 1]
-            # [09-22 보강] «고유값 2개 미만» 만으로는 부족하다.
+            # [09-22 보강] 「고유값 2개 미만」 만으로는 부족하다.
             #   1차 조합에서 고유값 76개인데 범위가 1.000~1.000 인 경우를 봤다 —
             #   순위가 부동소수점 끝자리에만 남아 위태롭다. 폭으로 판정한다.
             #   폭(max-min)이 1e-6 미만이면 사실상 뭉친 것으로 본다.

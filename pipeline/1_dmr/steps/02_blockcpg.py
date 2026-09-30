@@ -4,7 +4,7 @@
 JSD 창은 모든 검체에서 같아야 한다. 검체마다 관측된 자리로 창을 만들면
 서로 다른 자리의 분포를 맞대게 되어 JSD 가 성립하지 않는다.
 그래서 칸마다 '충분한 검체가 함께 보는 자리'를 먼저 확정한다.
-기준은 후보 칸과 같다 — 정상 60% AND 암 60%(종당 파일 MINREP개 이상).
+기준은 후보 칸과 같다. 정상 60% AND 암 60%(종당 파일 MINREP개 이상).
 """
 
 # 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돌아
@@ -13,7 +13,7 @@ if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
 import os as _os, sys as _sys
-# 0_setup 을 찾는다. 이 파일이 «복사되어» 정리본 밖에서 돌 수도 있으므로
+# 0_setup 을 찾는다. 이 파일이 「복사되어」 정리본 밖에서 돌 수도 있으므로
 #   ① 자기 위에서 위로 올라가며 찾고 ② 환경변수 METH_CONF_DIR ③ 그래도 없으면
 #   설정 없이 돌 수 있게 기본값으로 간다(검증이 검체 폴더로 복사해 쓰는 경로다).
 _h = _os.path.dirname(_os.path.abspath(__file__))
@@ -31,7 +31,7 @@ try:
     _M, _D = _cfg.METH_ROOT, _cfg.DATASET_ROOT
 except ImportError:
     raise SystemExit(
-        '설정을 못 찾았습니다 — 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
+        '설정을 못 찾았습니다. 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
         '  이 파일은 정리본 안에서 도는 것이라 기본값으로 넘어가지 않습니다.\n'
         '  트리 밖에서 돌리려면 METH_CONF_DIR 로 0_setup 자리를 주십시오.')
 
@@ -40,12 +40,12 @@ import os, sys, glob, math
 import numpy as np, pandas as pd
 
 # ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
-#   배치가 다르면 «여기만» 고칩니다. 0_setup/config.conf 에는 뿌리 둘
-#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 있습니다.
-#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수도 있습니다(아래 참조).
+#   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
+#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
+#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
 ND   = _M + '/sample_data/_input/normal_pub15'
 GD   = _D + '/training/GBM_cell-line/cov'
-# 2026-09-26: 기본값에 세대 접미사가 없어 «옛 세대» 를 가리켰다.
+# 2026-09-26: 기본값에 세대 접미사가 없어 「옛 세대」 를 가리켰다.
 #   09-23 사고가 옛 세대 폴더를 덮은 원인이 바로 이것이다. GEN 을 따른다.
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:

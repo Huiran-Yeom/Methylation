@@ -12,7 +12,7 @@ if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
 import os as _os, sys as _sys
-# 0_setup 을 찾는다. 이 파일이 «복사되어» 정리본 밖에서 돌 수도 있으므로
+# 0_setup 을 찾는다. 이 파일이 「복사되어」 정리본 밖에서 돌 수도 있으므로
 #   ① 자기 위에서 위로 올라가며 찾고 ② 환경변수 METH_CONF_DIR ③ 그래도 없으면
 #   설정 없이 돌 수 있게 기본값으로 간다(검증이 검체 폴더로 복사해 쓰는 경로다).
 _h = _os.path.dirname(_os.path.abspath(__file__))
@@ -30,7 +30,7 @@ try:
     _M, _D = _cfg.METH_ROOT, _cfg.DATASET_ROOT
 except ImportError:
     raise SystemExit(
-        '설정을 못 찾았습니다 — 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
+        '설정을 못 찾았습니다. 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
         '  이 파일은 정리본 안에서 도는 것이라 기본값으로 넘어가지 않습니다.\n'
         '  트리 밖에서 돌리려면 METH_CONF_DIR 로 0_setup 자리를 주십시오.')
 
@@ -40,7 +40,7 @@ import numpy as np, pandas as pd
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from moderated_t import moderated_ttest, bh
 
-# 2026-09-26: 기본값에 세대 접미사가 없어 «옛 세대» 를 가리켰다.
+# 2026-09-26: 기본값에 세대 접미사가 없어 「옛 세대」 를 가리켰다.
 #   09-23 사고가 옛 세대 폴더를 덮은 원인이 바로 이것이다. GEN 을 따른다.
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:
@@ -50,12 +50,12 @@ if not _GEN:
         raise SystemExit('GEN(패널 세대)을 못 읽었습니다 — config.conf 의 GEN 을 채우거나 '
                          '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
 # ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
-#   배치가 다르면 «여기만» 고칩니다. 0_setup/config.conf 에는 뿌리 둘
-#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 있습니다.
-#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수도 있습니다(아래 참조).
+#   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
+#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
+#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
 # 2026-09-26: 기본값이 `j_candidates_d5` · `jsd_K3_minr4` 였다 — **깊이5 감도 변종**이고
 #   minr 도 4 다. 실제로 쓴 것은 `j_candidates<GEN>` 과 `jsd_K3_minr6` 다.
-#   그대로 두면 인자를 빠뜨린 사람이 «다른 JSD 표»로 패널을 고른다. 필수로 바꾼다.
+#   그대로 두면 인자를 빠뜨린 사람이 「다른 JSD 표」로 패널을 고른다. 필수로 바꾼다.
 CAND = _M + '/results/dmr/j_candidates' + _GEN
 JSD  = None
 OUT  = _M + '/results/dmr/j_panel' + _GEN
@@ -71,7 +71,7 @@ if '--col'  in a: COL  = a[a.index('--col')+1]
 #   run_dmr.sh 는 `ls ... | head -1` 로 만들어 파일이 없으면 빈 값을 넘긴다.
 if not JSD:
     sys.exit('사용: python 06_select.py --jsd <jsd_K?_minr?.parquet> [--cand ..] [--out ..] [--n N]'
-             '   ·  --jsd 에 기본값을 두지 않는다 — minr 이 다른 표를 읽으면 다른 패널이 나온다.'
+             '   ·  --jsd 에 기본값을 두지 않는다. minr 이 다른 표를 읽으면 다른 패널이 나온다.'
              '   ·  09-10 에 쓴 값: --jsd %s/results/dmr/j_jsd%s/jsd_K3_minr6.parquet --n 200'
              % (_M, _GEN))
 

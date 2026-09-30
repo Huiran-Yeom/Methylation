@@ -1,13 +1,13 @@
 #!/bin/bash
-# ── 자체 점검 — 한 번 돌리면 표 하나가 나옵니다 ──────────────────────────
+# ── 자체 점검: 한 번 돌리면 표 하나가 나옵니다 ──────────────────────────
 #
-#   목적: 47개 파일을 읽지 않고 «제대로 되어 있나» 를 확인한다.
+#   목적: 47개 파일을 읽지 않고 「제대로 되어 있나」 를 확인한다.
 #   읽기만 합니다. 아무것도 만들지 않고 아무것도 고치지 않습니다.
 #
 #   사용
 #     bash selfcheck.sh
 #
-#   PASS 가 전부면 «구조가 성립한다» 는 뜻입니다. «결과가 맞다» 는 뜻은 아닙니다 —
+#   PASS 가 전부면 「구조가 성립한다」 는 뜻입니다. 「결과가 맞다」 는 뜻은 아닙니다 —
 #   그건 README 의 「Reproducibility」 표(md5 대조)가 답합니다.
 set -u
 
@@ -29,7 +29,7 @@ done
 echo
 echo "════ 2. 단계 파일 수 ════"
 #   2026-09-29: 「비었나」만 보면 11개 중 10개를 지워도 통과한다. 기대 개수를 적어 둔다.
-#   단계를 더하거나 빼면 이 숫자도 같이 고친다 — 그게 이 검사의 요점이다.
+#   단계를 더하거나 빼면 이 숫자도 같이 고친다. 그게 이 검사의 요점이다.
 while IFS=: read -r d want; do
   n=$(find "$d" -maxdepth 1 -type f \( -name '*.py' -o -name '*.sh' \) 2>/dev/null | wc -l)
   if [ "$n" -eq "$want" ]; then ok "$d  $n개"
@@ -84,7 +84,7 @@ PY
 )
   case "$_out" in
     *SETUPFAIL*) bad "설정을 못 읽습니다" "$_out" ;;
-    *) ok "설정 읽힘 — $(echo "$_out" | grep '^VERSION')"
+    *) ok "설정 읽힘: $(echo "$_out" | grep '^VERSION')"
        _m=$(echo "$_out" | awk '/^EXPOSED_MISSING/{print $2}')
        [ "$_m" = "-" ] && ok "conf 키 전부 노출됨 ($(echo "$_out" | awk '/^KEYS/{print $2}')개)" \
                        || bad "노출 안 된 conf 키: $_m" ;;
@@ -101,8 +101,8 @@ _id=$(grep -rlP '^\s*[A-Za-z_]*[가-힣][A-Za-z0-9_가-힣]*\s*=' --include='*.p
 echo
 echo "════ 6. 서로를 부르는 이름이 실재하나 ════"
 #   2026-09-29: $S/ · $_HERE/ 만 보던 것을 넓혔다. run_train.sh 와 make_report.sh 는
-#   `cd "$S" && python -u <파일>` 꼴로 «맨 이름» 을 넘기고, run_one_sample.sh 는
-#   "$TRAIN_SRC/<파일>" 을 쓴다 — 셋 다 옛 규칙에 하나도 걸리지 않아, 단계 파일을
+#   `cd "$S" && python -u <파일>` 꼴로 「맨 이름」 을 넘기고, run_one_sample.sh 는
+#   "$TRAIN_SRC/<파일>" 을 쓴다. 셋 다 옛 규칙에 하나도 걸리지 않아, 단계 파일을
 #   지워도 이 묶음이 통과했다. 파이썬으로 본다(한글 경로에서 grep 이 새기도 한다).
 if [ -n "$_py" ]; then
   _out=$("$_py" - <<'HD6'
@@ -146,7 +146,7 @@ _conf=$(find . -path '*/cohorts/*' -name '*.conf' ! -name '*.example' 2>/dev/nul
 
 echo
 echo "════ 8. 단일인용 heredoc 이 쓰는 변수가 export 되나 ════"
-#   <<'X' 는 쓸 때 치환되지 않는다. 그 안의 스크립트는 «따로» 도니까 환경에서 찾는다.
+#   <<'X' 는 쓸 때 치환되지 않는다. 그 안의 스크립트는 「따로」 도니까 환경에서 찾는다.
 #   밖에서 export 안 했고 내부가 set -u 면 그 자리에서 죽는다 — 출력이 /dev/null 이면 조용히.
 #   2026-09-29: 정리 중 score_parallel.sh 의 _APPLY 가 정확히 이 꼴로 깨져 있었다.
 if [ -n "$_py" ]; then
@@ -204,7 +204,7 @@ HD8
 fi
 echo
 echo "════ 9. 산출물 경로에 한글이 없나 ════"
-#   코드 주석은 한글이다(의도). 그러나 «경로·파일명» 에 한글이 있으면 영어권 사용자가
+#   코드 주석은 한글이다(의도). 그러나 「경로·파일명」 에 한글이 있으면 영어권 사용자가
 #   만든 산출물을 읽을 수 없고, 저장소의 이름 규칙이 깨진다.
 #   판정: 공백 없는 토큰에 한글 + (구분자 2개 이상 또는 아는 확장자). 따옴표 안팎을 다 본다.
 if [ -n "$_py" ]; then
@@ -230,10 +230,10 @@ for r, ds, fs in os.walk('.'):
                 #   「요청 3/보유 5」 같은 말은 구분자가 하나뿐이라 걸리지 않는다.
                 if t.count('/') >= 2 or t.endswith(EXT):
                     hits.append('%s:%d  %s' % (p, i, t[:64]))
-        # 2026-09-29: 위는 «한 토큰» 만 본다. 경로를 이어 붙이면 한글이 조각으로
-        #   숨는다 — `+ '_cellline'` 자리에 `'_세포주'` 가 있던 것을 못 잡았다.
-        #   따옴표 안의 «공백 없는» 한글 조각 중 앞이 _ . / 인 것을 경로 조각으로 본다.
-        #   («암»·«정상» 같은 분류 라벨은 앞에 그런 글자가 없어 걸리지 않는다.)
+        # 2026-09-29: 위는 「한 토큰」 만 본다. 경로를 이어 붙이면 한글이 조각으로
+        #   숨는다. `+ '_cellline'` 자리에 `'_세포주'` 가 있던 것을 못 잡았다.
+        #   따옴표 안의 「공백 없는」 한글 조각 중 앞이 _ . / 인 것을 경로 조각으로 본다.
+        #   (「암」·「정상」 같은 분류 라벨은 앞에 그런 글자가 없어 걸리지 않는다.)
         for i, L in enumerate(io.open(p, encoding='utf-8', errors='replace'), 1):
             if L.lstrip().startswith('#'): continue
             for m in FRAG.finditer(L.split('#')[0]):
@@ -251,8 +251,8 @@ HD9
 fi
 echo
 echo "════ 10. 단계 이름 목록 셋이 일치하나 ════"
-#   검증은 학습 스크립트를 «복사해» 돌린다. 그 이름 짝(val03_1 <-> 01_...py)이
-#   세 곳에 적혀 있다 — config.conf 의 STEP_MAP · make_val_config.py 의 기본값 ·
+#   검증은 학습 스크립트를 「복사해」 돌린다. 그 이름 짝(val03_1 <-> 01_...py)이
+#   세 곳에 적혀 있다. config.conf 의 STEP_MAP · make_val_config.py 의 기본값 ·
 #   run_one_sample.sh 의 기본값. 셋이 어긋나면 그 피처만 빠진 채 완주하고
 #   채점이 결측을 학습 평균으로 메워 AUC 0.500 이 난다. 에러는 안 난다.
 if [ -n "$_py" ]; then
@@ -315,10 +315,10 @@ _junk=$(find . -not -path './.git/*' -not -path '*__pycache__*' \
 if [ -z "$_junk" ]; then ok "임시·백업 파일 0개"
 else bad "치워야 할 것 $(printf '%s\n' "$_junk" | wc -l)개" "$(printf '%s\n' "$_junk" | sed 's/^/        /')"; fi
 echo
-echo "════ 12. 경로가 맨 앞 «경로 블록» 에 모여 있나 ════"
-#   각 단계 스크립트는 자기가 읽고 쓰는 자리를 파일 «맨 앞» 한 묶음에 적는다.
+echo "════ 12. 경로가 맨 앞 「경로 블록」 에 모여 있나 ════"
+#   각 단계 스크립트는 자기가 읽고 쓰는 자리를 파일 「맨 앞」 한 묶음에 적는다.
 #   그래야 그 파일만 열면 무엇을 건드리는지 보이고, 배치가 다른 사람은 거기만 고친다.
-#   블록 «밖» 에 자료 경로가 흩어져 있으면 그것을 못 찾는다 — 그 상태를 잡는다.
+#   블록 「밖」 에 자료 경로가 흩어져 있으면 그것을 못 찾는다. 그 상태를 잡는다.
 if [ -n "$_py" ]; then
   _out=$("$_py" - <<'HD12'
 import io, os
@@ -340,7 +340,7 @@ for r, ds, fs in os.walk("."):
         for i, x in enumerate(L):
             if x.lstrip().startswith("#"): continue
             body = x.split("#")[0]
-            if a is not None and b is not None and a <= i <= b: continue   # 블록 «안» 은 제자리
+            if a is not None and b is not None and a <= i <= b: continue   # 블록 「안」 은 제자리
             for t in BAD:
                 if t in body:
                     hits.append("%s:%d  %s" % (p, i + 1, body.strip()[:58]))
@@ -350,13 +350,13 @@ HD12
 )
   _n=$(echo "$_out" | awk '/^OUTSIDE/{print $2}')
   if [ "${_n:-1}" -eq 0 ]; then ok "자료 경로 전부 맨 앞 블록 안에 $(echo "$_out" | sed -n '1s/.*(\(.*\))/()/p')"
-  else bad "블록 «밖» 에 흩어진 경로 ${_n}곳" "$(echo "$_out" | sed 1d)"; fi
+  else bad "블록 「밖」 에 흩어진 경로 ${_n}곳" "$(echo "$_out" | sed 1d)"; fi
 fi
 echo
 echo "════════════════════════════════════════"
 printf '  PASS %d · FAIL %d\n' "$PASS" "$FAIL"
 if [ "$FAIL" -eq 0 ]; then
-  echo "  구조가 성립합니다. «결과가 맞다» 는 README 의 Reproducibility 표를 보십시오."
+  echo "  구조가 성립합니다. 「결과가 맞다」 는 README 의 Reproducibility 표를 보십시오."
   exit 0
 else
   echo "  위 FAIL 을 보십시오."

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""j 파이프라인 설정 — _make_versions.py 가 이 틀에서 생성한다. 직접 고치지 말 것.
+"""j 파이프라인 설정: _make_versions.py 가 이 틀에서 생성한다. 직접 고치지 말 것.
 
 이름 규칙  j{패널}_{깊이}_{믹싱}
   패널  bl200 | bl300 | jsd200 | jsd300
@@ -18,7 +18,7 @@ import os as _os
 import sys as _sys
 
 # 설정은 0_setup/config.conf 에서만 읽는다. 다른 설정 기전을 두지 않는다.
-# 2026-09-25: 검증은 이 파일을 작업폴더로 «복사» 해 돌린다 — 트리 밖이라
+# 2026-09-25: 검증은 이 파일을 작업폴더로 「복사」 해 돌린다 — 트리 밖이라
 #   상위 폴더를 거슬러 올라가도 0_setup 이 없다. 그때는 METH_CONF_DIR 를 본다.
 _h = _os.path.dirname(_os.path.abspath(__file__))
 for _ in range(5):
@@ -76,7 +76,7 @@ MIN_READS_PER_WINDOW = _cfg.MIN_READS_PER_WINDOW      # 2026-09-14 사용자 지
 NORMALIZE_PATTERN = True
 
 # ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
-#   배치가 다르면 «여기만» 고칩니다. config.conf 에는 뿌리 둘과 실험 설정만.
+#   배치가 다르면 「여기만」 고친다. config.conf 에는 뿌리 둘과 실험 설정만 둔다.
 GENOME_FOLDER = ROOT + '/data/Bisulfite_Genome/'   # bismark 인덱스 (없으면 --genome_folder 없이 돈다)
 # ╚══════════════════════════════════════════════════════════════════╝
 
@@ -88,17 +88,17 @@ TOP_N_SAMPLES = 0
 DMR_PER_GROUP = 0
 DMR_GROUP_RE = r'^([A-Za-z]+[0-9]*)[_-]'
 
-# 2026-09-30: 판마다 «자기 풀» 을 본다. 예전에는 _cellline 하나로 박혀 있었다.
+# 2026-09-30: 판마다 「자기 풀」 을 본다. 예전에는 _cellline 하나로 박혀 있었다.
 #   풀 BAM 은 패널 영역의 리드만 담는다. 귀무판은 무작위 블록이라 실판 합집합
 #   영역 밖이고, cellline 풀에는 그 자리의 리드가 없다 — 실측(09-30):
 #     rand1200  통과 블록 8 / 200
-#     rand3200  «풀 부족으로 중단» (정상 2,678 보유 / 2,936 요청)
+#     rand3200  「풀 부족으로 중단」 (정상 2,678 보유 / 2,936 요청)
 #   원본은 판마다 config.py 가 따로 있어 각자 자기 풀을 가리켰다:
 #     j15rand*  -> j_pool<GEN>_rand    (무작위 패널 전용 풀)
 #     j15randb* -> j_pool<GEN>_randb   (귀무B 전용 · bl200 CpG 분포 맞춤)
 #     그 외     -> j_pool<GEN>_cellline (정상15 · 암30 · 세포주 단위)
 #   1_dmr/steps/run_pool.sh 가 cellline|rand|randb 셋을 다 만든다.
-#   randb 를 rand 보다 «먼저» 본다 — 'randb1200' 은 'rand' 로도 시작한다.
+#   randb 를 rand 보다 「먼저」 본다. 'randb1200' 은 'rand' 로도 시작한다.
 if PANEL.startswith('randb'):  _POOLDIR = 'j_pool' + GEN + '_randb'
 elif PANEL.startswith('rand'): _POOLDIR = 'j_pool' + GEN + '_rand'
 else:                          _POOLDIR = 'j_pool' + GEN + '_cellline'
@@ -139,8 +139,8 @@ def ensure_dirs():
     for d in (MIX_SD, MIX_OUT, BISMARK_OUT, ML_OUT):
         os.makedirs(d, exist_ok=True)
     # 2026-09-24 산출 폴더를 만드는 자리에서 설정을 같이 남긴다.
-    #   이것이 없으면 «어느 설정에서 나온 숫자인가» 를 나중에 못 댄다.
-    #   import 시점이 아니라 여기서 부른다 — import 부작용은 만들지 않는다.
+    #   이것이 없으면 「어느 설정에서 나온 숫자인가」 를 나중에 못 댄다.
+    #   import 시점이 아니라 여기서 부른다. import 부작용은 만들지 않는다.
     _cfg.snapshot(ML_OUT)
 
 

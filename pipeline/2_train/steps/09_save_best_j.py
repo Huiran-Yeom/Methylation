@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""검증에 넘길 모델과 문턱을 굳힌다 — j 판용 (2026-08-21)
+"""검증에 넘길 모델과 문턱을 굳힌다. j 판용 (2026-08-21)
 
 없어진 save_best_pool.py 자리다. 전신 ~/tools/bin/save_best_mean.py (08-14) 와
 같은 방식을 쓰되 셋을 바꿨다.
@@ -28,7 +28,7 @@ if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
 import os as _os, sys as _sys
-# 0_setup 을 찾는다. 이 파일이 «복사되어» 정리본 밖에서 돌 수도 있으므로
+# 0_setup 을 찾는다. 이 파일이 「복사되어」 정리본 밖에서 돌 수도 있으므로
 #   ① 자기 위에서 위로 올라가며 찾고 ② 환경변수 METH_CONF_DIR ③ 그래도 없으면
 #   설정 없이 돌 수 있게 기본값으로 간다(검증이 검체 폴더로 복사해 쓰는 경로다).
 _h = _os.path.dirname(_os.path.abspath(__file__))
@@ -46,7 +46,7 @@ try:
     _M, _D = _cfg.METH_ROOT, _cfg.DATASET_ROOT
 except ImportError:
     raise SystemExit(
-        '설정을 못 찾았습니다 — 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
+        '설정을 못 찾았습니다. 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
         '  이 파일은 정리본 안에서 도는 것이라 기본값으로 넘어가지 않습니다.\n'
         '  트리 밖에서 돌리려면 METH_CONF_DIR 로 0_setup 자리를 주십시오.')
 
@@ -154,13 +154,13 @@ def fit_save(X, y, md, tag):
             auc = float(roc_auc_score(y, o))
         except Exception as e:
             print('      %-20s 실패 (%s)' % (mn, type(e).__name__))
-            failures.append('모델 %s 실패 (%s) — %s' % (mn, type(e).__name__, tag))
+            failures.append('모델 %s 실패 (%s): %s' % (mn, type(e).__name__, tag))
             continue
         if best is None or auc > best[1]:
             best = (mn, auc, o, meth)
     if best is None:
-        print('      %s — 네 모델 다 실패' % tag)
-        failures.append('네 모델 다 실패 — %s' % tag)
+        print('      %s: 네 모델 다 실패' % tag)
+        failures.append('네 모델 다 실패: %s' % tag)
         return None
     mn, auc, o, meth = best
     m = models()[mn]
@@ -186,7 +186,7 @@ def fit_save(X, y, md, tag):
     negdist, posdist = _dist(_neg), _dist(_pos)
     # 2026-09-15 [문턱 오차] 분위수 하나로는 "그 문턱이 얼마나 흔들리나" 를 못 낸다.
     #   음성 n=100 · p=0.95 일 때 95% 분위수의 95% 신뢰구간은 **순서통계량**으로 나온다
-    #   — 정렬한 음성 점수의 90~100번째. Bin(100,0.95) 의 평균 95 · SD 2.18 에서 온다.
+    #: 정렬한 음성 점수의 90~100번째. Bin(100,0.95) 의 평균 95 · SD 2.18 에서 온다.
     #   여유 있게 상위 20개를 남긴다. 이게 있어야 특이도 주장에 구간이 붙는다.
     negtop = sorted(float(x) for x in _neg)[-20:]
     os.makedirs(md, exist_ok=True)
@@ -223,7 +223,7 @@ for V in VERS:
     ps = sorted(int(os.path.basename(f).split('_')[0])
                 for f in glob.glob('%s/*_mean_%s.csv' % (D, V)))
     if not ps:
-        print('%s 건너뜀 — mean 행렬 없음' % V)
+        print('%s 건너뜀: mean 행렬 없음' % V)
         continue
     print('')
     print('== %s   비율 %d개' % (V, len(ps)))
@@ -261,7 +261,7 @@ for V in VERS:
         # 2026-09-14: 여기서 검체 이름을 r0,r1,... 로 덮어쓰고 있었다.
         #   그러면 같은 검체의 다른 비율판이 학습 접기와 검증 접기에 갈라 들어가도
         #   막을 수가 없다(GroupKFold 가 구조적으로 불가능해진다).
-        #   이름을 남긴다 — 중복은 비율을 붙여 구분하되 검체 부분을 보존한다.
+        #   이름을 남긴다. 중복은 비율을 붙여 구분하되 검체 부분을 보존한다.
         Xp.index = ['%s@r%d' % (str(ix), k)
                     for k, ix in enumerate(Xp.index)]
         yp.index = Xp.index
@@ -276,7 +276,7 @@ print('끝. 저장한 모델 %d개' % made)
 # 2026-09-15 [고침] 판마다 센다. 그리고 방향을 단정하지 않는다.
 #   앞서는 made(판 루프 누적)를 _expect(판 하나 기준)와 비교했다. 범위가 달랐다.
 #   5k+15k 를 굳히니 254 vs 127, 네 판이면 508 vs 127 로 **정상인데 실패**가 떴다.
-#   그리고 문구가 "조용히 적게" 였는데 실제로는 많았다 — 반대로 알려준 것이다.
+#   그리고 문구가 "조용히 적게" 였는데 실제로는 많았다. 반대로 알려준 것이다.
 #   [배운 것] 관문이 거짓으로 울면 그 관문은 죽는다. 254 때 이미 울었는데 지나쳤다.
 #   멈추는 관문이어도 한 번 거짓이면 두 번째부터 안 읽힌다.
 for _V in sorted(made_by_V):

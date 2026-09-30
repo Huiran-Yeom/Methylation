@@ -10,7 +10,7 @@
   jsdb200 j_panel15_supplement/panel_jsd_supplement_n200.csv
 
 원래 인라인으로 돌려 파일이 없었다. 09-26 에 세션 기록에서 찾아 그대로 옮겼다.
-계산은 한 글자도 바꾸지 않았다 — 바꾸면 기존 패널과 달라진다.
+계산은 한 글자도 바꾸지 않았다. 바꾸면 기존 패널과 달라진다.
 
   사용
     python 08_export_panels.py                  # 실제 자리에 쓴다
@@ -39,7 +39,7 @@ try:
     _M = _cfg.METH_ROOT
 except ImportError:
     raise SystemExit(
-        '설정을 못 찾았습니다 — 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
+        '설정을 못 찾았습니다. 0_setup/meth_config.py 가 있는 자리를 찾지 못했습니다.\n'
         '  이 파일은 정리본 안에서 도는 것이라 기본값으로 넘어가지 않습니다.\n'
         '  트리 밖에서 돌리려면 METH_CONF_DIR 로 0_setup 자리를 주십시오.')
 
@@ -49,7 +49,7 @@ import os
 import sys
 import pandas as pd
 
-# 2026-09-26: 세대를 박아 두면 GEN 을 바꿨을 때 «이전 세대» 후보로 패널을 내보낸다.
+# 2026-09-26: 세대를 박아 두면 GEN 을 바꿨을 때 「이전 세대」 후보로 패널을 내보낸다.
 #   그러면 실제 패널과 귀무 패널의 세대가 갈리는데, 여기가 대조의 기준선이다.
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:
@@ -59,9 +59,9 @@ if not _GEN:
         raise SystemExit('GEN(패널 세대)을 못 읽었습니다 — config.conf 의 GEN 을 채우거나 '
                          '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
 # ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
-#   배치가 다르면 «여기만» 고칩니다. 0_setup/config.conf 에는 뿌리 둘
-#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 있습니다.
-#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수도 있습니다(아래 참조).
+#   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
+#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
+#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
 R = _M + '/results/dmr'
 OUT = R + '/j_panel_dmr' + _GEN + '_panels'
 # ╚══════════════════════════════════════════════════════════════════╝
@@ -76,7 +76,7 @@ SRC = {'bl200':   R + '/j_panel_dmr' + _GEN + '/bl200_d10_cellline/DMR_confirmed
        'jsd200':  R + '/j_panel' + _GEN + '/panel_jsd_jsd_mean_n200.csv',
        'jsdb200': R + '/j_panel' + _GEN + '_supplement/panel_jsd_supplement_n200.csv'}
 
-# 2026-09-28: 없는 입력에서 pandas traceback 만 남으면 «누가 만드는지» 를 모른다.
+# 2026-09-28: 없는 입력에서 pandas traceback 만 남으면 「누가 만드는지」 를 모른다.
 #   어느 단계를 먼저 돌려야 하는지 같이 말한다.
 _MADE_BY = {'bl200':   '07_panel.py  (Baseline 순위)',
             'jsd200':  '06_select.py (JSD 상위 N)',
@@ -93,7 +93,7 @@ for panel, src in SRC.items():
     f = pd.DataFrame({'Feature': d['chr'].astype(str) + '_' + d['blk'].astype(str),
                       'dbeta':   d['dbeta'].astype(float),
                       'q':       d['q'].astype(float)})
-    # 200칸이 아니거나 같은 칸이 두 번 들어오면 멈춘다 — 조용히 넘기면
+    # 200칸이 아니거나 같은 칸이 두 번 들어오면 멈춘다. 조용히 넘기면
     # 학습과 검증이 서로 다른 패널을 본다.
     assert len(f) == 200 and f['Feature'].is_unique, (panel, len(f))
     os.makedirs(OUT + '/' + panel, exist_ok=True)
@@ -102,7 +102,7 @@ for panel, src in SRC.items():
         h.write('원본 %s\n변환 2026-09-14 · Feature=chr_blk · 200블록\n' % src)
     print('%-8s %3d블록  <- %s' % (panel, len(f), '/'.join(src.split('/')[-2:])))
 
-# 판끼리 얼마나 겹치는지 — 겹침이 크면 «판 비교» 가 묶음 비교가 된다
+# 판끼리 얼마나 겹치는지. 겹침이 크면 「판 비교」 가 묶음 비교가 된다
 F = {panel: set(pd.read_csv('%s/%s/DMR_confirmed_%s.csv' % (OUT, panel, panel))['Feature'])
      for panel in SRC}
 for x, y in itertools.combinations(SRC, 2):

@@ -1,27 +1,23 @@
-# Methylation-based GBM classifier — panel selection to external validation
+# Methylation-based GBM classifier: panel selection to external validation
 
 Code for building a methylation-pattern classifier for glioblastoma (GBM) from
 cfDNA and validating it on an external cohort. This folder contains only the code
 that produces the numbers reported in the paper.
 
-> **Quick check.** You do not have to read the files to see whether this is wired
-> correctly. Run `bash selfcheck.sh` — it prints a PASS/FAIL table in 11 groups
-> (structure, step counts, syntax of every `.py` and `.sh`, config resolution plus
-> every conf key being exposed, naming, cross-references, a scan for identifiers
-> that must not be published, whether variables used inside single-quoted heredocs
-> are exported, that no output path contains a non-ASCII name, that no stray temp or backup
-> file is left in the tree, and that the three
-> copies of the step-name map agree). It reads only; it writes nothing.
-> Currently **PASS 25 · FAIL 0**.
+> **Quick check.** `bash selfcheck.sh` prints a PASS/FAIL table over 12 groups and
+> writes nothing. It currently reports **PASS 26 · FAIL 0**. The groups cover
+> structure, step counts, syntax of every `.py` and `.sh`, config resolution, naming,
+> cross-references, publishable identifiers, heredoc exports, output paths,
+> the step-name map, stray files, and where paths are declared.
 >
-> Groups 6, 8, 9 and 10 exist because each caught a real defect that had shipped:
+> Groups 6, 8, 9 and 10 exist because each caught a defect that had already shipped:
 > a driver calling a renamed file, a variable unexported into a here-document, a
 > Korean path fragment, and a step-name map that had silently stopped being read.
 > Each was re-broken on purpose to confirm the group turns red.
 
 ---
 
-## Pipeline — five commands
+## Pipeline: five commands
 
 You edit one file and run four. Everything else is a step invoked for you.
 
@@ -125,7 +121,7 @@ Because `LLR(θ=0) ≡ 0`, `LLR_max` is floored at zero. **A median of 0.00 mean
 is seeded from `SEED`, the ratio, the replicate **and the sample name**, so each
 combination reproduces and no two samples share a negative draw. (The sample axis
 was added 2026-09-16 after all 178 validation negatives came out read-identical.) Ratios whose pool is too shallow are **skipped rather than filled by
-sampling with replacement** — filling would make the replicates non-independent
+sampling with replacement**: filling would make the replicates non-independent
 and inflate apparent performance.
 
 ---
@@ -165,7 +161,7 @@ them that way and **skips** any cov whose BAM it cannot find.
 **Memory.** `3_validate` refuses to start the mixing step until `free -g` reports
 at least 22 GB *available*, and gives up after ~3 hours. On a smaller machine every
 sample fails after that wait. Lower it with `MEMGATE_FREE=<GB>` and `MEMGATE_N=<n>`
-(concurrent slots) — both are environment variables, not config keys.
+(concurrent slots): both are environment variables, not config keys.
 
 | What | Where | Note |
 |---|---|---|
@@ -197,7 +193,7 @@ pip install -r requirements.txt
 
 ---
 
-## Reproducibility — what is and is not guaranteed
+## Reproducibility: what is and is not guaranteed
 
 Re-running with the same input and config produced byte-identical output
 (one sample, one panel, verified repeatedly):
@@ -330,4 +326,4 @@ do not touch a reported number. Everything that does is in this tree, including
 stage 11 and the two JSD null/bootstrap steps.
 
 Operations and monitoring scripts (memory watchdog, progress board, resume
-drivers) are not included — they do not affect results.
+drivers) are not included: they do not affect results.

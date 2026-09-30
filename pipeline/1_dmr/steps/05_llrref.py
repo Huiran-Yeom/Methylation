@@ -143,7 +143,6 @@ PG[ok] = Ps[ok] / nP[ok, None]
 
 # [가드 자리 교정] 이 가드가 PG 를 「만들기 전」 에 있었다.
 #   암이 하나라도 있으면 np.isfinite(PG) 가 평가돼 NameError 로 죽는다 —
-#   가드를 넣은 09-14 08:52 이후로 이 코드는 돌 수 없었다
 #   (참조표는 08:38 산출, 즉 가드 전이다). 검사 내용은 그대로 두고 자리만 옮긴다.
 if len(lines) == 0 or not np.isfinite(PG).any():
     sys.exit('중단: 암 %d종 · P_GBM 에 유효값이 없습니다 — 참조를 만들지 않습니다' % len(lines))

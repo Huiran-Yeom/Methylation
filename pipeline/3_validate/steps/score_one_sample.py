@@ -189,7 +189,7 @@ def run_model(name, B, keys, rows):
         #   검체마다 값이 같아져 AUC 가 정확히 0.500 이 된다(순위 소멸).
         #   원인: LLR 원값이 리드 수에 비례해 깊은 판에서 decision_function 이 60~106 까지 간다.
         #   z>36 이면 1/(1+e^-z) 는 1.0 과 구별되지 않는다.
-        #   실측 09-22: bl200 50k z=106 · jsd200 100k z=60 → 전 검체 proba 1.0 → AUC 0.500
+        #   실측: bl200 50k z=106 · jsd200 100k z=60 → 전 검체 proba 1.0 → AUC 0.500
         #              bl200 5k z=8 → 0.9997 (정상) · jsd200 50k z=29 → 0.992 (아슬아슬)
         #   AUC 는 순위만 보므로 뭉친 것이 확인되면 decision_function 으로 바꾼다.
         #   모델은 그대로다. 같은 z 를 다른 방식으로 읽을 뿐이라 판정 규칙을 안 바꾼다.
@@ -197,7 +197,7 @@ def run_model(name, B, keys, rows):
         _thr_z = None      # 포화로 df 를 쓸 때의 문턱 (z 공간)
         if st == 'predict_proba' and hasattr(m, 'predict_proba'):
             sc = m.predict_proba(X)[:, 1]
-            # [09-22 보강] 「고유값 2개 미만」 만으로는 부족하다.
+            # 「고유값 2개 미만」 만으로는 부족하다.
             #   1차 조합에서 고유값 76개인데 범위가 1.000~1.000 인 경우를 봤다 —
             #   순위가 부동소수점 끝자리에만 남아 위태롭다. 폭으로 판정한다.
             #   폭(max-min)이 1e-6 미만이면 사실상 뭉친 것으로 본다.
@@ -209,7 +209,7 @@ def run_model(name, B, keys, rows):
                 #   사전등록이 요구하는 특이도·위양성(⑪·②)을 그 칸에서 못 낸다.
                 #   로지스틱은 predict_proba = sigmoid(decision_function) 이므로
                 #   logit(thr) 이 정확히 같은 지점이다. 재학습도 재보정도 필요 없다.
-                #   (다섯 칸 전부 LogisticRegression 임을 09-22 에 확인했다.
+                #   (다섯 칸 전부 LogisticRegression 임을 확인했다.
                 #    다른 모형은 이 등식이 안 서므로 그대로 공백으로 둔다.)
                 _e = m
                 if hasattr(_e, 'named_steps'):

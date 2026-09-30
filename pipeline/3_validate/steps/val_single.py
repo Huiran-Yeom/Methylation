@@ -1,4 +1,4 @@
-# LAYOUT=single 코호트용: 검증 사본(val03_*.py)의 짝 요구를 없앤다 (2026-08-11)
+# LAYOUT=single 코호트용: 검증 사본(val03_*.py)의 짝 요구를 없앤다.
 # 학습 스크립트는 건드리지 않는다.
 import io, os
 

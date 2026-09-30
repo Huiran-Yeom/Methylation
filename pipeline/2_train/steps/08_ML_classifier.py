@@ -73,7 +73,7 @@ SOURCES = {
 
 COMBOS = []
 
-# 모든 조합: 있는 특징의 공집합 아닌 부분집합 전부 (2026-08-13)
+# 모든 조합: 있는 특징의 공집합 아닌 부분집합 전부
 # 손으로 적지 않는다. 특징이 늘어도 이 줄은 그대로 둔다.
 import glob as _g, itertools as _it
 _all = ['mean', 'entropy']
@@ -240,7 +240,7 @@ def main():
                     # 재사용 문턱은 교차검증 예측(out-of-fold) 으로 구한다.
                     # 학습셋 in-sample 점수를 쓰면 트리 모델이 학습셋을 외우는 탓에
                     # 문턱이 지나치게 낮아져 새 데이터에서 특이도가 무너진다.
-                    # 2026-08-06 실측(v4 0.1%): RF 특이도 0.005 · XGB 0.106
+                    # 실측(0.1%): RF 특이도 0.005 · XGB 0.106
                     #    (로지스틱·SVM 은 0.89~0.91 로 정상: 외우지 못하기 때문)
                     try:
                         cvm = 'predict_proba' if hasattr(model, 'predict_proba') else 'decision_function'
@@ -277,7 +277,7 @@ def main():
                         'n_pos_val': int((yva == 1).sum()), 'n_neg_val': int((yva == 0).sum()),
                     }, f'{mdir}/{name.replace("|", "_")}__{mname.replace(" ", "")}.joblib')
                     # ── 5-fold 교차검증(전체 200개): 한 번 나눈 것에 결과가 달리지 않게.
-                    #    최고 모델을 고르는 기준은 이 AUC 다 (2026-08-14).
+                    #    최고 모델을 고르는 기준은 이 AUC 다.
                     try:
                         cm2 = 'predict_proba' if hasattr(model, 'predict_proba') else 'decision_function'
                         # [실행차단 교정] 여기서 안 채운 X 를 그대로 넣고 있었다.

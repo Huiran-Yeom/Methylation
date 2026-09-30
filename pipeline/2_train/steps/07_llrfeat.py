@@ -145,7 +145,7 @@ def _self_proof():
 
 
 # getattr 의 셋째 인자를 지웠다. 기본값이 곧 조용한 오답이다 —
-#   MIN_READS_PER_WINDOW 의 기본값 4 는 09-14 에 6 으로 「철회된」 값이었다.
+#   MIN_READS_PER_WINDOW 의 기본값 4 는 쓰지 않는다. 설정의 값(6)을 따른다.
 #   복사본이 config 를 못 읽으면 06 은 4 로 세고 07 은 minr6 참조표를 읽어
 #   두 피처가 다른 문턱으로 계산된다. 파일이 따로라 아무 에러도 안 난다.
 K = getattr(C, 'PATTERN_K')

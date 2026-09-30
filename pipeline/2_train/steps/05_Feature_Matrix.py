@@ -57,7 +57,7 @@ INPUT_FORMAT = getattr(C, 'INPUT_FORMAT', 'bedgraph')
 FILE_ORDER = getattr(C, 'FILE_ORDER', 'numeric')
 MIN_SAMPLE_COVERAGE = getattr(C, 'MIN_SAMPLE_COVERAGE', 1.0)
 
-# 엔트로피 방식과 출력 이름을 명령줄로 바꾼다 (2026-08-14).
+# 엔트로피 방식과 출력 이름을 명령줄로 바꾼다.
 # value_counts 는 값 종류 수 = 커버리지 대리지표라 0.1% 에서 AUC 0.50 이었다.
 # histogram(10구간) 은 종류 수에 둔감하므로 따로 만들어 비교한다.
 _a = sys.argv
@@ -109,7 +109,7 @@ def read_beta(path):
             dtype={'chr': str, 'pos': np.int64, 'beta': np.float64},
         )
     else:
-        # 첫 줄은 `track type=bedGraph` (2026-07-30 실측 확인). 최종 코드의 df[1:] 와 동일
+        # 첫 줄은 `track type=bedGraph` (실측 확인). 최종 코드의 df[1:] 와 동일
         df = pd.read_csv(
             path, sep='\t', header=None, skiprows=1, usecols=[0, 1, 3],
             names=['chr', 'pos', 'beta'],
@@ -184,7 +184,7 @@ def to_frame(rows_normal, rows_gbm, label):
         # 남은 결측은 그 블록의 샘플 평균으로 채운다(모델이 NaN 을 못 받으므로)
         # 누출 주의: 이 평균은 정상·암을 모두 합쳐 낸 값이고, 학습/검증을
         #    나누기 전에 채운다. 옳게 하려면 2_train/steps/08 에서 나눈 뒤 학습셋 평균으로
-        #    채워야 한다. 2026-08-13 실측: mean 행렬은 607열 중 2열(0.3%)만
+        #    채워야 한다. 실측: mean 행렬은 607열 중 2열(0.3%)만
         #    해당돼 영향이 작다. readent 는 크므로 반드시 확인할 것.
         df = df.fillna(df.mean(axis=0))
     print(f'    {label}: 블록 {before} -> {df.shape[1]} (커버율 기준 {MIN_SAMPLE_COVERAGE})')

@@ -35,7 +35,7 @@ from paths import (script_dir, script_dir_abs, VERSION_CONF, WORK_ROOT_CONF,
 # 동시 실행을 제한하는데, 이름이 같으면 검증이 본 실행의 자리를 빼앗는다.
 # STEPS 를 config.conf 의 STEP_MAP 에서 만든다. 두 정본이면 어긋난다.
 #   STEP_MAP 형식:  <검체폴더에 놓일 이름>:<원본 파일명>;...
-#   못 읽으면 아래 기본값으로 간다(그 값이 09-14 이후 실제로 쓴 목록이다).
+#   못 읽으면 아래 기본값으로 간다.
 _STEPS_DEFAULT = {'01_Preprocessing_for_ML_RawData_Mixing.py': 'val03_1.py',
          '02_Preprocessing_for_ML_RawData_Mixing.py': 'val03_2.py',
          '03_Preprocessing_for_ML_RawData_Mixing.py': 'val03_3.py',
@@ -46,7 +46,7 @@ _STEPS_DEFAULT = {'01_Preprocessing_for_ML_RawData_Mixing.py': 'val03_1.py',
          # readent·mhl 은 (마) 결정으로 안 쓴다. 복사하지 않는다.
          #   되살리려면 그 파일을 2_train/steps/ 에 먼저 두어야 한다 — 이 저장소에는 없다.
          # 'step04_1b_readfeat.py': 'val04_1b.py',
-         # JSD 피처. 08-21 에 새로 만든 것이 이 목록에 없어
+         # JSD 피처. 이 목록에 없으면
          #   검증에서 JSD-2 를 못 쟀다. 파일은 판 폴더가 아니라 한 단계 위에 있다.
          '06_jsdfeat.py': 'val04_1c.py',
          # [실행차단 교정] LLR 이 이 목록에 없어 검증이 llr 을 아예 안 만들었다.
@@ -140,7 +140,7 @@ if 'PANEL' in dir():
     #   그대로 뒀으면 학습은 새 패널, 검증은 옛 패널이 된다.
     #   자리를 VERSION 으로 가른다. 추측하지 않는다.
     # 'j15' 를 못 박으면 GEN 을 바꿨을 때 「옛 자리」(j_panel_dmr)로 내려간다.
-    #   그 자리에 같은 이름의 옛 파일이 남아 있어 09-14 에 조용히 옛 패널을 읽었다.
+    #   그 자리에 같은 이름의 옛 파일이 남아 있으면 조용히 옛 패널을 읽는다.
     # 이 줄은 「생성되는 config.py 안에서」 돈다. 그 파일은
     #   meth_config 를 _cfg 로 import 하므로 이름이 맞아야 한다.
     #   토큰 치환은 문자열 안을 못 건드려서 영어화 때 여기만 남았다.
@@ -272,7 +272,7 @@ def main():
         if os.path.islink(d) or os.path.exists(d):
             os.remove(d)
         # 없는 파일을 조용히 넘기면 그 피처만 빠진 채 끝까지 돌고,
-        #   채점이 결측을 평균으로 메워 AUC 0.500 이 된다. 09-21 에 나흘 썼던 그 증상이다.
+        #   채점이 결측을 평균으로 메워 AUC 0.500 이 된다.
         #   피처를 빼는 것은 STEPS 항목을 지워서 한다. 여기 있는데 파일이 없으면 항상 설정 오류다.
         if not os.path.exists(s):
             sys.exit('복사할 파일이 없다: %s — STEPS 에는 있는데 TRAIN_SRC 에 없다. '

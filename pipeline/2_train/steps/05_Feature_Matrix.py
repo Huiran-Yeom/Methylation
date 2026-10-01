@@ -220,6 +220,10 @@ def main():
             print(f'건너뜀: {gbm_dir} 없음')
             continue
         print(f'GBM(mut_{p}_reads) 처리 중...')
+        # 이 'GBM' 은 암종 이름이 아니라 검체 번호 접두사다 (GBM1·GBM2…).
+        #   07_llrfeat 의 ^(Normal|GBM)(\d+)$ 와 to_frame 의 startswith('Normal')
+        #   이 같은 글자를 전제한다. 1단계의 CANCER_LABEL 과는 무관하다 —
+        #   여기를 바꾸면 07 이 「행 이름을 못 읽었습니다」 로 멈춘다.
         g_mean, g_ent, g_map = collect(gbm_dir, 'GBM', dmr)
         all_map += [{**r, 'mut_reads': p} for r in g_map]
 

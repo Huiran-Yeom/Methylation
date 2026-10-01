@@ -137,15 +137,8 @@ def scan(bam):
     f.close()
     return nr, nh
 
-os.makedirs(OUT, exist_ok=True)
-for K in KS:
-    fp = OUT + '/windows_K%d.parquet' % K
-    if not os.path.exists(fp):
-        d = pd.DataFrame({'chr':[x[0] for x in wins[K]], 'blk':[x[1] for x in wins[K]],
-                          'wi':[x[2] for x in wins[K]]})
-        for j in range(K): d['pos%d' % (j+1)] = [x[3][j] for x in wins[K]]
-        d.to_parquet(fp, index=False); print('창 표 저장 K%d' % K)
-
+# 짝을 «아무것도 쓰기 전에» 맞춰 본다. 폴더를 만들거나 창 표를 쓴 뒤에 멈추면,
+#   경로를 고쳐 다시 돌릴 때 run_dmr.sh 의 덮어쓰기 관문이 그 몇 개 때문에 막는다.
 jobs = [(sid(f), NB, 'Normal') for f in sorted(glob.glob(ND+'/*.cov.gz'))] + \
        [(sid(f), GB, 'GBM')    for f in sorted(glob.glob(GD+'/*.cov.gz'))]
 if ONLY: jobs = [j for j in jobs if j[0] == ONLY]
@@ -180,9 +173,27 @@ if _miss:
                  '  암   BAM: ' + GB + chr(10) +
                  '  폴더가 다르면 NORMAL_BAM_DIR · GBM_BAM_DIR 로 주십시오.' + chr(10) +
                  '  빠진 채로 진행하려면 ALLOW_SKIP=1 (04 의 정상 기준이 줄어듭니다).')
+    # ALLOW_SKIP 이라도 계급이 통째로 비면 안 된다. 넘기면 04_jsd 가 「쓸 수 있는
+    #   창이 0」 으로 죽는데, 그 메시지는 BAM 폴더를 안 알려 준다.
+    _gone = [t for t in sorted({j[2] for j in jobs}) if not any(x[2] == t for x in _pair)]
+    if _gone:
+        sys.exit(('중단: %s 을 한 개도 짝짓지 못했습니다 (ALLOW_SKIP 으로도 넘길 수 없습니다).'
+                  % ' · '.join(_gone)) + chr(10) +
+                 '  정상 BAM: ' + NB + chr(10) + '  암   BAM: ' + GB + chr(10) +
+                 '  폴더가 다르면 NORMAL_BAM_DIR · GBM_BAM_DIR 로 주십시오.')
     print('  ALLOW_SKIP=1 — 빠진 채로 진행합니다. 04 의 정상 기준이 줄어듭니다.')
 
 if not _pair: sys.exit('중단: 짝지은 검체가 하나도 없습니다.')
+
+os.makedirs(OUT, exist_ok=True)
+for K in KS:
+    fp = OUT + '/windows_K%d.parquet' % K
+    if not os.path.exists(fp):
+        d = pd.DataFrame({'chr':[x[0] for x in wins[K]], 'blk':[x[1] for x in wins[K]],
+                          'wi':[x[2] for x in wins[K]]})
+        for j in range(K): d['pos%d' % (j+1)] = [x[3][j] for x in wins[K]]
+        d.to_parquet(fp, index=False); print('창 표 저장 K%d' % K)
+
 
 for i, (s, bam, ty) in enumerate(_pair, 1):
     nr, nh = scan(bam)

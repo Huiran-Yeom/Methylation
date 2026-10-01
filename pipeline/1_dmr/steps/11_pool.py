@@ -73,10 +73,14 @@ print('패널 %d칸 · 검체 %d개' % (len(keep), len(USE)))
 
 bams = []
 for s in USE:
-    # 두 폴더가 같을 수 있다(정상·암 BAM 을 한 곳에 두는 배치). dict.fromkeys 로
-    #   중복을 없앤다. 그러지 않으면 같은 파일이 두 번 걸려 len(hit)!=1 로 건너뛴다.
-    hit = [f for f in dict.fromkeys(glob.glob(NB+'/*.bam') + glob.glob(GB+'/*.bam'))
-           if sid(f) == s]
+    # 두 폴더가 같을 수 있다(정상·암 BAM 을 한 곳에 두는 배치). 그대로 두면 같은
+    #   파일이 두 번 걸려 len(hit)!=1 로 건너뛴다. 문자열이 아니라 «실경로» 로
+    #   묶는다 — /data/bam 과 /data/bam/ 은 다른 문자열이지만 같은 폴더다.
+    _seen, hit = set(), []
+    for f in glob.glob(NB+'/*.bam') + glob.glob(GB+'/*.bam'):
+        r = os.path.realpath(f)
+        if r in _seen or sid(f) != s: continue
+        _seen.add(r); hit.append(f)
     if len(hit) != 1:
         sys.exit('BAM 을 못 찾음: %s (%d개)' % (s, len(hit)))
     bams.append((s, hit[0]))

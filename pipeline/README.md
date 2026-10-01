@@ -156,13 +156,13 @@ error you get without each one is in the last column.
 
 | Needed | Where the code looks | If missing |
 |---|---|---|
-| Normal cov files | `$METH_ROOT/sample_data/_input/normal_pub15/*.cov.gz` — under `METH_ROOT` (the *output* root), not `DATASET_ROOT`. Override with `NORMAL_SET=` | step 01: `cov 파일 없음` |
+| Normal cov files | `$METH_ROOT/sample_data/_input/normal_pub15/*.cov.gz` — under `METH_ROOT` (the *output* root), not `DATASET_ROOT`. Override with `NORMAL_SET=` | step 01: `정상 cov 가 없다` (both folders empty: `cov 파일 없음`) |
 | **Three** panel-union CSVs | `$METH_ROOT/results/dmr/j_panel<GEN>/` — one `chr,blk` row per panel block. `panel_union3_cellline.csv` (the three real panels), `panel_union_rand3.csv` (null A), `panel_union_randb3.csv` (null B) | step 11: `패널 목록이 없다` |
 | `use<GEN>_normal.txt`, `use<GEN>_gbm.txt` | `~/tmp/` — one sample id per line (the id is the filename up to the first `_`). Override with `USE_NORMAL=` / `USE_GBM=` | step 11: `쓸 BAM 목록이 없다` |
 | Bisulfite genome index | `$METH_ROOT/data/Bisulfite_Genome/` | step 03 runs bismark **without** `--genome_folder`, which changes its behaviour silently |
 
-BAM and cov filenames must share a sample id up to the first `_`; step 03 matches
-them that way and **skips** any cov whose BAM it cannot find.
+BAM and cov filenames must share a sample id up to the first `_`. Step 03 pairs
+them that way and refuses to run if any pair is missing (see below).
 
 **Moving the data.** Changing `METH_ROOT` and `DATASET_ROOT` in `0_setup/config.conf`
 moves everything: all 19 path blocks derive from those two. If your layout *under*

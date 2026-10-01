@@ -84,7 +84,6 @@ if not files: sys.exit('cov 파일 없음')
 _nn = sum(1 for f, _t in files if _t == 'Normal')
 if _nn == 0:          sys.exit('정상 cov 가 없다 — NORMAL_SET 또는 --nd 를 확인하라: ' + ND)
 if _nn == len(files): sys.exit('암 cov 가 없다 — GBM_COV_DIR 을 확인하라: ' + GD)
-if not files: sys.exit('cov 파일 없음')
 
 u_norm = len({grp(sid(f)) for f,t in files if t=='Normal'})
 u_gbm  = len({grp(sid(f)) for f,t in files if t=='GBM'})

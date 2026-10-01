@@ -151,10 +151,13 @@ jobs = [(sid(f), NB, 'Normal') for f in sorted(glob.glob(ND+'/*.cov.gz'))] + \
 if ONLY: jobs = [j for j in jobs if j[0] == ONLY]
 if not jobs: sys.exit('대상 검체 없음')
 
+_done, _skip = {}, {}
 for i, (s, bd, ty) in enumerate(jobs, 1):
-    hit = [f for f in glob.glob(bd+'/*.bam') if sid(f) == s]
+    hit = [f for f in dict.fromkeys(glob.glob(bd+'/*.bam')) if sid(f) == s]
     if len(hit) != 1:
-        print('  [%2d/%d] %-16s BAM %d개: 건너뜀' % (i, len(jobs), s, len(hit))); continue
+        print('  [%2d/%d] %-16s BAM %d개: 건너뜀 (%s)' % (i, len(jobs), s, len(hit), bd))
+        _skip[ty] = _skip.get(ty, 0) + 1; continue
+    _done[ty] = _done.get(ty, 0) + 1
     nr, nh = scan(hit[0])
     msg = []
     for K in KS:
@@ -168,4 +171,16 @@ for i, (s, bd, ty) in enumerate(jobs, 1):
         cd.to_parquet(OUT + '/count_%s_K%d.parquet' % (s, K), index=False)
     print('  [%2d/%d] %-16s 리드 %10d · 후보걸침 %9d · %s'
           % (i, len(jobs), s, nr, nh, ' | '.join(msg)), flush=True)
+# 계급 하나가 통째로 건너뛰어도 여기까지 오면 rc=0 으로 끝난다. 그러면
+#   04_jsd 가 한 계급만으로 JSD 를 재게 된다. 끝에서 계급별로 센다.
+print()
+for _t in ('Normal', 'GBM'):
+    print('  %-8s 센 것 %d개 · 건너뛴 것 %d개' % (_t, _done.get(_t, 0), _skip.get(_t, 0)))
+_empty = [_t for _t in ('Normal', 'GBM') if _done.get(_t, 0) == 0]
+if _empty:
+    sys.exit(('중단: %s 을 한 개도 못 셌습니다.' % ' · '.join(_empty)) + chr(10) +
+             '  cov 이름과 BAM 이름이 첫 _ 앞까지 같아야 짝이 맞습니다.' + chr(10) +
+             '  정상 BAM: ' + NB + chr(10) +
+             '  암   BAM: ' + GB + chr(10) +
+             '  폴더가 다르면 NORMAL_BAM_DIR · GBM_BAM_DIR 로 주십시오.')
 print('\n저장: ' + OUT)

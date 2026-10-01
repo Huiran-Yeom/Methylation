@@ -178,6 +178,21 @@ silently reads the old location.
 | `NORMAL_BAM_DIR` | `$DATASET_ROOT/for_in_silico_test/normal_cfDNA_public/aligned_bam` | steps 03, 11 |
 | `GBM_BAM_DIR` | `$DATASET_ROOT/training/GBM_cell-line/aligned_bam` | steps 03, 11 |
 
+Step 03 pairs a cov file with its BAM by the sample id up to the first `_`, and
+it now counts what it paired. If either class ends with nothing it stops and
+prints both BAM paths, rather than finishing with one class and exit 0. Point
+`NORMAL_BAM_DIR` at an empty folder and you get:
+
+```
+  Normal   센 것 0개 · 건너뛴 것 15개
+  GBM      센 것 30개 · 건너뛴 것 0개
+중단: Normal 을 한 개도 못 셌습니다.
+```
+
+Partial mismatches are reported but not fatal: a cov set with 28 entries against
+15 BAMs prints `센 것 15개 · 건너뛴 것 13개` and continues, because skipping a cov
+whose BAM is absent is the documented behaviour.
+
 **There are three pooled-BAM sets, not one.** A pooled BAM holds only reads inside
 its own panel regions, so a null panel — whose blocks are drawn at random — finds
 almost nothing in the real-panel pool. Stage 1 step 11 builds all three, and

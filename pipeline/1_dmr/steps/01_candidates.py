@@ -37,12 +37,9 @@ import numpy as np, pandas as pd
 #   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
 #   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
 #   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
-#   자료 폴더는 환경변수로 옮길 수 있다. 같은 값이 여러 단계에 적혀 있어,
-#   폴더를 옮기고 한 곳만 고치면 나머지가 조용히 옛 자리를 읽기 때문이다.
+#   이 단계가 읽는 자료 폴더는 환경변수로 옮길 수 있다.
 #     NORMAL_SET      정상 cov (*.cov.gz)
 #     GBM_COV_DIR     암 cov
-#     NORMAL_BAM_DIR  정상 BAM
-#     GBM_BAM_DIR     암 BAM
 ND  = _os.environ.get('NORMAL_SET')  or _M + '/sample_data/_input/normal_pub15'
 GD  = _os.environ.get('GBM_COV_DIR') or _D + '/training/GBM_cell-line/cov'
 # 산출 폴더는 GEN(패널 세대)을 따른다. 비우면 세대 없는 옛 폴더를 가리킨다.
@@ -93,6 +90,11 @@ def read_one(p):
 files = [(f,'Normal') for f in sorted(glob.glob(ND+'/*.cov.gz'))] + \
         [(f,'GBM')    for f in sorted(glob.glob(GD+'/*.cov.gz'))]
 if not files: sys.exit('cov 파일 없음')
+# 한 쪽만 비어도 멈춘다. 그냥 두면 그 반의 need 가 0 이 되어 아래 계급 조건이
+#   늘 참이 되고, 한 계급만으로 만든 후보를 조용히 내보낸다(종료값 0).
+_nn = sum(1 for _, _t in files if _t == 'Normal')
+if _nn == 0:        sys.exit('정상 cov 가 없다 — NORMAL_SET 또는 --nd 를 확인하라: ' + ND)
+if _nn == len(files): sys.exit('암 cov 가 없다 — GBM_COV_DIR 을 확인하라: ' + GD)
 if DRY: files = files[:1] + files[-1:]   # 2026-08-20: 정상 1 + 암 1 (암 경로도 지나가게)
 # 커버 기준을 집단별로 나눈다.
 #   한 덩어리로 세면 한쪽으로 몰린 블록이 통과해 t검정에서 NaN 이 된다.

@@ -81,8 +81,8 @@ GENOME_FOLDER = ROOT + '/data/Bisulfite_Genome/'   # bismark 인덱스 (없으�
 # ╚══════════════════════════════════════════════════════════════════╝
 
 # RAW_NORMAL_COV_DIR · RAW_GBM_COV_DIR 을 지웠다 — 트리의 어느 코드도
-#   읽지 않는 죽은 값이었다. 정상·암 cov 자리는 config.conf 의 NORMAL_COV_DIR ·
-#   GBM_COV_DIR 이고, 1단계가 그것을 읽는다. 여기에 또 두면 둘이 어긋난다.
+#   읽지 않는 죽은 값이었다. 정상·암 cov 자리는 1단계가 자기 경로 블록에서 정하고,
+#   환경변수 NORMAL_SET·GBM_COV_DIR 로 옮긴다. 여기에 또 두면 둘이 어긋난다.
 COV_SUFFIX = '.cov.gz'
 TOP_N_SAMPLES = 0
 DMR_PER_GROUP = 0

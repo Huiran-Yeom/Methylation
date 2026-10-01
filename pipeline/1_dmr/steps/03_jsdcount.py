@@ -53,12 +53,11 @@ if not _GEN:
 #   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
 #   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
 #   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
-#   자료 폴더는 환경변수로 옮길 수 있다. 같은 값이 여러 단계에 적혀 있어,
-#   폴더를 옮기고 한 곳만 고치면 나머지가 조용히 옛 자리를 읽기 때문이다.
-#     NORMAL_SET      정상 cov (*.cov.gz)
-#     GBM_COV_DIR     암 cov
-#     NORMAL_BAM_DIR  정상 BAM
-#     GBM_BAM_DIR     암 BAM
+#   이 단계가 읽는 자료 폴더는 환경변수로 옮길 수 있다.
+#     NORMAL_SET      정상 cov (검체 목록을 여기서 뽑는다)
+#     GBM_COV_DIR     암 cov (같음)
+#     NORMAL_BAM_DIR  정상 BAM (실제로 읽는 곳)
+#     GBM_BAM_DIR     암 BAM (같음)
 CAND = _M + '/results/dmr/j_candidates' + _GEN
 OUT  = _M + '/results/dmr/j_jsdcount' + _GEN
 NB   = _os.environ.get('NORMAL_BAM_DIR') or _D + '/for_in_silico_test/normal_cfDNA_public/aligned_bam'

@@ -36,7 +36,7 @@ except ImportError:
         '  트리 밖에서 돌리려면 METH_CONF_DIR 로 0_setup 자리를 주십시오.')
 
 
-import os, sys, glob, subprocess
+import os, re, sys, glob, subprocess
 import pandas as pd, pysam
 
 # ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
@@ -61,10 +61,21 @@ OUT   = a[a.index('--out')+1]
 USE   = [x for x in open(a[a.index('--use')+1]).read().split() if x]
 PAD   = int(a[a.index('--pad')+1]) if '--pad' in a else 200
 
+# 파일 이름에서 검체 이름을 뽑는다. 기본은 첫 _ 앞까지 — cov 와 BAM 의 뒤쪽
+#   꼬리표가 달라도 짝이 맞게 하기 위해서다.
+#   자료마다 이름 규칙이 다르다. 안 맞으면 «자료를 고치지 말고» SID_RE 를 준다.
+#   첫 괄호가 검체 이름이 되고, 안 걸리면 기본 규칙으로 떨어진다. 예:
+#     SID_RE='(.+?)__'   H1876_0d__SRR…  -> H1876_0d   (밑줄 둘로 가르는 자료)
+#                        H1876__SRR…     -> H1876
+_SRE = _os.environ.get('SID_RE')
+_srx = re.compile(_SRE) if _SRE else None
 def sid(p):
     b = os.path.basename(p)
     for suf in ('.bismark.cov.gz', '.cov.gz', '.bam'):
         if b.endswith(suf): b = b[:-len(suf)]; break
+    if _srx is not None:
+        m = _srx.match(b)
+        if m and m.groups(): return m.group(1)
     return b.split('_')[0]
 
 P = pd.read_csv(PANEL)

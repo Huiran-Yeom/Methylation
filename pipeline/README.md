@@ -197,6 +197,31 @@ normal reference. `ALLOW_SKIP=1` proceeds anyway and says so.
 
 `--sample <id>` runs one sample and is exempt from the class accounting.
 
+**Naming rules for a different dataset.** Two environment variables adapt the
+sample-id and replicate-grouping rules so you never have to rename data files.
+Both default to the conventions of the dataset used here, so leaving them unset
+reproduces the reported results.
+
+| Variable | Default | What it does |
+|---|---|---|
+| `SID_RE` | first `_`-separated field | Sample id from the filename. The first capture group is the id; a name the pattern does not match falls back to the default. |
+| `GROUP_RE` | `SNU<n>-<rep>` → `SNU<n>` | Groups replicate files into one independent unit, **cancer side only**. Coverage requires a fraction of *units*, not of files, so this changes the threshold. |
+
+Steps 01 and 02 stop if two files resolve to the same sample id, because the id
+becomes a column name and a collision would drop one of them silently.
+`GROUP_RE` is not applied to normals: one file per person is assumed there and
+an assertion enforces it.
+
+For example, a dataset that separates sample from run with a double underscore
+(`H1876_0d__SRR25758566_…`, `H1876__SRR25758603_…` — the same cell line
+sequenced twice) runs with:
+
+```bash
+SID_RE='(.+?)__' GROUP_RE='([A-Za-z0-9]+)' bash 1_dmr/run_dmr.sh
+```
+
+giving distinct ids `H1876_0d` and `H1876` that group into one cell line.
+
 **There are three pooled-BAM sets, not one.** A pooled BAM holds only reads inside
 its own panel regions, so a null panel — whose blocks are drawn at random — finds
 almost nothing in the real-panel pool. Stage 1 step 11 builds all three, and

@@ -36,7 +36,7 @@ except ImportError:
         '  트리 밖에서 돌리려면 METH_CONF_DIR 로 0_setup 자리를 주십시오.')
 
 
-import os, sys, glob, math
+import os, re, sys, glob, math
 import numpy as np, pandas as pd
 
 # ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
@@ -70,22 +70,64 @@ if '--depth' in a: MINCOV = int(a[a.index('--depth')+1]) - 1
 OUT = a[a.index('--out')+1] if '--out' in a else CAND
 # ╚══════════════════════════════════════════════════════════════════╝
 
+# 파일 이름에서 검체 이름을 뽑는다. 기본은 첫 _ 앞까지 — cov 와 BAM 의 뒤쪽
+#   꼬리표가 달라도 짝이 맞게 하기 위해서다.
+#   자료마다 이름 규칙이 다르다. 안 맞으면 «자료를 고치지 말고» SID_RE 를 준다.
+#   첫 괄호가 검체 이름이 되고, 안 걸리면 기본 규칙으로 떨어진다. 예:
+#     SID_RE='(.+?)__'   H1876_0d__SRR…  -> H1876_0d   (밑줄 둘로 가르는 자료)
+#                        H1876__SRR…     -> H1876
+_SRE = _os.environ.get('SID_RE')
+_srx = re.compile(_SRE) if _SRE else None
 def sid(p):
     b = os.path.basename(p)
     for suf in ('.bismark.cov.gz', '.cov.gz'):
         if b.endswith(suf):
             b = b[:-len(suf)]; break
+    if _srx is not None:
+        m = _srx.match(b)
+        if m and m.groups(): return m.group(1)
     return b.split('_')[0]
-def grp(s):  return s.split('-')[0] if s.upper().startswith('SNU') and '-' in s else s
+# 반복본을 독립단위(세포주 한 종)로 묶는 규칙. 커버 조건을 파일이 아니라
+#   독립단위로 세기 때문에 이 규칙이 need_g 와 MINREP 에 바로 들어간다.
+#   기본값은 이 연구의 GBM 자료 이름 규칙(SNU<n>-<반복>)이다. 다른 자료는
+#   GROUP_RE 로 준다 — 첫 괄호가 독립단위 이름이 된다. 예:
+#     GROUP_RE='([A-Za-z0-9]+)'      H1876_0d -> H1876 · H1876 -> H1876
+#   안 주면 이름이 그대로 독립단위가 되어, 반복본이 서로 다른 종으로 세어진다.
+_GRE = _os.environ.get('GROUP_RE')
+_grx = re.compile(_GRE) if _GRE else None
+
+
+def grp(s, t='GBM'):
+    # GROUP_RE 는 «암 쪽에만» 쓴다. 반복본 묶기는 세포주 개념이고, 정상은
+    #   한 사람당 한 파일이 전제다(아래 assert u_norm == n_norm 이 그것을 지킨다).
+    #   정상까지 묶으면 NC-P-1·NC-P-3·… 아홉이 'NC' 하나가 되어 커버 기준이
+    #   9명에서 5명으로 느슨해진다.
+    if _grx is not None and t == 'GBM':
+        m = _grx.match(s)
+        return m.group(1) if (m and m.groups()) else s
+    return s.split('-')[0] if s.upper().startswith('SNU') and '-' in s else s
 
 files = [(f,'Normal') for f in sorted(glob.glob(ND+'/*.cov.gz'))] + \
         [(f,'GBM')    for f in sorted(glob.glob(GD+'/*.cov.gz'))]
 if not files: sys.exit('cov 파일 없음')
+# 같은 sid 가 둘 이상이면 멈춘다. sid 는 검체 이름이자 표의 열 이름이라,
+#   겹치면 pivot_table(aggfunc='first') 이 뒤엣것을 «조용히 버린다».
+_byid = {}
+for _f, _t in files: _byid.setdefault(sid(_f), []).append(_os.path.basename(_f))
+_dup = {k: v for k, v in _byid.items() if len(v) > 1}
+if _dup:
+    _msg = ['중단: 검체 이름이 겹칩니다 (첫 _ 앞까지가 이름입니다).']
+    for _k, _v in sorted(_dup.items())[:10]:
+        _msg.append('  %s : %s' % (_k, ' · '.join(_v)))
+    if len(_dup) > 10: _msg.append('  … 외 %d개' % (len(_dup) - 10))
+    _msg.append('  겹치면 표의 열이 덮여 한 쪽이 조용히 사라집니다.')
+    _msg.append('  파일 이름의 첫 _ 앞을 서로 다르게 바꾸십시오.')
+    sys.exit(chr(10).join(_msg))
 _nn = sum(1 for f, _t in files if _t == 'Normal')
 if _nn == 0:          sys.exit('정상 cov 가 없다 — NORMAL_SET 또는 --nd 를 확인하라: ' + ND)
 if _nn == len(files): sys.exit('암 cov 가 없다 — GBM_COV_DIR 을 확인하라: ' + GD)
 
-u_norm = len({grp(sid(f)) for f,t in files if t=='Normal'})
+u_norm = len({grp(sid(f), 'Normal') for f,t in files if t=='Normal'})
 u_gbm  = len({grp(sid(f)) for f,t in files if t=='GBM'})
 need_n = int(math.ceil(FRAC*u_norm))
 need_g = int(math.ceil(FRAC*u_gbm))

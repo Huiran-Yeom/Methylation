@@ -38,7 +38,7 @@ except ImportError:
         '  트리 밖에서 돌리려면 METH_CONF_DIR 로 0_setup 자리를 주십시오.')
 
 
-import os, sys, glob
+import os, re, sys, glob
 import numpy as np, pandas as pd, pysam
 
 # 산출 폴더는 GEN(패널 세대)을 따른다. 비우면 세대 없는 옛 폴더를 가리킨다.
@@ -78,10 +78,21 @@ if '--out'  in a: OUT  = a[a.index('--out')+1]
 ONLY  = a[a.index('--sample')+1] if '--sample' in a else None
 LIMIT = int(a[a.index('--limit')+1]) if '--limit' in a else 0
 
+# 파일 이름에서 검체 이름을 뽑는다. 기본은 첫 _ 앞까지 — cov 와 BAM 의 뒤쪽
+#   꼬리표가 달라도 짝이 맞게 하기 위해서다.
+#   자료마다 이름 규칙이 다르다. 안 맞으면 «자료를 고치지 말고» SID_RE 를 준다.
+#   첫 괄호가 검체 이름이 되고, 안 걸리면 기본 규칙으로 떨어진다. 예:
+#     SID_RE='(.+?)__'   H1876_0d__SRR…  -> H1876_0d   (밑줄 둘로 가르는 자료)
+#                        H1876__SRR…     -> H1876
+_SRE = _os.environ.get('SID_RE')
+_srx = re.compile(_SRE) if _SRE else None
 def sid(p):
     b = os.path.basename(p)
     for suf in ('.bismark.cov.gz', '.cov.gz', '.bam'):
         if b.endswith(suf): b = b[:-len(suf)]; break
+    if _srx is not None:
+        m = _srx.match(b)
+        if m and m.groups(): return m.group(1)
     return b.split('_')[0]
 
 P = pd.read_parquet(CAND + '/blocks_cpg.parquet').sort_values(['chr','blk','pos'])

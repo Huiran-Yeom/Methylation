@@ -164,6 +164,20 @@ error you get without each one is in the last column.
 BAM and cov filenames must share a sample id up to the first `_`; step 03 matches
 them that way and **skips** any cov whose BAM it cannot find.
 
+**Moving the data.** Changing `METH_ROOT` and `DATASET_ROOT` in `0_setup/config.conf`
+moves everything: all 19 path blocks derive from those two. If your layout *under*
+those roots differs, four environment variables move the data folders without
+editing any file. Each value is written in two or three steps, so setting the
+variable is safer than editing them by hand — edit two of three and the third
+silently reads the old location.
+
+| Variable | Default | Read by |
+|---|---|---|
+| `NORMAL_SET` | `$METH_ROOT/sample_data/_input/normal_pub15` | steps 01, 02, 03 |
+| `GBM_COV_DIR` | `$DATASET_ROOT/training/GBM_cell-line/cov` | steps 01, 02, 03 |
+| `NORMAL_BAM_DIR` | `$DATASET_ROOT/for_in_silico_test/normal_cfDNA_public/aligned_bam` | steps 03, 11 |
+| `GBM_BAM_DIR` | `$DATASET_ROOT/training/GBM_cell-line/aligned_bam` | steps 03, 11 |
+
 **There are three pooled-BAM sets, not one.** A pooled BAM holds only reads inside
 its own panel regions, so a null panel — whose blocks are drawn at random — finds
 almost nothing in the real-panel pool. Stage 1 step 11 builds all three, and

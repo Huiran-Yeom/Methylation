@@ -43,8 +43,14 @@ import pandas as pd, pysam
 #   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
 #   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
 #   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
-NB = _D + '/for_in_silico_test/normal_cfDNA_public/aligned_bam'
-GB = _D + '/training/GBM_cell-line/aligned_bam'
+#   자료 폴더는 환경변수로 옮길 수 있다. 같은 값이 여러 단계에 적혀 있어,
+#   폴더를 옮기고 한 곳만 고치면 나머지가 조용히 옛 자리를 읽기 때문이다.
+#     NORMAL_SET      정상 cov (*.cov.gz)
+#     GBM_COV_DIR     암 cov
+#     NORMAL_BAM_DIR  정상 BAM
+#     GBM_BAM_DIR     암 BAM
+NB = _os.environ.get('NORMAL_BAM_DIR') or _D + '/for_in_silico_test/normal_cfDNA_public/aligned_bam'
+GB = _os.environ.get('GBM_BAM_DIR')    or _D + '/training/GBM_cell-line/aligned_bam'
 BLOCK = 100
 try:   # 01~03 과 같은 격자. 어긋나면 풀이 패널과 다른 자리를 담는다.
     BLOCK = int(_cfg.BLOCK_SIZE)

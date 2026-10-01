@@ -53,12 +53,18 @@ if not _GEN:
 #   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
 #   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
 #   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
+#   자료 폴더는 환경변수로 옮길 수 있다. 같은 값이 여러 단계에 적혀 있어,
+#   폴더를 옮기고 한 곳만 고치면 나머지가 조용히 옛 자리를 읽기 때문이다.
+#     NORMAL_SET      정상 cov (*.cov.gz)
+#     GBM_COV_DIR     암 cov
+#     NORMAL_BAM_DIR  정상 BAM
+#     GBM_BAM_DIR     암 BAM
 CAND = _M + '/results/dmr/j_candidates' + _GEN
 OUT  = _M + '/results/dmr/j_jsdcount' + _GEN
-NB   = _D + '/for_in_silico_test/normal_cfDNA_public/aligned_bam'
-GB   = _D + '/training/GBM_cell-line/aligned_bam'
-ND   = _M + '/sample_data/_input/normal_pub15'
-GD   = _D + '/training/GBM_cell-line/cov'
+NB   = _os.environ.get('NORMAL_BAM_DIR') or _D + '/for_in_silico_test/normal_cfDNA_public/aligned_bam'
+GB   = _os.environ.get('GBM_BAM_DIR')    or _D + '/training/GBM_cell-line/aligned_bam'
+ND   = _os.environ.get('NORMAL_SET')     or _M + '/sample_data/_input/normal_pub15'
+GD   = _os.environ.get('GBM_COV_DIR')    or _D + '/training/GBM_cell-line/cov'
 # ╚══════════════════════════════════════════════════════════════════╝
 BLOCK, KS = 100, (3, 4, 5)
 try:   # 2026-09-29: BLOCK_SIZE 가 config.conf 에 있는데 1단계는 100 을 박고 있었다.

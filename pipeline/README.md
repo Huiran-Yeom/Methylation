@@ -220,10 +220,12 @@ For example, a dataset that separates sample from run with a double underscore
 sequenced twice) runs with:
 
 ```bash
-SID_RE='(.+?)__' GROUP_RE='([A-Za-z0-9]+)' bash 1_dmr/run_dmr.sh
+SID_RE='(.+?)__' GROUP_RE='(.+?)_\d+d$' bash 1_dmr/run_dmr.sh
 ```
 
 giving distinct ids `H1876_0d` and `H1876` that group into one cell line.
+A name the pattern does not match stays its own unit, so `SHP_77` is not
+truncated to `SHP`. `GROUP_RE='([A-Za-z0-9]+)'` would truncate it.
 
 Stages 2 and 4 take the normal/cancer split from the `type` column of
 `samples.csv`, which step 01 writes. Nothing downstream infers class from a

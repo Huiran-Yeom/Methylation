@@ -58,7 +58,31 @@ SHORT = {'mean|entropy': 'ME', 'mean|entropy|jsd': 'ME+JSD', 'llr': 'LLR',
          'mean|entropy|llr': 'ME+LLR', 'mean|entropy|jsd|llr': 'ME+JSD+LLR', 'pdr': 'PDR',
          'mean|entropy|pdr': 'ME+PDR', 'mean|entropy|jsd|pdr': 'ME+JSD+PDR',
          'mean|entropy|jsd|llr|pdr': 'ME+JSD+LLR+PDR'}
-person = lambda s: (re.match(r'^((pat|ind)_\d+)_', str(s)) or [None, str(s)])[1]
+# 읽을 깊이. 자료를 바꾸면 DEPTHS='5k 50k' 처럼 준다.
+DEPTHS = tuple((os.environ.get('DEPTHS') or '5k 15k 50k 100k').split())
+
+# 검체 이름에서 «사람»을 뽑는다. 사람 단위로 묶어 한 사람이 표를 여럿 쥐지 않게 한다.
+#   기본값은 이 논문의 이름 규칙(pat_1_... · ind_3_...)이다.
+#   다른 자료를 쓰면 PERSON_RE 로 바꾼다. 괄호 하나가 사람 이름이 된다.
+#   예: PERSON_RE='^([A-Z0-9]+)-'
+_PRE = re.compile(os.environ.get('PERSON_RE') or r'^((pat|ind)_\d+)_')
+_pmiss = [0, 0]
+
+
+def person(s):
+    m = _PRE.match(str(s))
+    if m and m.groups():
+        _pmiss[1] += 1
+        return m.group(1)
+    _pmiss[0] += 1
+    return str(s)
+
+
+def person_warn():
+    """하나도 못 맞추면 사람 묶기가 검체 묶기와 같아진다. 조용히 넘기지 않는다."""
+    if _pmiss[1] == 0 and _pmiss[0]:
+        print('  ! PERSON_RE 가 검체 %d개 중 하나도 못 맞췄습니다 — 사람 단위 묶기가 검체 단위와'
+              ' 같아집니다. 환경변수 PERSON_RE 를 자료의 이름 규칙에 맞추세요.' % _pmiss[0])
 
 def auc(y, s):
     y, s = np.asarray(y, float), np.asarray(s, float)
@@ -98,7 +122,7 @@ def tie_width(y, s):
         return U / (P * N)
     return w(0.0), w(1.0), len(set(ss.tolist()))
 
-for depth in ('5k', '15k', '50k', '100k'):
+for depth in DEPTHS:
     # 태그 없는 단일모델 파일과 섞이지 않게 all_combos만 읽는다
     fs = glob.glob('%s/*/results/%s_%s_uni/step04_ML_classifier/y_prob_all_%s_%s_uni_all_combos.csv'
                    % (V, PAN, depth, PAN, depth))
@@ -106,6 +130,7 @@ for depth in ('5k', '15k', '50k', '100k'):
         print('\n== %s 리드: all_combos 채점 파일 없음' % depth); continue
     D = pd.concat([pd.read_csv(f) for f in fs], ignore_index=True)
     D['person'] = D['sample'].map(person)
+    person_warn()
     # [교집합 · 비율별] 사전등록 2-2(94·256줄): 「세 패널이 모두 값을 낸 검증 검체만」.
     #   실측: 빠짐은 검체 전체가 아니라 (검체,비율) 칸 단위로 일어난다.
     #     5k   모든 비율 178/178/178            깨끗

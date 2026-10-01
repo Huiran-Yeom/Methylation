@@ -189,10 +189,28 @@ def build_windows(keep_blocks):
 
 def build_pn(nwin):
     """정상 기준 분포. 검체마다 합=1 로 만든 뒤 평균 (한 검체 = 한 표)."""
-    fs = [f for f in sorted(glob.glob(JCOUNT + '/count_*_K%d.parquet' % K))
-          if 'SNU' not in os.path.basename(f)]
+    fs = sorted(glob.glob(JCOUNT + '/count_*_K%d.parquet' % K))
+    # 정상·암 구분은 samples.csv 의 type 열에서 읽는다.
+    #   파일 이름으로 추측하면 자료를 바꿨을 때 암이 전부 정상으로 들어간다.
+    _sc = CAND + '/samples.csv'
+    if not os.path.exists(_sc):
+        sys.exit('samples.csv 가 없습니다 — 1단계 01_candidates 를 먼저 돌리세요: ' + _sc)
+    _meta = pd.read_csv(_sc)
+    for _c in ('sample', 'type'):
+        if _c not in _meta.columns:
+            sys.exit('samples.csv 에 %s 열이 없습니다: %s' % (_c, _sc))
+    _norm = set(_meta.loc[_meta['type'] == 'Normal', 'sample'].astype(str))
+    if not _norm:
+        sys.exit('samples.csv 에 type=Normal 인 검체가 없습니다: ' + _sc)
+    _suf = '_K%d.parquet' % K
+    _nm = lambda f: os.path.basename(f)[len('count_'):-len(_suf)]
+    _drop = [f for f in fs if _nm(f) not in _norm]
+    fs = [f for f in fs if _nm(f) in _norm]
     if not fs:
-        sys.exit('정상 count 파일을 못 찾았습니다: ' + JCOUNT)
+        sys.exit('정상 count 파일을 못 찾았습니다 — samples.csv 의 정상 %d명과 이름이 겹치는 것이 없습니다: %s'
+                 % (len(_norm), JCOUNT))
+    if _drop:
+        print('  P_N : 정상 아닌 %d개 제외' % len(_drop))
     S = np.zeros((nwin, 1 << K))
     N = np.zeros(nwin)
     for f in fs:

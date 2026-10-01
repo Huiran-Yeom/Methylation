@@ -21,6 +21,7 @@ if __name__ != '__main__':
 
 import io
 import os
+import re
 import shutil
 _LAYOUT = [None]   # 코호트 리드 방식 자동 감지 (2026-08-11)
 import sys
@@ -235,7 +236,12 @@ def main():
     conf = load_conf(cohort)
     # 깊이마다 배경 목록과 반복 수가 다르다. 판 이름에서 깊이를 읽는다.
     #   얕은 공여자는 깊은 판을 혼자 못 채운다. 섞으면 '사람' 과 '병합본' 이 한 표에 섞인다.
-    _dep = next((x for x in ('5k', '15k', '50k', '100k') if ('_%s_' % x) in v), '')
+    # 이름에 박힌 깊이를 뽑는다. DEPTHS 에 있는 것을 먼저 보고, 없으면 _<숫자>k_ 로 찾는다.
+    _cand = (os.environ.get('DEPTHS') or '5k 15k 50k 100k').split()
+    _dep = next((x for x in _cand if ('_%s_' % x) in v), '')
+    if not _dep:
+        _m = re.search(r'_(\d+k)_', v)
+        _dep = _m.group(1) if _m else ''
     _dk = {'5k': '5K', '15k': '15K', '50k': '50K', '100k': '100K'}.get(_dep, '')
     _nrep_key = 'NREP_' + _dk if _dk and ('NREP_' + _dk) in conf else 'NREP'
     _norm_key = 'NORMALS_' + _dk if _dk and ('NORMALS_' + _dk) in conf else 'NORMALS'

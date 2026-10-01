@@ -95,9 +95,28 @@ PANELS = _cfg.PANELS
 EGAD_REPS = (1, 2, 3)
 
 
+# 검체 이름에서 «사람»을 뽑는다. 사람 단위로 묶어 한 사람이 표를 여럿 쥐지 않게 한다.
+#   기본값은 이 논문의 이름 규칙(pat_1_... · ind_3_...)이다.
+#   다른 자료를 쓰면 PERSON_RE 로 바꾼다. 괄호 하나가 사람 이름이 된다.
+#   예: PERSON_RE='^([A-Z0-9]+)-'
+_PRE = re.compile(os.environ.get('PERSON_RE') or r'^((pat|ind)_\d+)_')
+_pmiss = [0, 0]
+
+
 def person(s):
-    m = re.match(r'^((pat|ind)_\d+)_', str(s))
-    return m.group(1) if m else str(s)
+    m = _PRE.match(str(s))
+    if m and m.groups():
+        _pmiss[1] += 1
+        return m.group(1)
+    _pmiss[0] += 1
+    return str(s)
+
+
+def person_warn():
+    """하나도 못 맞추면 사람 묶기가 검체 묶기와 같아진다. 조용히 넘기지 않는다."""
+    if _pmiss[1] == 0 and _pmiss[0]:
+        print('  ! PERSON_RE 가 검체 %d개 중 하나도 못 맞췄습니다 — 사람 단위 묶기가 검체 단위와'
+              ' 같아집니다. 환경변수 PERSON_RE 를 자료의 이름 규칙에 맞추세요.' % _pmiss[0])
 
 
 def donor(rep):
@@ -137,6 +156,7 @@ def load(panel, combo):
         return None, '조합 %s 가 %d개 파일에 없음' % (combo, len(fs))
     d = d.copy()
     d['person'] = d['sample'].map(person)
+    person_warn()
     d['donor'] = d['rep'].map(donor) if 'rep' in d.columns else 0
     return d, None
 

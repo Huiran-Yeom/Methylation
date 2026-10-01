@@ -447,6 +447,8 @@ def main():
         MP = pd.read_csv(mp)
         bad = []
         for sid, fn in zip(MP['sample_id'].astype(str), MP['file'].astype(str)):
+            # 05_Feature_Matrix 의 collect(..., 'Normal'/'GBM') 가 만든 번호다.
+            #   암종 이름이 아니다. 두 파일이 같은 글자를 쓰기로 한 약속이다.
             g = re.match(r'^(Normal|GBM)(\d+)$', sid)
             h = re.search(r'sampled_reads_(\d+)\.', fn)
             if g and h and int(g.group(2)) != int(h.group(1)):

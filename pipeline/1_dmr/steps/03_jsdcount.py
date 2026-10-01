@@ -151,14 +151,41 @@ jobs = [(sid(f), NB, 'Normal') for f in sorted(glob.glob(ND+'/*.cov.gz'))] + \
 if ONLY: jobs = [j for j in jobs if j[0] == ONLY]
 if not jobs: sys.exit('대상 검체 없음')
 
-_done, _skip = {}, {}
-for i, (s, bd, ty) in enumerate(jobs, 1):
-    hit = [f for f in dict.fromkeys(glob.glob(bd+'/*.bam')) if sid(f) == s]
-    if len(hit) != 1:
-        print('  [%2d/%d] %-16s BAM %d개: 건너뜀 (%s)' % (i, len(jobs), s, len(hit), bd))
-        _skip[ty] = _skip.get(ty, 0) + 1; continue
-    _done[ty] = _done.get(ty, 0) + 1
-    nr, nh = scan(hit[0])
+# 짝을 «스캔 전에» 맞춰 본다. 뒤에서 검사하면 암 30개를 다 읽고 90개 파일을 쓴 뒤에야
+#   멈추고, 다시 돌리려면 run_dmr.sh 의 덮어쓰기 관문까지 풀어야 한다.
+_pair, _miss = [], []
+for s, bd, ty in jobs:
+    hit = [f for f in glob.glob(bd+'/*.bam') if sid(f) == s]
+    if len(hit) == 1: _pair.append((s, hit[0], ty))
+    else:             _miss.append((s, ty, len(hit), bd))
+
+_have = {}
+for _s, _f, _t in _pair: _have[_t] = _have.get(_t, 0) + 1
+for _t in sorted({t for _, _, t in jobs}):
+    _m = sum(1 for x in _miss if x[1] == _t)
+    print('  %-8s 짝 %d개 · 못 찾음 %d개' % (_t, _have.get(_t, 0), _m))
+
+if _miss:
+    for _s, _t, _n, _bd in _miss[:20]:
+        print('    %-16s %s BAM %d개  (%s)' % (_s, _t, _n, _bd))
+    if len(_miss) > 20: print('    … 외 %d개' % (len(_miss) - 20))
+    # 넘어가면 01 이 쓴 samples.csv 와 여기서 센 검체 수가 어긋난다. 04_jsd 는
+    #   NEED_N 을 samples.csv 로 잡으므로(04_jsd.py:91), 많이 빠지면 「쓸 수 있는
+    #   창이 0」 으로 죽고, 조금 빠지면 «줄어든 정상 기준»으로 조용히 다른 패널을
+    #   고른다. 그래서 기본은 멈춤이고, 알고 넘기려면 ALLOW_SKIP=1 을 준다.
+    if os.environ.get('ALLOW_SKIP') != '1':
+        sys.exit('중단: 짝 BAM 을 못 찾은 검체가 %d개 있습니다.' % len(_miss) + chr(10) +
+                 '  cov 이름과 BAM 이름이 첫 _ 앞까지 같아야 짝이 맞습니다.' + chr(10) +
+                 '  정상 BAM: ' + NB + chr(10) +
+                 '  암   BAM: ' + GB + chr(10) +
+                 '  폴더가 다르면 NORMAL_BAM_DIR · GBM_BAM_DIR 로 주십시오.' + chr(10) +
+                 '  빠진 채로 진행하려면 ALLOW_SKIP=1 (04 의 정상 기준이 줄어듭니다).')
+    print('  ALLOW_SKIP=1 — 빠진 채로 진행합니다. 04 의 정상 기준이 줄어듭니다.')
+
+if not _pair: sys.exit('중단: 짝지은 검체가 하나도 없습니다.')
+
+for i, (s, bam, ty) in enumerate(_pair, 1):
+    nr, nh = scan(bam)
     msg = []
     for K in KS:
         tot = C[K].sum(1)
@@ -170,17 +197,5 @@ for i, (s, bd, ty) in enumerate(jobs, 1):
         cd = cd[tot > 0]
         cd.to_parquet(OUT + '/count_%s_K%d.parquet' % (s, K), index=False)
     print('  [%2d/%d] %-16s 리드 %10d · 후보걸침 %9d · %s'
-          % (i, len(jobs), s, nr, nh, ' | '.join(msg)), flush=True)
-# 계급 하나가 통째로 건너뛰어도 여기까지 오면 rc=0 으로 끝난다. 그러면
-#   04_jsd 가 한 계급만으로 JSD 를 재게 된다. 끝에서 계급별로 센다.
-print()
-for _t in ('Normal', 'GBM'):
-    print('  %-8s 센 것 %d개 · 건너뛴 것 %d개' % (_t, _done.get(_t, 0), _skip.get(_t, 0)))
-_empty = [_t for _t in ('Normal', 'GBM') if _done.get(_t, 0) == 0]
-if _empty:
-    sys.exit(('중단: %s 을 한 개도 못 셌습니다.' % ' · '.join(_empty)) + chr(10) +
-             '  cov 이름과 BAM 이름이 첫 _ 앞까지 같아야 짝이 맞습니다.' + chr(10) +
-             '  정상 BAM: ' + NB + chr(10) +
-             '  암   BAM: ' + GB + chr(10) +
-             '  폴더가 다르면 NORMAL_BAM_DIR · GBM_BAM_DIR 로 주십시오.')
+          % (i, len(_pair), s, nr, nh, ' | '.join(msg)), flush=True)
 print('\n저장: ' + OUT)

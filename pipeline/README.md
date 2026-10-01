@@ -178,20 +178,24 @@ silently reads the old location.
 | `NORMAL_BAM_DIR` | `$DATASET_ROOT/for_in_silico_test/normal_cfDNA_public/aligned_bam` | steps 03, 11 |
 | `GBM_BAM_DIR` | `$DATASET_ROOT/training/GBM_cell-line/aligned_bam` | steps 03, 11 |
 
-Step 03 pairs a cov file with its BAM by the sample id up to the first `_`, and
-it now counts what it paired. If either class ends with nothing it stops and
-prints both BAM paths, rather than finishing with one class and exit 0. Point
-`NORMAL_BAM_DIR` at an empty folder and you get:
+Step 03 pairs a cov file with its BAM by the sample id up to the first `_`. It
+checks every pair **before** it starts scanning and stops if any is missing,
+naming them and both BAM folders:
 
 ```
-  Normal   센 것 0개 · 건너뛴 것 15개
-  GBM      센 것 30개 · 건너뛴 것 0개
-중단: Normal 을 한 개도 못 셌습니다.
+  GBM      짝 30개 · 못 찾음 0개
+  Normal   짝 0개 · 못 찾음 15개
+중단: 짝 BAM 을 못 찾은 검체가 15개 있습니다.
 ```
 
-Partial mismatches are reported but not fatal: a cov set with 28 entries against
-15 BAMs prints `센 것 15개 · 건너뛴 것 13개` and continues, because skipping a cov
-whose BAM is absent is the documented behaviour.
+Any missing pair is fatal, not just an empty class, because step 01 writes
+`samples.csv` from the cov list while step 03 scans only what it could pair.
+Step 04 derives its normal-coverage threshold from `samples.csv`, so a cov set
+of 28 against 15 BAMs either kills step 04 with `쓸 수 있는 창이 0` or, for a
+smaller gap, quietly selects a different 200-block panel against a shrunken
+normal reference. `ALLOW_SKIP=1` proceeds anyway and says so.
+
+`--sample <id>` runs one sample and is exempt from the class accounting.
 
 **There are three pooled-BAM sets, not one.** A pooled BAM holds only reads inside
 its own panel regions, so a null panel — whose blocks are drawn at random — finds

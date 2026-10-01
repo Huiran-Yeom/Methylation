@@ -128,8 +128,17 @@ with open(sc, newline='', encoding='utf-8') as fh:
     for c in ('sample', 'type'):
         if c not in (rd.fieldnames or []):
             sys.exit('samples.csv 에 %s 열이 없습니다: %s' % (c, sc))
+    _odd = set()
     for r in rd:
-        (norm if r['type'] == 'Normal' else canc).append(r['sample'])
+        t = r['type']
+        if t == 'Normal':   norm.append(r['sample'])
+        elif t == _CANCER:  canc.append(r['sample'])
+        else:               _odd.add(t)
+    # 'Normal' 이 아닌 것을 전부 암으로 세면 CANCER_LABEL 이 어긋나도 조용히 돈다.
+    if _odd:
+        sys.exit('samples.csv 에 모르는 type 이 있습니다: %s (아는 것은 Normal · %s). '
+                 'CANCER_LABEL 이 1단계가 쓴 값과 맞는지 보십시오: %s'
+                 % (', '.join(sorted(_odd)), _CANCER, sc))
 if not norm: sys.exit('samples.csv 에 정상이 없습니다: ' + sc)
 if not canc: sys.exit('samples.csv 에 암이 없습니다 (type=%s): %s' % (_CANCER, sc))
 

@@ -105,7 +105,9 @@ else:                          _POOLDIR = 'j_pool' + GEN + '_cellline'
 _POOL = os.environ.get('POOL_DIR') or (ROOT + '/results/dmr/' + _POOLDIR)
 # 2026-09 까지 실판 풀 폴더 이름이 j_pool<GEN>_세포주 였다. 옛 트리에는 영문 이름이
 #   없어 풀을 못 찾고 2단계 첫 걸음이 죽는다. 새 이름이 없으면 옛 이름을 본다.
-if not os.path.isdir(_POOL) and _POOLDIR.endswith('_cellline'):
+#   POOL_DIR 을 직접 준 경우에는 그 값을 그대로 둔다 — 없는 폴더를 줬으면 그렇게 멈춘다.
+if (not os.environ.get('POOL_DIR') and not os.path.isdir(_POOL)
+        and _POOLDIR.endswith('_cellline')):
     _old = _POOL[:-len('_cellline')] + '_세포주'
     if os.path.isdir(_old):
         _POOL = _old

@@ -210,8 +210,11 @@ step 10 "귀무B 3판 (씨앗 20260914+100+i)" python -u "$S/10_null_b.py"
 #   다르고 11_pool 이 끝에 samtools sort 를 하므로 결과가 같다).
 # 10c 가 목록을 j_panel<GEN> 아래에 쓴다. run_pool.sh 의 기본값은 ~/tmp 라
 #   세대·자료가 섞일 수 있다. 산출 트리 안을 보게 여기서 못박는다.
-export USE_NORMAL="$D/j_panel$GEN/use${GEN}_normal.txt"
-export USE_GBM="$D/j_panel$GEN/use${GEN}_gbm.txt"
+#   다만 사용자가 준 값이 있으면 그것을 쓴다. 그냥 export 하면 README 가 적어 둔
+#   USE_NORMAL= 덮어쓰기가 말없이 무시된다.
+: "${USE_NORMAL:=$D/j_panel$GEN/use${GEN}_normal.txt}"
+: "${USE_GBM:=$D/j_panel$GEN/use${GEN}_gbm.txt}"
+export USE_NORMAL USE_GBM
 
 _pool_all() {   # 풀 셋을 차례로 만든다. 하나라도 못 만들면 실패로 끝낸다.
   local w bad=""

@@ -103,6 +103,12 @@ if PANEL.startswith('randb'):  _POOLDIR = 'j_pool' + GEN + '_randb'
 elif PANEL.startswith('rand'): _POOLDIR = 'j_pool' + GEN + '_rand'
 else:                          _POOLDIR = 'j_pool' + GEN + '_cellline'
 _POOL = os.environ.get('POOL_DIR') or (ROOT + '/results/dmr/' + _POOLDIR)
+# 2026-09 까지 실판 풀 폴더 이름이 j_pool<GEN>_세포주 였다. 옛 트리에는 영문 이름이
+#   없어 풀을 못 찾고 2단계 첫 걸음이 죽는다. 새 이름이 없으면 옛 이름을 본다.
+if not os.path.isdir(_POOL) and _POOLDIR.endswith('_cellline'):
+    _old = _POOL[:-len('_cellline')] + '_세포주'
+    if os.path.isdir(_old):
+        _POOL = _old
 FULL_NORMAL_BAM = _POOL + '/pool_normal_all.bam'
 FULL_GBM_BAM    = _POOL + '/pool_gbm_all.bam'
 # NEGCTRL_BG_BAM · NEGCTRL_MIX_BAM 을 지웠다 — 읽는 코드가 없고,

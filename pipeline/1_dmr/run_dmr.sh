@@ -101,6 +101,7 @@ _outs() {   # _outs <단계번호> -> 그 단계가 「처음 만드는」 폴�
     07)  echo "$D/j_panel_dmr$GEN/bl200_d10_cellline" ;;
     08)  echo "$D/j_panel_dmr${GEN}_panels" ;;
     09|10) : ;;                     # j_panel_dmr<GEN>_panels 에 더한다
+    10c) : ;;                      # j_panel<GEN> 에 더한다 (06 이 만든 폴더)
     11)  echo "$D/j_pool${GEN}_cellline"     # 11 은 풀 셋을 만든다. 셋 다 검사한다.
          echo "$D/j_pool${GEN}_rand"
          echo "$D/j_pool${GEN}_randb" ;;
@@ -202,8 +203,16 @@ step 10 "귀무B 3판 (씨앗 20260914+100+i)" python -u "$S/10_null_b.py"
 #   풀은 셋이다. 풀 BAM 은 «자기 패널 영역의 리드만» 담으므로, 무작위 블록을 쓰는
 #   귀무판은 실판 풀에서 거의 아무것도 못 찾는다(실측: 200칸 중 8칸). 그래서
 #   2_train/steps/config.py 가 PANEL 로 풀을 고르고, 여기서 셋을 다 만든다.
-#   주의: run_pool.sh 는 panel_union*.csv 를 입력으로 받는데 그것을 만드는 코드는
-#   여기 없다. 1단계 패널 산출을 손으로 합친 것이다. README 에 적어 두었다.
+#   run_pool.sh 는 panel_union*.csv 와 use<GEN>_{normal,gbm}.txt 를 입력으로 받는다.
+#   2026-10-01 까지 이 다섯을 손으로 만들어 두고 썼다. 그래서 새 자료로 처음부터
+#   돌리면 11 이 「패널 목록이 없다」 로 멈췄다. 10c 가 판과 samples.csv 에서 만든다
+#   — GBM 자료에서 손으로 만든 것과 넷은 바이트 동일, rand3 은 집합 동일(줄 차례만
+#   다르고 11_pool 이 끝에 samtools sort 를 하므로 결과가 같다).
+# 10c 가 목록을 j_panel<GEN> 아래에 쓴다. run_pool.sh 의 기본값은 ~/tmp 라
+#   세대·자료가 섞일 수 있다. 산출 트리 안을 보게 여기서 못박는다.
+export USE_NORMAL="$D/j_panel$GEN/use${GEN}_normal.txt"
+export USE_GBM="$D/j_panel$GEN/use${GEN}_gbm.txt"
+
 _pool_all() {   # 풀 셋을 차례로 만든다. 하나라도 못 만들면 실패로 끝낸다.
   local w bad=""
   for w in cellline rand randb; do
@@ -217,6 +226,8 @@ _pool_all() {   # 풀 셋을 차례로 만든다. 하나라도 못 만들면 실
   echo "  몇 칸으로 조용히 돌거나 「풀 부족」 으로 멈춥니다." >&2
   return 1
 }
+step 10c "풀 입력 만들기 (합집합 3 · 검체목록 2)" python -u "$S/10c_panel_union.py"
+
 step 11 "패널 영역 풀 BAM (cellline·rand·randb)" _pool_all
 
 say "DMR 끝: $D/j_panel_dmr${GEN}_panels/<패널>/DMR_confirmed_<패널>.csv"

@@ -50,7 +50,10 @@ unset _v
 
 WHICH=${1:-}
 case "$WHICH" in
-  cellline) PANEL=$DMR_OUT/j_panel$GEN/panel_union3_cellline.csv ;;
+  cellline) PANEL=$DMR_OUT/j_panel$GEN/panel_union3_cellline.csv
+            # 2026-09 까지 이 이름이 panel_union3_세포주.csv 였다. 옛 트리를
+            #   그대로 쓸 수 있게 새 이름이 없으면 옛 이름을 본다.
+            [ -f "$PANEL" ] || PANEL=$DMR_OUT/j_panel$GEN/panel_union3_세포주.csv ;;
   rand)   PANEL=$DMR_OUT/j_panel$GEN/panel_union_rand3.csv ;;
   randb)  PANEL=$DMR_OUT/j_panel$GEN/panel_union_randb3.csv ;;
   *) echo "사용: $(basename "$0") cellline|rand|randb"; exit 1 ;;

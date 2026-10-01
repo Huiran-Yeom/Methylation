@@ -97,18 +97,20 @@ _GRE = _os.environ.get('GROUP_RE')
 _grx = re.compile(_GRE) if _GRE else None
 
 
-def grp(s, t='GBM'):
+_CANCER = getattr(_cfg, 'CANCER_LABEL', 'GBM')   # samples.csv 의 type 값
+
+def grp(s, t=_CANCER):
     # GROUP_RE 는 «암 쪽에만» 쓴다. 반복본 묶기는 세포주 개념이고, 정상은
     #   한 사람당 한 파일이 전제다(아래 assert u_norm == n_norm 이 그것을 지킨다).
     #   정상까지 묶으면 NC-P-1·NC-P-3·… 아홉이 'NC' 하나가 되어 커버 기준이
     #   9명에서 5명으로 느슨해진다.
-    if _grx is not None and t == 'GBM':
+    if _grx is not None and t == _CANCER:
         m = _grx.match(s)
         return m.group(1) if (m and m.groups()) else s
     return s.split('-')[0] if s.upper().startswith('SNU') and '-' in s else s
 
 files = [(f,'Normal') for f in sorted(glob.glob(ND+'/*.cov.gz'))] + \
-        [(f,'GBM')    for f in sorted(glob.glob(GD+'/*.cov.gz'))]
+        [(f,_CANCER)    for f in sorted(glob.glob(GD+'/*.cov.gz'))]
 if not files: sys.exit('cov 파일 없음')
 # 같은 sid 가 둘 이상이면 멈춘다. sid 는 검체 이름이자 표의 열 이름이라,
 #   겹치면 pivot_table(aggfunc='first') 이 뒤엣것을 «조용히 버린다».
@@ -128,12 +130,12 @@ if _nn == 0:          sys.exit('정상 cov 가 없다 — NORMAL_SET 또는 --nd
 if _nn == len(files): sys.exit('암 cov 가 없다 — GBM_COV_DIR 을 확인하라: ' + GD)
 
 u_norm = len({grp(sid(f), 'Normal') for f,t in files if t=='Normal'})
-u_gbm  = len({grp(sid(f)) for f,t in files if t=='GBM'})
+u_gbm  = len({grp(sid(f)) for f,t in files if t==_CANCER})
 need_n = int(math.ceil(FRAC*u_norm))
 need_g = int(math.ceil(FRAC*u_gbm))
 _nrep = {}
 for _f,_t in files:
-    if _t == 'GBM':
+    if _t == _CANCER:
         _g = grp(sid(_f)); _nrep[_g] = _nrep.get(_g,0)+1
 _req = {g: min(MINREP,n) for g,n in _nrep.items()}
 print('정상 %d명 · 암 %d종 · 자리 기준 정상 %d AND 암 %d'
@@ -162,7 +164,7 @@ A = pd.concat(rows, ignore_index=True)
 del rows
 
 N  = A[A.ty=='Normal'].groupby(['chr','blk','start'], observed=True)['grp'].nunique()
-G  = A[A.ty=='GBM'   ].groupby(['chr','blk','start','grp'], observed=True).size()
+G  = A[A.ty==_CANCER   ].groupby(['chr','blk','start','grp'], observed=True).size()
 Gv = np.array([_req[g] for g in G.index.get_level_values('grp')])
 Go = pd.Series((G.values >= Gv).astype(np.int32),
                index=G.index).groupby(level=[0,1,2]).sum()

@@ -84,11 +84,18 @@ if '--dir'   in a: D     = a[a.index('--dir')+1]
 if '--cand'  in a: CAND  = a[a.index('--cand')+1]
 if '--out'   in a: OUT   = a[a.index('--out')+1]
 
+_CANCER = getattr(_cfg, 'CANCER_LABEL', 'GBM')   # samples.csv 의 type 값
+
 M   = pd.read_csv(CAND + '/samples.csv')
 grp = dict(zip(M['sample'], M['group'])); typ = dict(zip(M['sample'], M['type']))
 norm  = sorted(s for s in typ if typ[s] == 'Normal')
 lines = {}
-for s in sorted(t for t in typ if typ[t] == 'GBM'): lines.setdefault(grp[s], []).append(s)
+for s in sorted(t for t in typ if typ[t] == _CANCER): lines.setdefault(grp[s], []).append(s)
+# CANCER_LABEL 과 samples.csv 의 type 이 어긋나면 양성이 0개가 된다.
+#   그대로 두면 AUC 가 nan 이 되거나 전부 음성으로 학습한다. 여기서 멈춘다.
+if int(len(lines)) == 0:
+    sys.exit('samples.csv 에 type=%s 인 검체가 없습니다. CANCER_LABEL 과 1단계가 쓴 값이'
+             ' 어긋났습니다 (현재 CANCER_LABEL=%s).' % (_CANCER, _CANCER))
 
 W  = pd.read_parquet(D + '/windows_K%d.parquet' % K)
 nw, m = len(W), 1 << K

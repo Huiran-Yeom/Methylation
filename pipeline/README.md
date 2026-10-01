@@ -208,6 +208,7 @@ reproduces the reported results.
 | `GROUP_RE` | `SNU<n>-<rep>` → `SNU<n>` | Groups replicate files into one independent unit, **cancer side only**. Coverage requires a fraction of *units*, not of files, so this changes the threshold. |
 | `PERSON_RE` | `pat_1_…` / `ind_3_…` | Stage 4 only. Groups validation samples by person so one person cannot carry several rows of a table. Prints a warning if it matches nothing. |
 | `DEPTHS` | `5k 15k 50k 100k` | Panel depths to read in stages 3 and 4. Stage 3 also falls back to `_<n>k_` in the model name. |
+| `CANCER_LABEL` | `GBM` | The value stage 1 writes in the `type` column of `samples.csv`, and the value every later step compares against. Changing it means re-running stage 1; a mismatch stops the run rather than training on zero positives. |
 
 Steps 01 and 02 stop if two files resolve to the same sample id, because the id
 becomes a column name and a collision would drop one of them silently.
@@ -226,7 +227,10 @@ giving distinct ids `H1876_0d` and `H1876` that group into one cell line.
 
 Stages 2 and 4 take the normal/cancer split from the `type` column of
 `samples.csv`, which step 01 writes. Nothing downstream infers class from a
-filename.
+filename. The cancer label itself is cosmetic — set `CANCER_LABEL=SCLC` and the
+column reads `SCLC` — but it is not cosmetic in `2_train`, where sample ids are
+built as `Normal1…` / `GBM1…` and the classifier keys on that prefix. Those ids
+are internal and stay as they are.
 
 **There are three pooled-BAM sets, not one.** A pooled BAM holds only reads inside
 its own panel regions, so a null panel — whose blocks are drawn at random — finds

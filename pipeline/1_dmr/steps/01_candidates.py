@@ -93,12 +93,14 @@ _GRE = _os.environ.get('GROUP_RE')
 _grx = re.compile(_GRE) if _GRE else None
 
 
-def grp(s, t='GBM'):
+_CANCER = getattr(_cfg, 'CANCER_LABEL', 'GBM')   # samples.csv 의 type 값
+
+def grp(s, t=_CANCER):
     # GROUP_RE 는 «암 쪽에만» 쓴다. 반복본 묶기는 세포주 개념이고, 정상은
     #   한 사람당 한 파일이 전제다(아래 assert u_norm == n_norm 이 그것을 지킨다).
     #   정상까지 묶으면 NC-P-1·NC-P-3·… 아홉이 'NC' 하나가 되어 커버 기준이
     #   9명에서 5명으로 느슨해진다.
-    if _grx is not None and t == 'GBM':
+    if _grx is not None and t == _CANCER:
         m = _grx.match(s)
         return m.group(1) if (m and m.groups()) else s
     return s.split('-')[0] if s.upper().startswith('SNU') and '-' in s else s
@@ -117,7 +119,7 @@ def read_one(p):
     return g[g.n_cpg >= MINCPG]
 
 files = [(f,'Normal') for f in sorted(glob.glob(ND+'/*.cov.gz'))] + \
-        [(f,'GBM')    for f in sorted(glob.glob(GD+'/*.cov.gz'))]
+        [(f,_CANCER)    for f in sorted(glob.glob(GD+'/*.cov.gz'))]
 if not files: sys.exit('cov 파일 없음')
 # 같은 sid 가 둘 이상이면 멈춘다. sid 는 검체 이름이자 표의 열 이름이라,
 #   겹치면 pivot_table(aggfunc='first') 이 뒤엣것을 «조용히 버린다».
@@ -146,7 +148,7 @@ if DRY: files = files[:1] + files[-1:]   # 2026-08-20: 정상 1 + 암 1 (암 경
 n_norm = sum(1 for _, t in files if t == 'Normal')
 n_gbm  = len(files) - n_norm
 u_norm = len({grp(sid(f), 'Normal') for f, t in files if t == 'Normal'})
-u_gbm  = len({grp(sid(f)) for f, t in files if t == 'GBM'})
+u_gbm  = len({grp(sid(f)) for f, t in files if t == _CANCER})
 assert u_norm == n_norm, '정상에 복제 파일이 있다 — 커버 계산을 다시 봐야 한다'
 need_n = int(math.ceil(FRAC * u_norm))
 need_g = int(math.ceil(FRAC * u_gbm))
@@ -175,7 +177,7 @@ A['_n'] = A['sample'].isin(_nset)
 # 세포주별 파일 수. 파일이 MINREP보다 적으면 있는 만큼만 요구한다.
 _nrep = {}
 for _f, _t in files:
-    if _t == 'GBM':
+    if _t == _CANCER:
         _g = grp(sid(_f)); _nrep[_g] = _nrep.get(_g, 0) + 1
 _req   = {g: min(MINREP, n) for g, n in _nrep.items()}
 _short = sorted(g for g, n in _nrep.items() if n < MINREP)
@@ -217,8 +219,8 @@ C.to_parquet(OUT+'/cpg_matrix.parquet')
 M = pd.DataFrame(meta); M.to_csv(OUT+'/samples.csv', index=False)
 pd.DataFrame({'chr':B.index.get_level_values(0),'blk':B.index.get_level_values(1)}
              ).to_csv(OUT+'/blocks_frac%03d.csv' % round(FRAC*100), index=False)
-txt = ['검체 %d (정상 %d · 암 %d)' % (len(meta), (M.type=='Normal').sum(), (M.type=='GBM').sum()),
-       '독립단위 정상 %d · 암 %d' % (M[M.type=='Normal'].group.nunique(), M[M.type=='GBM'].group.nunique()),
+txt = ['검체 %d (정상 %d · 암 %d)' % (len(meta), (M.type=='Normal').sum(), (M.type==_CANCER).sum()),
+       '독립단위 정상 %d · 암 %d' % (M[M.type=='Normal'].group.nunique(), M[M.type==_CANCER].group.nunique()),
        '기준 리드%d · CpG%d · 커버%.0f%% (정상 %d명 AND 암 %d종 · 종당 파일 %d개 이상)'
        % (MINCOV+1, MINCPG, FRAC*100, need_n, need_g, MINREP),
        '후보 블록 %d' % len(B), '결측률 %.1f%%' % (B.isna().mean().mean()*100)]

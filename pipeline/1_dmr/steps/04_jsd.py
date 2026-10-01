@@ -82,7 +82,14 @@ M = pd.read_csv(CAND + '/samples.csv')
 if USE: M = M[M['sample'].isin(USE)]
 grp = dict(zip(M['sample'], M['group'])); typ = dict(zip(M['sample'], M['type']))
 norm  = sorted(s for s in typ if typ[s] == 'Normal')
-gbm   = sorted(s for s in typ if typ[s] == 'GBM')
+_CANCER = getattr(_cfg, 'CANCER_LABEL', 'GBM')   # samples.csv 의 type 값
+
+gbm   = sorted(s for s in typ if typ[s] == _CANCER)
+# CANCER_LABEL 과 samples.csv 의 type 이 어긋나면 양성이 0개가 된다.
+#   그대로 두면 AUC 가 nan 이 되거나 전부 음성으로 학습한다. 여기서 멈춘다.
+if int(len(gbm)) == 0:
+    sys.exit('samples.csv 에 type=%s 인 검체가 없습니다. CANCER_LABEL 과 1단계가 쓴 값이'
+             ' 어긋났습니다 (현재 CANCER_LABEL=%s).' % (_CANCER, _CANCER))
 lines = {}
 for s in gbm: lines.setdefault(grp[s], []).append(s)
 # NEED 를 표본 수에서 자동 계산한다. 상수로 두면 정상 인원이 바뀔 때

@@ -148,10 +148,12 @@ def scan(bam):
     f.close()
     return nr, nh
 
+_CANCER = getattr(_cfg, 'CANCER_LABEL', 'GBM')   # samples.csv 의 type 값
+
 # 짝을 «아무것도 쓰기 전에» 맞춰 본다. 폴더를 만들거나 창 표를 쓴 뒤에 멈추면,
 #   경로를 고쳐 다시 돌릴 때 run_dmr.sh 의 덮어쓰기 관문이 그 몇 개 때문에 막는다.
 jobs = [(sid(f), NB, 'Normal') for f in sorted(glob.glob(ND+'/*.cov.gz'))] + \
-       [(sid(f), GB, 'GBM')    for f in sorted(glob.glob(GD+'/*.cov.gz'))]
+       [(sid(f), GB, _CANCER)    for f in sorted(glob.glob(GD+'/*.cov.gz'))]
 if ONLY: jobs = [j for j in jobs if j[0] == ONLY]
 if not jobs: sys.exit('대상 검체 없음')
 

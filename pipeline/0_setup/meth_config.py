@@ -28,6 +28,9 @@ _DEFAULTS = {
     'TRAIN_SRC': os.path.join(_TREE, '2_train', 'steps'),
     'ANALYSIS_DIR': os.path.join(_TREE, '3_validate', 'steps'),
     'GEN': '15',
+    # samples.csv 의 type 열에 적히는 «암» 쪽 이름. 쓰는 곳과 읽는 곳이 모두
+    #   이 값을 본다. 바꾸면 1단계를 처음부터 다시 돌려야 한다.
+    'CANCER_LABEL': 'GBM',
     # 빈 값이면 「어느 코호트든 허용」. 이름을 적으면 그 목록만 허용한다.
     'VAL_COHORTS': '',
     'PANELS': 'bl200,jsd200,jsdb200',
@@ -130,6 +133,7 @@ TRAIN_SRC = get_path('TRAIN_SRC')
 ANALYSIS_DIR = get_path('ANALYSIS_DIR')
 
 GEN = get('GEN')
+CANCER_LABEL = get('CANCER_LABEL')
 VAL_COHORTS = [x.strip() for x in get('VAL_COHORTS').split(',') if x.strip()]
 PANELS = [x.strip() for x in get('PANELS').split(',') if x.strip()]
 # 자체점검이 「conf 에 있는데 모듈 속성으로 없다」 를 잡았다.

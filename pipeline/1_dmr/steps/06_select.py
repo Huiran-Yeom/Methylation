@@ -77,7 +77,14 @@ if not JSD:
 B = pd.read_parquet(CAND + '/beta_matrix.parquet')
 M = pd.read_csv(CAND + '/samples.csv')
 X = B.T.reindex(M['sample']).values.astype(np.float32)
-y = (M['type'] == 'GBM').astype(int).values
+_CANCER = getattr(_cfg, 'CANCER_LABEL', 'GBM')   # samples.csv 의 type 값
+
+y = (M['type'] == _CANCER).astype(int).values
+# CANCER_LABEL 과 samples.csv 의 type 이 어긋나면 양성이 0개가 된다.
+#   그대로 두면 AUC 가 nan 이 되거나 전부 음성으로 학습한다. 여기서 멈춘다.
+if int(y.sum()) == 0:
+    sys.exit('samples.csv 에 type=%s 인 검체가 없습니다. CANCER_LABEL 과 1단계가 쓴 값이'
+             ' 어긋났습니다 (현재 CANCER_LABEL=%s).' % (_CANCER, _CANCER))
 _c = [str(i) for i in range(X.shape[1])]
 _D = pd.DataFrame(X, columns=_c); _D['_g'] = M['group'].values; _D['_y'] = y
 _A = _D.groupby('_g', sort=True).mean()

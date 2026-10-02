@@ -73,6 +73,9 @@ def _md5f(p):
     return h.hexdigest()[:8]
 V, ML = C.VERSION, C.ML_OUT
 TRAIN = _M + '/results/panels/%s/%s/step04_ML_classifier/models' % (V.split('_')[0], V)
+# 모델만 다른 트리에서 읽어야 할 때가 있다 — 같은 검체 피처에 새로 굳힌 모델을
+#   적용해 보는 경우다. 검체 자료와 산출 자리는 그대로 두고 모델 자리만 옮긴다.
+TRAIN = os.environ.get('MODELS_DIR') or TRAIN
 SM = os.path.basename(os.getcwd())
 RATIOS = [r for r in C.MUT_RATIOS if r > 0]
 

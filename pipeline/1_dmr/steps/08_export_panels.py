@@ -81,6 +81,18 @@ SRC = {'bl200':   R + '/j_panel_dmr' + _GEN + '/bl200_d10_cellline/DMR_confirmed
 _MADE_BY = {'bl200':   '07_panel.py  (Baseline 순위)',
             'jsd200':  '06_select.py (JSD 상위 N)',
             'jsdb200': '06b_select_supplement.py 를 먼저 돌리십시오 (j_panel<GEN>_supplement 에 씁니다)'}
+# 2026-09 까지 두 자리 이름이 한글이었다. 코드만 영문으로 바꾸고 저장된 산출물
+#   쪽 짝을 안 지어서, 옛 트리에 08 만 따로 돌리면 bl200·jsdb200 입력을 못 찾는다.
+#   (처음부터 도는 실행은 07·06b 가 영문 이름으로 먼저 만드니 안 걸린다.)
+#   새 이름이 없을 때만 옛 이름을 본다.
+_OLD = {'bl200':   SRC['bl200'].replace('bl200_d10_cellline', 'bl200_d10_세포주'),
+        'jsdb200': SRC['jsdb200'].replace('_supplement/panel_jsd_supplement_n200.csv',
+                                          '_보완/panel_jsd보완_n200.csv')}
+for _p, _o in _OLD.items():
+    if not os.path.isfile(SRC[_p]) and os.path.isfile(_o):
+        print('  옛 이름으로 읽는다: %s' % _o)
+        SRC[_p] = _o
+
 for panel, src in SRC.items():
     if not os.path.isfile(src):
         raise SystemExit(

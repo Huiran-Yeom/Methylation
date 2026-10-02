@@ -143,11 +143,23 @@ def is_mixed():
     return True
 
 
+
+def _allcombo(prefix):
+    """all_combos 채점 파일을 찾는다.
+
+    2026-09 까지 이 꼬리가 _모든조합.csv 였다. 한글->영문 이름바꿈을 코드만 하고
+    저장된 산출물 쪽 짝을 안 지어서, 옛 트리에 대고 돌리면 한 칸도 못 읽는다.
+    새 이름이 하나도 없을 때만 옛 이름을 본다. 끝을 맞춰 글롭하므로
+    _모든조합_포화전.csv (중간 산출물) 는 안 걸린다.
+    """
+    fs = glob.glob(prefix + '_all_combos.csv')
+    return fs or glob.glob(prefix + '_모든조합.csv')
+
 def load(panel, combo):
     """make_tables.py 와 같은 원본을 읽는다. 검체마다 파일 하나."""
     v = _cfg.version_name(panel, DEPTH)
-    pat = '%s/step04_ML_classifier/y_prob_all_%s_all_combos.csv' % (val_dir(panel), v)
-    fs = sorted(glob.glob(pat))
+    pat = '%s/step04_ML_classifier/y_prob_all_%s' % (val_dir(panel), v)
+    fs = sorted(_allcombo(pat))
     if not fs:
         return None, '채점 파일 없음: %s' % pat
     d = pd.concat([pd.read_csv(f) for f in fs], ignore_index=True)

@@ -167,7 +167,8 @@ tr '\n' '\0' < "$_LIST" | xargs -0 -P"$PAR" -I{} bash -c '
 mkdir -p "${TMP_ROOT:-$HOME/tmp}/lock/val"
 _d=0; _busy=0; _miss=""
 while read -r s; do
-  if [ -s "$METH_ROOT/${COHORT}_val/$s/results/$V/step04_ML_classifier/y_prob_all_${V}_all_combos.csv" ]; then
+  # 2026-09 까지 꼬리가 _모든조합.csv 였다. 옛 트리도 끝난 것으로 세도록 둘 다 본다.
+  if [ -s "$METH_ROOT/${COHORT}_val/$s/results/$V/step04_ML_classifier/y_prob_all_${V}_all_combos.csv" ] || [ -s "$METH_ROOT/${COHORT}_val/$s/results/$V/step04_ML_classifier/y_prob_all_${V}_모든조합.csv" ]; then
     _d=$((_d+1)); continue
   fi
   # 잠금을 잡아 보고 곧 놓는다. 잡히면 아무도 안 하고 있다(진짜 빠짐).

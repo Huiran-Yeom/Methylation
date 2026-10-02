@@ -84,6 +84,18 @@ def person_warn():
         print('  ! PERSON_RE 가 검체 %d개 중 하나도 못 맞췄습니다 — 사람 단위 묶기가 검체 단위와'
               ' 같아집니다. 환경변수 PERSON_RE 를 자료의 이름 규칙에 맞추세요.' % _pmiss[0])
 
+
+def _allcombo(prefix):
+    """all_combos 채점 파일을 찾는다.
+
+    2026-09 까지 이 꼬리가 _모든조합.csv 였다. 한글->영문 이름바꿈을 코드만 하고
+    저장된 산출물 쪽 짝을 안 지어서, 옛 트리에 대고 돌리면 한 칸도 못 읽는다.
+    새 이름이 하나도 없을 때만 옛 이름을 본다. 끝을 맞춰 글롭하므로
+    _모든조합_포화전.csv (중간 산출물) 는 안 걸린다.
+    """
+    fs = glob.glob(prefix + '_all_combos.csv')
+    return fs or glob.glob(prefix + '_모든조합.csv')
+
 def auc(y, s):
     y, s = np.asarray(y, float), np.asarray(s, float)
     npos, nneg = (y == 1).sum(), (y == 0).sum()
@@ -124,7 +136,7 @@ def tie_width(y, s):
 
 for depth in DEPTHS:
     # 태그 없는 단일모델 파일과 섞이지 않게 all_combos만 읽는다
-    fs = glob.glob('%s/*/results/%s_%s_uni/step04_ML_classifier/y_prob_all_%s_%s_uni_all_combos.csv'
+    fs = _allcombo('%s/*/results/%s_%s_uni/step04_ML_classifier/y_prob_all_%s_%s_uni'
                    % (V, PAN, depth, PAN, depth))
     if not fs:
         print('\n== %s 리드: all_combos 채점 파일 없음' % depth); continue
@@ -143,7 +155,7 @@ for depth in DEPTHS:
     _UNI = {}
     for _p in ['j' + _cfg.GEN + _x for _x in _cfg.PANELS]:
         _byr = {}
-        for _f in glob.glob('%s/*/results/%s_%s_uni/step04_ML_classifier/y_prob_all_%s_%s_uni_all_combos.csv'
+        for _f in _allcombo('%s/*/results/%s_%s_uni/step04_ML_classifier/y_prob_all_%s_%s_uni'
                             % (V, _p, depth, _p, depth)):
             try:
                 _d = pd.read_csv(_f, usecols=['sample', 'feature_set', 'fraction_pct'])

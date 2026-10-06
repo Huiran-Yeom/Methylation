@@ -134,6 +134,8 @@ def tie_width(y, s):
         return U / (P * N)
     return w(0.0), w(1.0), len(set(ss.tolist()))
 
+RAT_LABEL = ['0.1%', '0.5%', '1%', '2%', '2.5%', '3%', '5%']
+
 for depth in DEPTHS:
     # 태그 없는 단일모델 파일과 섞이지 않게 all_combos만 읽는다
     fs = _allcombo('%s/*/results/%s_%s_uni/step04_ML_classifier/y_prob_all_%s_%s_uni'
@@ -204,6 +206,16 @@ for depth in DEPTHS:
         print('%-16s %-5s %s   검체' % (SHORT.get(c, c), (mdl.iloc[0][:3] if len(mdl) else '?'),
                                         ''.join('%9.3f' % v for v in rs)))
         print('%-16s %-5s %s   사람' % ('', '', ''.join('%9.3f' % v for v in rp)))
+        # [관문] 모델이 상수를 내뱉으면 동점 폭이 0 이라 아래 경고를 비켜 간다.
+        #   고유값 1개면 양성·음성에 같은 점수를 줬다는 뜻이고 AUC 는 정확히 0.5 로
+        #   「성능이 낮다」 처럼 보인다. 실제로 폐 100k 의 llr 단독에서 XGBoost 가
+        #   840행 전부 0.9995 를 냈다. 낮은 성능이 아니라 못 쓰는 칸이다.
+        _const = [i for i, (_, _, u) in enumerate(tw) if u == 1]
+        if _const:
+            print('%-16s %-5s   !! 상수 예측: 비율 %s 에서 점수 고유값이 1개다.'
+                  '  이 줄의 AUC 는 성능이 아니라 구별 실패다.'
+                  % ('', '', ','.join(RAT_LABEL[i] for i in _const)))
+
         # 동점 폭이 0.02 를 넘는 칸이 있으면 그 줄 밑에 구간을 적는다.
         #   0.02 는 「세 판 사이 격차의 최소 단위」 정도. 이보다 크면 순위 주장이 흔들린다.
         if any((h - l) > 0.02 for l, h, _ in tw if l == l):

@@ -85,6 +85,9 @@ def person_warn():
               ' 같아집니다. 환경변수 PERSON_RE 를 자료의 이름 규칙에 맞추세요.' % _pmiss[0])
 
 
+_GEN_SEEN = set()
+
+
 def _allcombo(prefix):
     """all_combos 채점 파일을 찾는다.
 
@@ -94,7 +97,24 @@ def _allcombo(prefix):
     _모든조합_포화전.csv (중간 산출물) 는 안 걸린다.
     """
     fs = glob.glob(prefix + '_all_combos.csv')
-    return fs or glob.glob(prefix + '_모든조합.csv')
+    if fs:
+        _GEN_SEEN.add('all_combos')
+        return fs
+    fs = glob.glob(prefix + '_모든조합.csv')
+    if fs:
+        # [기록] 어느 이름을 읽었는지 남긴다. 폴백이 조용하면 옛 자료를 읽고도
+        #   「되는 것처럼」 보인다 — 이름 짝이 어긋난 결함을 폴백이 숨긴다.
+        _GEN_SEEN.add('모든조합')
+        print('   [옛 이름으로 읽음] %s_모든조합.csv (%d개)' % (prefix.split('/')[-1], len(fs)))
+    return fs
+
+
+def gen_warn():
+    """한 표가 두 세대를 섞어 읽었으면 표 밑에 찍는다. 막을 수는 없어도 모르고
+       넘어가는 것은 막는다."""
+    if len(_GEN_SEEN) > 1:
+        print('   !! 세대 혼합: 이 표는 %s 를 섞어 읽었습니다. 칸마다 읽은 산출물의'
+              ' 세대가 다릅니다 — 나란히 비교하지 마십시오.' % ' · '.join(sorted(_GEN_SEEN)))
 
 def auc(y, s):
     y, s = np.asarray(y, float), np.asarray(s, float)
@@ -226,3 +246,5 @@ for depth in DEPTHS:
             _mu = min(u for _, _, u in tw if u)
             print('%-16s %-5s   고유값 최소 %d개: 이 줄은 동점이 많아 순위를 주장할 수 없다'
                   % ('', '', _mu))
+
+gen_warn()

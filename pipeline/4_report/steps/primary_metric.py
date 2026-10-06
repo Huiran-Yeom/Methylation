@@ -144,6 +144,9 @@ def is_mixed():
 
 
 
+_GEN_SEEN = set()
+
+
 def _allcombo(prefix):
     """all_combos 채점 파일을 찾는다.
 
@@ -153,7 +156,24 @@ def _allcombo(prefix):
     _모든조합_포화전.csv (중간 산출물) 는 안 걸린다.
     """
     fs = glob.glob(prefix + '_all_combos.csv')
-    return fs or glob.glob(prefix + '_모든조합.csv')
+    if fs:
+        _GEN_SEEN.add('all_combos')
+        return fs
+    fs = glob.glob(prefix + '_모든조합.csv')
+    if fs:
+        # [기록] 어느 이름을 읽었는지 남긴다. 폴백이 조용하면 옛 자료를 읽고도
+        #   「되는 것처럼」 보인다 — 이름 짝이 어긋난 결함을 폴백이 숨긴다.
+        _GEN_SEEN.add('모든조합')
+        print('   [옛 이름으로 읽음] %s_모든조합.csv (%d개)' % (prefix.split('/')[-1], len(fs)))
+    return fs
+
+
+def gen_warn():
+    """한 표가 두 세대를 섞어 읽었으면 표 밑에 찍는다. 막을 수는 없어도 모르고
+       넘어가는 것은 막는다."""
+    if len(_GEN_SEEN) > 1:
+        print('   !! 세대 혼합: 이 표는 %s 를 섞어 읽었습니다. 칸마다 읽은 산출물의'
+              ' 세대가 다릅니다 — 나란히 비교하지 마십시오.' % ' · '.join(sorted(_GEN_SEEN)))
 
 def load(panel, combo):
     """make_tables.py 와 같은 원본을 읽는다. 검체마다 파일 하나."""
@@ -346,6 +366,7 @@ def main():
         print('  정상 EGAD -0.2989 · 정상 GSE +2.0087 로 부호가 갈린다.')
         print('  둘이 크게 다르면 그 차이가 llr 의 플랫폼 의존이다. 대표는 위 조합이다.')
         run(alt, mixed)
+    gen_warn()
     return 0
 
 

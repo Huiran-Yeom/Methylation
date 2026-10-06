@@ -85,7 +85,22 @@ def person_warn():
               ' 같아집니다. 환경변수 PERSON_RE 를 자료의 이름 규칙에 맞추세요.' % _pmiss[0])
 
 
-_GEN_SEEN = set()
+_GEN_SEEN = {}      # 판_깊이 -> (이름세대, 조합수)
+
+
+def _width(f):
+    """이 표가 쓰는 보고 9조합 중 그 파일에 몇 개가 있는지.
+
+    담긴 조합 총수(31 이냐 9 냐)는 이 표를 치우치게 하지 않는다 — 이 표는
+    COMBOS 를 한 줄씩 내고 조합 최대값을 쓰지 않는다. 해로운 것은 보고
+    조합인데 칸이 아예 없는 경우다. 그러면 그 열은 판마다 다른 조합 집합을
+    나란히 놓은 것이 된다.
+    """
+    try:
+        have = set(pd.read_csv(f, usecols=['feature_set']).feature_set.unique())
+    except Exception:
+        return -1
+    return len([c for c in COMBOS if c in have])
 
 
 def _allcombo(prefix):
@@ -96,25 +111,41 @@ def _allcombo(prefix):
     새 이름이 하나도 없을 때만 옛 이름을 본다. 끝을 맞춰 글롭하므로
     _모든조합_포화전.csv (중간 산출물) 는 안 걸린다.
     """
+    _k = prefix.split('/')[-1][len('y_prob_all_'):]
     fs = glob.glob(prefix + '_all_combos.csv')
     if fs:
-        _GEN_SEEN.add('all_combos')
+        _GEN_SEEN[_k] = ('all_combos', _width(fs[0]))
         return fs
     fs = glob.glob(prefix + '_모든조합.csv')
     if fs:
-        # [기록] 어느 이름을 읽었는지 남긴다. 폴백이 조용하면 옛 자료를 읽고도
-        #   「되는 것처럼」 보인다 — 이름 짝이 어긋난 결함을 폴백이 숨긴다.
-        _GEN_SEEN.add('모든조합')
+        # [기록] 이름만이 아니라 보고 조합이 몇 개 있는지까지 남긴다. 이름이
+        #   다른 것은 그 자체로 해롭지 않다. 해로운 것은 보고 조합인데 칸이
+        #   없는 것이다. 이름만 찍으면 읽는 사람이 「이름만 다르겠지」 로
+        #   넘긴다 — 실제로 그렇게 읽혔다(2026-10-06).
+        _GEN_SEEN[_k] = ('모든조합', _width(fs[0]))
         print('   [옛 이름으로 읽음] %s_모든조합.csv (%d개)' % (prefix.split('/')[-1], len(fs)))
     return fs
 
 
 def gen_warn():
-    """한 표가 두 세대를 섞어 읽었으면 표 밑에 찍는다. 막을 수는 없어도 모르고
-       넘어가는 것은 막는다."""
-    if len(_GEN_SEEN) > 1:
-        print('   !! 세대 혼합: 이 표는 %s 를 섞어 읽었습니다. 칸마다 읽은 산출물의'
-              ' 세대가 다릅니다 — 나란히 비교하지 마십시오.' % ' · '.join(sorted(_GEN_SEEN)))
+    """칸마다 읽은 산출물의 이름세대나 조합 수가 다르면 표 밑에 찍는다.
+       막을 수는 없어도 모르고 넘어가는 것은 막는다."""
+    if len(_GEN_SEEN) < 2:
+        return
+    gens = {g for g, _ in _GEN_SEEN.values()}
+    wids = {w for _, w in _GEN_SEEN.values()}
+    if len(gens) < 2 and len(wids) < 2:
+        return
+    if len(wids) > 1:
+        print('   !! 조합 집합 비대칭 — 판마다 보고 %d조합 중 가진 수가 다릅니다.'
+              ' 빈 칸이 생기는 열은 판마다 다른 조합을 나란히 놓은 것입니다.'
+              ' 그 열로 판 순위를 매기지 마십시오.' % len(COMBOS))
+    else:
+        print('   !! 이름세대 혼합 — 보고 조합은 %d개로 같으나 읽은 산출물의 세대가'
+              ' 다릅니다. 값은 비교할 수 있으나 재현 경로가 다릅니다.' % wids.pop())
+    for _n in sorted(_GEN_SEEN):
+        _g, _w = _GEN_SEEN[_n]
+        print('        %-28s %-11s 보고조합 %d/%d' % (_n, _g, _w, len(COMBOS)))
 
 def auc(y, s):
     y, s = np.asarray(y, float), np.asarray(s, float)

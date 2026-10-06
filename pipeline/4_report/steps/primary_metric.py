@@ -144,7 +144,20 @@ def is_mixed():
 
 
 
-_GEN_SEEN = set()
+_GEN_SEEN = {}      # 판_깊이 -> (이름세대, 조합수)
+
+
+def _width(f):
+    """1차 조합이 그 파일에 있으면 1, 없으면 0.
+
+    담긴 조합 총수는 1차 지표를 흔들지 않는다 — 조합은 결과를 보기 전에
+    하나로 정해 뒀고 최대값을 고르지 않는다. 확인할 것은 그 한 조합의 칸이
+    판마다 다 있는지다. 없는 판이 있으면 그 판은 1차 지표가 없는 것이다.
+    """
+    try:
+        return int(COMBO in set(pd.read_csv(f, usecols=['feature_set']).feature_set.unique()))
+    except Exception:
+        return -1
 
 
 def _allcombo(prefix):
@@ -155,25 +168,43 @@ def _allcombo(prefix):
     새 이름이 하나도 없을 때만 옛 이름을 본다. 끝을 맞춰 글롭하므로
     _모든조합_포화전.csv (중간 산출물) 는 안 걸린다.
     """
+    _k = prefix.split('/')[-1][len('y_prob_all_'):]
     fs = glob.glob(prefix + '_all_combos.csv')
     if fs:
-        _GEN_SEEN.add('all_combos')
+        _GEN_SEEN[_k] = ('all_combos', _width(fs[0]))
         return fs
     fs = glob.glob(prefix + '_모든조합.csv')
     if fs:
-        # [기록] 어느 이름을 읽었는지 남긴다. 폴백이 조용하면 옛 자료를 읽고도
-        #   「되는 것처럼」 보인다 — 이름 짝이 어긋난 결함을 폴백이 숨긴다.
-        _GEN_SEEN.add('모든조합')
+        # [기록] 이름만이 아니라 조합 수까지 남긴다. 이름이 다른 것은 그 자체로
+        #   해롭지 않다. 해로운 것은 「고를 수 있었던 폭」이 칸마다 다른 것이다
+        #   — 폭이 넓은 쪽이 최대값을 고를 기회를 더 받는다.
+        _GEN_SEEN[_k] = ('모든조합', _width(fs[0]))
         print('   [옛 이름으로 읽음] %s_모든조합.csv (%d개)' % (prefix.split('/')[-1], len(fs)))
     return fs
 
 
 def gen_warn():
-    """한 표가 두 세대를 섞어 읽었으면 표 밑에 찍는다. 막을 수는 없어도 모르고
-       넘어가는 것은 막는다."""
-    if len(_GEN_SEEN) > 1:
-        print('   !! 세대 혼합: 이 표는 %s 를 섞어 읽었습니다. 칸마다 읽은 산출물의'
-              ' 세대가 다릅니다 — 나란히 비교하지 마십시오.' % ' · '.join(sorted(_GEN_SEEN)))
+    """칸마다 읽은 산출물의 이름세대나 조합 수가 다르면 표 밑에 찍는다.
+
+    1차 조합은 결과를 보기 전에 하나로 정해 뒀으므로 담긴 조합 총수에
+    영향받지 않는다. 그래도 찍는다 — 출처가 다르면 재현 경로가 다르다.
+    """
+    if len(_GEN_SEEN) < 2:
+        return
+    gens = {g for g, _ in _GEN_SEEN.values()}
+    wids = {w for _, w in _GEN_SEEN.values()}
+    if len(gens) < 2 and len(wids) < 2:
+        return
+    if 0 in wids or -1 in wids:
+        print('   !! 1차 조합이 없는 판이 있습니다 (%s). 그 판은 1차 지표를'
+              ' 낼 수 없습니다 — 빠진 채로 순위를 매기지 마십시오.' % COMBO)
+    else:
+        print('   !! 이름세대 혼합 — 1차 조합(%s)은 모든 판에 있으나 읽은'
+              ' 산출물의 세대가 다릅니다. 값은 비교할 수 있으나 재현 경로가'
+              ' 다릅니다.' % COMBO)
+    for _n in sorted(_GEN_SEEN):
+        _g, _w = _GEN_SEEN[_n]
+        print('        %-28s %-11s 1차조합 %s' % (_n, _g, '있음' if _w == 1 else '없음'))
 
 def load(panel, combo):
     """make_tables.py 와 같은 원본을 읽는다. 검체마다 파일 하나."""

@@ -212,7 +212,9 @@ def run_model(name, B, keys, rows):
                 #   사전등록이 요구하는 특이도·위양성(⑪·②)을 그 칸에서 못 낸다.
                 #   로지스틱은 predict_proba = sigmoid(decision_function) 이므로
                 #   logit(thr) 이 정확히 같은 지점이다. 재학습도 재보정도 필요 없다.
-                #   (다섯 칸 전부 LogisticRegression 임을 확인했다.
+                #   (2026-09 시점에 다섯 칸 전부 LogisticRegression 이었다.
+                #    모델이 바뀌면 이 말은 안 맞을 수 있다 — 그래서 아래에서
+                #    런타임에 type 을 확인한다. 주석을 믿지 않는다.
                 #    다른 모형은 이 등식이 안 서므로 그대로 공백으로 둔다.)
                 _e = m
                 if hasattr(_e, 'named_steps'):

@@ -104,6 +104,18 @@ if int(len(gbm)) == 0:
              ' 어긋났습니다 (현재 CANCER_LABEL=%s).' % (_CANCER, _CANCER))
 lines = {}
 for s in gbm: lines.setdefault(grp[s], []).append(s)
+# [교정 2026-10-08 · 사전등록 26-2] 참조표는 «참조군» 만으로 만든다. 학습 풀(11_pool)은
+#   «혼합군» 만 쓴다. 같은 사람이 양쪽에 들어가면 학습 양성·음성이 자기 자신으로 만든
+#   참조로 채점돼 학습 CV 가 부풀려진다(추기 25~43). 가르는 규칙은 meth_config.split_ref_mix.
+if int(getattr(_cfg, 'LLR_HELDOUT', 0)):
+    _rn, _mn = _cfg.split_ref_mix(norm)
+    _rg, _mg = _cfg.split_ref_mix(lines)
+    print('[held-out] 참조군만 씀 — 정상 %d/%d · 암 %d/%d종' % (len(_rn), len(norm), len(_rg), len(lines)))
+    print('  정상 참조군 ' + ' '.join(_rn))
+    print('  암   참조군 ' + ' '.join(_rg))
+    norm = [s for s in norm if s in set(_rn)]
+    lines = {g: v for g, v in lines.items() if g in set(_rg)}
+    gbm = [s for g in sorted(lines) for s in lines[g]]
 import math
 if NEED_N is None: NEED_N = int(math.ceil(FRAC * len(norm)))
 if NEED_G is None: NEED_G = int(math.ceil(FRAC * len(lines)))

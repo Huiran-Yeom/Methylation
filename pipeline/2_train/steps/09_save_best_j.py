@@ -74,6 +74,7 @@ try:   # 2026-09-29: SEED 가 config.conf 에 있는데 여기서만 박혀 있�
     SEED = int(_cfg.SEED)
 except Exception:
     pass
+FIXED = str(getattr(_cfg, 'FIXED_MODEL', '') or '').strip()   # 비면 모델 넷을 겨룬다
 
 _a = sys.argv[1:]
 FEATS = []
@@ -98,10 +99,16 @@ if not VERS:
 
 
 def models():
-    return {'Logistic Regression': LogisticRegression(random_state=SEED, max_iter=2000),
+    ms = {'Logistic Regression': LogisticRegression(random_state=SEED, max_iter=2000),
             'Random Forest': RandomForestClassifier(random_state=SEED, n_jobs=1),
             'XGBoost': XGBClassifier(random_state=SEED, eval_metric='logloss', n_jobs=1),
             'SVM': SVC(random_state=SEED)}
+    # [교정 2026-10-08] 모델을 미리 하나로 고정한다(config.conf FIXED_MODEL · 사전등록 41-2).
+    if FIXED:
+        if FIXED not in ms:
+            raise SystemExit('FIXED_MODEL=%r 은 모델 이름이 아니다: %s' % (FIXED, ' · '.join(ms)))
+        return {FIXED: ms[FIXED]}
+    return ms
 
 
 def load(D, V, p, feats):

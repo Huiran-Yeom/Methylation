@@ -42,6 +42,7 @@ PANEL   = _cfg.PANEL
 DMR_SOURCE_VERSION = None
 SHARE_FROM = None          # 이 판이 2_train/steps/01 을 직접 돌린다
 SEED = _cfg.SEED
+FIXED_MODEL = getattr(_cfg, 'FIXED_MODEL', '')   # 비면 모델 넷을 겨룬다
 
 BLOCK_SIZE = _cfg.BLOCK_SIZE
 CPG_THRESHOLD = 4             # step02 전용 — j 는 step02 를 여기서 안 돌린다

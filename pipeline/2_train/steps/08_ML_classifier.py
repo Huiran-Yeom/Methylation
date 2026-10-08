@@ -113,7 +113,7 @@ def make_models():
     XGBClassifier 의 use_label_encoder=False 는 넣지 않았다. 라벨이 이미 0/1 정수라
     학습 결과에 영향이 없고(xgboost 1.x 에서 경고만 없애는 역할), 2.x 에서는 에러다.
     """
-    return {
+    ms = {
         'Logistic Regression': LogisticRegression(random_state=C.SEED),
         'Random Forest': RandomForestClassifier(random_state=C.SEED, n_jobs=C.N_JOBS),
         'XGBoost': XGBClassifier(
@@ -121,6 +121,14 @@ def make_models():
         ),
         'SVM': SVC(random_state=C.SEED, probability=C.SVM_PROBABILITY),
     }
+    # [교정 2026-10-08] 모델을 미리 하나로 고정한다(config.conf FIXED_MODEL).
+    #   넷 중 최고를 고르면 고르는 것만으로 값이 오른다(사전등록 41-2).
+    fixed = (getattr(C, 'FIXED_MODEL', '') or '').strip()
+    if fixed:
+        if fixed not in ms:
+            raise SystemExit('FIXED_MODEL=%r 은 모델 이름이 아니다: %s' % (fixed, ' · '.join(ms)))
+        return {fixed: ms[fixed]}
+    return ms
 
 
 def get_scores(model, X):

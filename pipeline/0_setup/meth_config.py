@@ -47,6 +47,10 @@ _DEFAULTS = {
     'SEED': '42',
     'TEST_SIZE': '0.2',
     'N_JOBS': '1',
+    # 비우면 모델 넷을 교차검증으로 겨뤄 1등 (옛 동작).
+    'FIXED_MODEL': '',
+    # 0 이면 옛 동작 — LLR 참조표와 학습 풀에 같은 사람이 들어간다.
+    'LLR_HELDOUT': '0',
 }
 _CACHE = None
 SOURCE = {}
@@ -160,6 +164,23 @@ MIN_SAMPLE_COVERAGE = float(get('MIN_SAMPLE_COVERAGE'))
 TEST_SIZE = float(get('TEST_SIZE'))
 MUT_RATIOS = [float(x) for x in get('MUT_RATIOS').replace(' ', '').split(',') if x]
 
+# 모델을 미리 하나로 고정한다. 이름은 08·09 의 모델 키와 같아야 한다.
+#   결과를 보고 고르면 그 자체가 선택이라 귀무 바닥이 0.03~0.04 오른다(사전등록 41-2).
+FIXED_MODEL = get('FIXED_MODEL').strip()
+# LLR 참조표 공여자와 섞기 공여자를 가른다(사전등록 26-2). 1 이면 켠다.
+LLR_HELDOUT = int(get('LLR_HELDOUT') or 0)
+
+
+def split_ref_mix(units):
+    """(참조군, 혼합군). 단위 이름을 바이트 순으로 줄 세워 번갈아 가른다 — 사전등록 26-2.
+
+    바이트 순 = `LC_ALL=C sort`. 기본 로케일 정렬은 대소문자를 무시해 다른 명단을 낸다.
+    1·3·5…번째가 참조군, 2·4·6…번째가 혼합군. 시드를 쓰지 않는다 — 고르는 행위가 선택이 된다.
+    단위는 «사람·세포주» 다. 같은 세포주의 반복을 쪼개면 누수가 남는다.
+    """
+    u = sorted(set(units), key=lambda s: s.encode('utf-8'))
+    return u[0::2], u[1::2]
+
 # VERSION 이름 안의 깊이와 TARGET_DEPTH_READS 가 어긋나면 멈춘다.
 #   옛 구조는 config.py 를 「생성」 해 둘이 같이 박혔으므로 어긋날 수 없었다.
 #   설정을 한 파일로 빼면서 어긋날 수 있게 됐다. 적어 두는 것은 방어가 아니다.
@@ -210,5 +231,5 @@ if __name__ == '__main__':
               'TRAIN_SRC', 'ANALYSIS_DIR', 'GEN', 'VAL_COHORTS', 'PANELS', 'NULL_PANELS', 'VERSION', 'PANEL',
               'TARGET_DEPTH_READS', 'DEPTH_MODE', 'MUT_RATIOS', 'PATTERN_K',
               'MIN_READS_PER_WINDOW', 'BLOCK_SIZE', 'MIN_SAMPLE_COVERAGE',
-              'SEED', 'TEST_SIZE', 'N_JOBS'):
+              'SEED', 'TEST_SIZE', 'N_JOBS', 'FIXED_MODEL', 'LLR_HELDOUT'):
         print('%-22s %-44s (%s)' % (k, globals()[k], SOURCE.get(k, '-')))

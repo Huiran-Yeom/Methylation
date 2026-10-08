@@ -170,12 +170,23 @@ def collect(folder, prefix, dmr):
     return means, ents, mapping
 
 
+# 검증은 이 파일을 검체 폴더에 val04_1.py 로 복사해 돌린다.
+_VAL = os.path.basename(__file__).startswith('val')
+
+
 def to_frame(rows_normal, rows_gbm, label):
     """행=샘플, 열=블록. MIN_SAMPLE_COVERAGE 로 결측 블록을 정리한다."""
     df = pd.DataFrame.from_dict({**rows_normal, **rows_gbm}, orient='index')
     n_total = len(df)
     before = df.shape[1]
-    if MIN_SAMPLE_COVERAGE >= 1.0:
+    if _VAL:
+        # [교정 2026-10-08 · 추기 44-6] 검증에서는 블록을 버리지도 채우지도 않는다.
+        #   검증의 «묶음»은 한 검체 · 한 비율의 양성 N + 음성 N 이다. 그 커버율로 블록을
+        #   버리면 반복 수에 따라 남는 블록이 달라지고, 묶음 평균으로 채우면 양성의
+        #   빈칸이 양성·음성을 섞은 값으로 채워진다. 빈칸은 비운 채 넘기면
+        #   score_one_sample 이 학습 평균(train_mean)으로 채운다.
+        pass
+    elif MIN_SAMPLE_COVERAGE >= 1.0:
         df = df.dropna(axis=1, how='any')          # 최종 코드와 동일
     else:
         need = int(np.ceil(MIN_SAMPLE_COVERAGE * n_total))
@@ -186,7 +197,9 @@ def to_frame(rows_normal, rows_gbm, label):
         #    나누기 전에 채운다. 옳게 하려면 2_train/steps/08 에서 나눈 뒤 학습셋 평균으로
         #    채워야 한다. 실측: mean 행렬은 607열 중 2열(0.3%)만
         #    해당돼 영향이 작다. readent 는 크므로 반드시 확인할 것.
-        df = df.fillna(df.mean(axis=0))
+        # [교정 2026-10-08 · 추기 44-6] 여기서 채우지 않는다. 옛 코드는 정상·암을 합친
+        #   묶음 평균으로 채웠다(라벨이 섞인 채우기). 08 · 09 의 Imputer 가 학습 접기
+        #   평균으로만 채운다. 블록 고르기(위 keep)는 라벨을 안 보므로 그대로 둔다.
     print(f'    {label}: 블록 {before} -> {df.shape[1]} (커버율 기준 {MIN_SAMPLE_COVERAGE})')
     df['Type'] = [0 if s.startswith('Normal') else 1 for s in df.index]
     return df

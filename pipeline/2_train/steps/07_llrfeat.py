@@ -429,8 +429,20 @@ def main():
                    key=lambda p: int(re.search(r'[/\\](\d+)_mean_', p).group(1)))
     if not means:
         sys.exit('mean CSV 가 없습니다. step04_1 을 먼저 돌리세요: ' + out_dir)
+    # [교정 2026-10-12 · 사전등록 54-2 · 65] 검증에서는 블록 집합을 «학습» 의 mean 표에서 가져온다.
+    #   검증 검체의 mean 표는 블록을 안 버려(50) 학습 mean 표와 블록이 다르다. 그대로 쓰면 llr 이
+    #   학습과 다른 창들을 합산한다(실측 창 1,272 → 1,273). 검증 실행기(run_one_sample.sh)가
+    #   LLR_KEEP_FROM 에 학습 step04_ML_classifier 자리를 준다. 학습은 이 값을 안 주므로 그대로다.
+    _kf = os.environ.get('LLR_KEEP_FROM')
+    if _kf:
+        _tm = sorted(glob.glob(_kf + '/*_mean_%s.csv' % C.VERSION),
+                     key=lambda p: int(re.search(r'[/\\](\d+)_mean_', p).group(1)))
+        if not _tm:
+            sys.exit('LLR_KEEP_FROM 에 학습 mean CSV 가 없습니다: ' + _kf)
+        print('  블록 집합: 학습 mean 표 %s' % os.path.basename(_tm[0]))
+    keep_src = _tm[0] if _kf else means[0]     # 블록 집합만 학습에서 — 비율마다 읽는 것은 이 검체의 means
 
-    ref = pd.read_csv(means[0], index_col=0, nrows=1)
+    ref = pd.read_csv(keep_src, index_col=0, nrows=1)
     keep = set()
     for c in ref.columns:
         ch, _, bk = str(c).rpartition('_')

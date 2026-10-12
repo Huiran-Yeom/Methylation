@@ -153,6 +153,86 @@ for val in (False, True):
         ok(bool(np.isnan(X.loc['Normal1', '1_20'])), '학습: 빈칸을 묶음 평균으로 채우지 않는다')
     ok(df['Type'].tolist() == [0] * 5 + [1] * 5, '라벨 열은 그대로')
 
+# ── 4. 다음 판 준비 (2026-10-12 · 사전등록 65) ─────────────────
+print('4. 다음 판 준비')
+import tempfile  # noqa: E402
+
+# 4-1 검증 판별을 환경변수로도 (65 라)
+src05 = io.open(os.path.join(TREE, '2_train/steps/05_Feature_Matrix.py'), encoding='utf-8').read()
+line = [l for l in src05.splitlines() if l.startswith('_VAL = ')][0]
+for env, want in ((None, False), ('1', True)):
+    if env is None:
+        os.environ.pop('METH_VALIDATE', None)
+    else:
+        os.environ['METH_VALIDATE'] = env
+    ns = {'os': os, '__file__': '/x/05_Feature_Matrix.py'}
+    exec(line, ns)
+    ok(ns['_VAL'] is want, '05: 파일 이름이 val 이 아니어도 METH_VALIDATE=%s 이면 _VAL=%s' % (env, want))
+os.environ.pop('METH_VALIDATE', None)
+
+# 4-2 05_llrref 의 held-out 분할은 --use 와 무관하게 samples.csv 전체로 (65 다)
+blk = block_src(os.path.join(TREE, '1_dmr/steps/05_llrref.py'), "M = pd.read_csv(CAND + '/samples.csv')", 'import math')
+with tempfile.TemporaryDirectory() as td:
+    rows = [(n, n, 'Normal') for n in normals] + [('C%d-%d' % (g, r), 'C%d' % g, 'SCLC') for g in range(1, 7) for r in (1, 2)]
+    pd.DataFrame(rows, columns=['sample', 'group', 'type']).to_csv(td + '/samples.csv', index=False)
+    # 옛 코드(부분집합을 다시 가름)와 새 코드(전체로 가름)가 다른 답을 내는 명단이어야 한다 — 우연히 같으면 시험이 못 잡는다
+    use = set(normals[1:7]) | {'C2-1', 'C3-1', 'C4-1', 'C5-1'}
+    class _Cf:
+        LLR_HELDOUT = 1; CANCER_LABEL = 'SCLC'
+        split_ref_mix = staticmethod(M.split_ref_mix)
+    ns = {'pd': pd, 'sys': sys, 'CAND': td, 'USE': use, '_cfg': _Cf}
+    exec(blk, ns)
+    rn_full, _ = M.split_ref_mix(normals)
+    rg_full, _ = M.split_ref_mix(['C%d' % g for g in range(1, 7)])
+    ok(sorted(ns['norm']) == sorted(set(use) & set(rn_full)), '05: --use 를 줘도 정상 참조군은 전체 분할의 참조군 ∩ use')
+    ok(sorted(ns['lines']) == sorted({'C2', 'C3', 'C4', 'C5'} & set(rg_full)), '05: 암 참조군도 전체 분할 기준')
+    _old_n, _ = M.split_ref_mix(sorted(set(normals[1:7]))); _old_g, _ = M.split_ref_mix(['C2', 'C3', 'C4', 'C5'])
+    ok(sorted(_old_n) != sorted(set(use) & set(rn_full)) and sorted(_old_g) != sorted({'C2', 'C3', 'C4', 'C5'} & set(rg_full)),
+       '05: (시험 자체) 옛 분할과 새 분할이 이 명단에서 다르다')
+
+# 4-3 07 의 llr 블록 집합은 LLR_KEEP_FROM(학습) 에서, 비율마다 읽는 표는 검체 것 (54-2)
+blk7 = block_src(os.path.join(TREE, '2_train/steps/07_llrfeat.py'),
+                 "    means = sorted(glob.glob(out_dir + '/*_mean_%s.csv' % C.VERSION),", '    keep = set()')
+blk7 = '\n'.join(l[4:] if l.startswith('    ') else l for l in blk7.splitlines())
+import glob as _glob, re as _re  # noqa: E402
+with tempfile.TemporaryDirectory() as td:
+    sd, tdir = os.path.join(td, 'sample'), os.path.join(td, 'train')
+    os.makedirs(sd); os.makedirs(tdir)
+    pd.DataFrame({'1_10': [0.1], '1_20': [0.2], '1_30': [0.3]}).to_csv(sd + '/5_mean_V.csv')
+    pd.DataFrame({'1_10': [0.1], '1_20': [0.2]}).to_csv(sd + '/25_mean_V.csv')
+    pd.DataFrame({'1_10': [0.1], '1_20': [0.2]}).to_csv(tdir + '/5_mean_V.csv')
+    class _C7:
+        VERSION = 'V'
+    for kf, want_cols in ((None, ['1_10', '1_20', '1_30']), (tdir, ['1_10', '1_20'])):
+        if kf is None:
+            os.environ.pop('LLR_KEEP_FROM', None)
+        else:
+            os.environ['LLR_KEEP_FROM'] = kf
+        ns = {'glob': _glob, 're': _re, 'os': os, 'sys': sys, 'pd': pd, 'C': _C7, 'out_dir': sd}
+        exec(blk7, ns)
+        got = list(ns['ref'].columns)
+        ok(got == want_cols, '07: LLR_KEEP_FROM=%s → 블록 %s' % ('학습' if kf else '없음', want_cols))
+        ok([os.path.basename(m) for m in ns['means']] == ['5_mean_V.csv', '25_mean_V.csv'],
+           '07: 비율마다 읽는 means 는 검체 것 그대로 (%s)' % ('학습' if kf else '없음'))
+    os.environ.pop('LLR_KEEP_FROM', None)
+
+# 4-4 08 의 특이도 문턱용 접기 예측은 접기 안에서 채운다 (65 가) — 학습 반복 안이라 소스로 본다
+src08 = io.open(os.path.join(TREE, '2_train/steps/08_ML_classifier.py'), encoding='utf-8').read()
+seg = src08[src08.index('oof = cross_val_predict('):src08.index('oof = np.asarray(oof')]
+ok('_Pipe(' in seg and '_Imputer(' in seg and 'Xtr_raw' in seg, '08: 문턱용 접기 예측이 Pipeline(Imputer) · 채우기 전 Xtr 를 쓴다')
+
+# 4-5 검증 실행기가 두 변수를 내보낸다
+sh = io.open(os.path.join(TREE, '3_validate/steps/run_one_sample.sh'), encoding='utf-8').read()
+ok('export LLR_KEEP_FROM=' in sh and 'export METH_VALIDATE=1' in sh, 'run_one_sample.sh: LLR_KEEP_FROM · METH_VALIDATE 를 내보낸다')
+
+# 4-6 08 · 09 의 로지스틱 회귀 설정이 같다
+_C8.FIXED_MODEL = ''
+ns8 = dict(base, C=_C8); exec(f08, ns8)
+ns9 = dict(base, C=_C8, SEED=42, FIXED=''); exec(f09, ns9)
+lr8, lr9 = ns8['make_models']()['Logistic Regression'], ns9['models']()['Logistic Regression']
+ok(lr8.get_params()['max_iter'] == lr9.get_params()['max_iter'], '08 · 09 LogisticRegression max_iter 같음 (%s · %s)'
+   % (lr8.get_params()['max_iter'], lr9.get_params()['max_iter']))
+
 print()
 print('결과: %s' % ('전부 통과' if not bad else '실패 %d개' % len(bad)))
 sys.exit(1 if bad else 0)

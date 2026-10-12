@@ -114,7 +114,8 @@ def make_models():
     학습 결과에 영향이 없고(xgboost 1.x 에서 경고만 없애는 역할), 2.x 에서는 에러다.
     """
     ms = {
-        'Logistic Regression': LogisticRegression(random_state=C.SEED),
+        # [교정 2026-10-12 · 65] 09 와 같은 설정 — 08 의 CV 로 고른 모델을 09 가 다른 설정으로 다시 적합하지 않게
+        'Logistic Regression': LogisticRegression(random_state=C.SEED, max_iter=2000),
         'Random Forest': RandomForestClassifier(random_state=C.SEED, n_jobs=C.N_JOBS),
         'XGBoost': XGBClassifier(
             random_state=C.SEED, eval_metric='logloss', n_jobs=C.N_JOBS
@@ -216,6 +217,7 @@ def main():
                 # 결측은 학습셋 평균으로만 채운다. 검증셋 값을 섞으면 누출이다.
                 # 행렬이 이미 채워져 온 경우에는 아무 일도 일어나지 않는다.
                 trmean = Xtr.mean()
+                Xtr_raw = Xtr        # 채우기 전 — 문턱용 접기 예측은 접기 안에서 채운다(아래 · 65 가)
                 if Xtr.isna().any().any() or Xva.isna().any().any():
                     Xtr = Xtr.fillna(trmean).fillna(0.0)
                     Xva = Xva.fillna(trmean).fillna(0.0)
@@ -252,8 +254,11 @@ def main():
                     #    (로지스틱·SVM 은 0.89~0.91 로 정상: 외우지 못하기 때문)
                     try:
                         cvm = 'predict_proba' if hasattr(model, 'predict_proba') else 'decision_function'
+                        # [교정 2026-10-12 · 사전등록 65 가] 미리 채운 Xtr 는 «학습셋 전체 · 정상·암 합친» 평균으로
+                        #   채워져 접기 밖 값이 섞인다. 아래 cv_auc 와 같게 접기마다 학습 접기 평균으로 채운다.
                         oof = cross_val_predict(
-                            clone(model), Xtr, ytr, method=cvm, n_jobs=1,
+                            _Pipe([('imp', _Imputer(strategy='mean', keep_empty_features=True)), ('m', clone(model))]),
+                            Xtr_raw, ytr, method=cvm, n_jobs=1,
                             cv=StratifiedKFold(5, shuffle=True, random_state=C.SEED))
                         oof = np.asarray(oof, dtype=float)
                         oof = oof[:, 1] if oof.ndim > 1 else oof

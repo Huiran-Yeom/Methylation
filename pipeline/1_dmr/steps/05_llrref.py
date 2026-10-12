@@ -91,6 +91,7 @@ if '--needg'in a: NEED_G = int(a[a.index('--needg')+1])
 USE = set(open(a[a.index('--use')+1]).read().split()) if '--use' in a else None
 
 M = pd.read_csv(CAND + '/samples.csv')
+M_ALL = M          # held-out 분할은 이 전체로 한다 — 11_pool 이 samples.csv 전체로 가르므로 같게(65 다)
 if USE: M = M[M['sample'].isin(USE)]
 grp = dict(zip(M['sample'], M['group'])); typ = dict(zip(M['sample'], M['type']))
 norm = sorted(s for s in typ if typ[s] == 'Normal')
@@ -108,8 +109,9 @@ for s in gbm: lines.setdefault(grp[s], []).append(s)
 #   «혼합군» 만 쓴다. 같은 사람이 양쪽에 들어가면 학습 양성·음성이 자기 자신으로 만든
 #   참조로 채점돼 학습 CV 가 부풀려진다(추기 25~43). 가르는 규칙은 meth_config.split_ref_mix.
 if int(getattr(_cfg, 'LLR_HELDOUT', 0)):
-    _rn, _mn = _cfg.split_ref_mix(norm)
-    _rg, _mg = _cfg.split_ref_mix(lines)
+    _ta = dict(zip(M_ALL['sample'], M_ALL['type'])); _ga = dict(zip(M_ALL['sample'], M_ALL['group']))
+    _rn, _mn = _cfg.split_ref_mix([x for x in _ta if _ta[x] == 'Normal'])
+    _rg, _mg = _cfg.split_ref_mix({_ga[x] for x in _ta if _ta[x] == _CANCER})
     print('[held-out] 참조군만 씀 — 정상 %d/%d · 암 %d/%d종' % (len(_rn), len(norm), len(_rg), len(lines)))
     print('  정상 참조군 ' + ' '.join(_rn))
     print('  암   참조군 ' + ' '.join(_rg))

@@ -171,7 +171,9 @@ def collect(folder, prefix, dmr):
 
 
 # 검증은 이 파일을 검체 폴더에 val04_1.py 로 복사해 돌린다.
-_VAL = os.path.basename(__file__).startswith('val')
+# [교정 2026-10-12 · 65 라] 파일 이름만으로 가르면 STEP_MAP 이름을 바꿀 때 조용히 학습 동작이 된다.
+#   검증 실행기(run_one_sample.sh)가 METH_VALIDATE=1 을 내보낸다.
+_VAL = os.path.basename(__file__).startswith('val') or os.environ.get('METH_VALIDATE') == '1'
 
 
 def to_frame(rows_normal, rows_gbm, label):

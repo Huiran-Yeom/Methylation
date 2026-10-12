@@ -220,6 +220,12 @@ export LLR_CAND=${LLR_CAND:-$METH_ROOT/results/dmr/j_candidates${GEN}}
 export JSD_CAND=${JSD_CAND:-$METH_ROOT/results/dmr/j_candidates${GEN}}
 export JSD_JCOUNT=${JSD_JCOUNT:-$METH_ROOT/results/dmr/j_jsdcount${GEN}}
 [ -f "$LLR_REF" ] || { echo "!! 참조표 없음 $LLR_REF" >> "$L"; exit 1; }
+# [교정 2026-10-12 · 사전등록 54-2 · 65] llr 의 블록 집합은 학습 mean 표에서 가져온다(JSD_COLS 와 같은 원칙).
+#   검증 검체의 mean 표는 블록을 안 버려 학습과 블록이 다르다. 07_llrfeat.py 가 이 자리를 본다.
+export LLR_KEEP_FROM=$METH_ROOT/results/panels/${v%%_*}/$v/step04_ML_classifier
+# [교정 2026-10-12 · 65 라] 검증임을 파일 이름(val…)만이 아니라 환경변수로도 알린다.
+#   STEP_MAP 에서 이름을 바꾸면 05_Feature_Matrix 가 조용히 학습 동작(블록 버리기)으로 돌아간다.
+export METH_VALIDATE=1
 # 파일 이름을 박지 않는다. 설정의 K·MINR 을 바꾸면 학습과 여기가
 #   다른 문턱의 참조표를 보게 된다.
 # 세대마다 이름이 같으므로 basename 으로는 구분이 안 된다. 상위폴더까지 찍는다.

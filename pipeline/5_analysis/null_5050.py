@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-이 파이프라인이 «신호가 전혀 없을 때» 낼 수 있는 AUC — 귀무 바닥. 2026-10-07
+이 파이프라인이 「신호가 전혀 없을 때」 낼 수 있는 AUC — 귀무 바닥.
 
 왜
   entropy 단독 다변량 CV 가 0.1% 와 0.5% 에서 0.6011 / 0.6012 였다. 비율 무관이라
@@ -9,19 +9,19 @@
   귀무 바닥**일 수 있다. 197칸 × 학습 160행에 모델 4개 중 최댓값을 쓰면 신호가
   0 이어도 0.5 보다 높게 나온다.
 
-설계 (검토 세션 제안)
+설계
   음성 100행(mut_0_reads)만 쓴다. 생물은 전부 같다 — 같은 풀에서 뽑은 복제본이다.
-  거기에 무작위 50/50 가짜 라벨을 붙이고 «같은 CV 파이프라인»을 돌린다.
+  거기에 무작위 50/50 가짜 라벨을 붙이고 「같은 CV 파이프라인」을 돌린다.
   반복해서 귀무 분포를 낸다.
 
-  ★ 라벨 섞기(음성·양성을 뒤섞는 것)를 쓰지 않는다. 그러면 같은 클래스 안의
+  주의: 라벨 섞기(음성·양성을 뒤섞는 것)를 쓰지 않는다. 그러면 같은 클래스 안의
     리드 공유가 라벨과 어긋나 귀무가 0.5 로 주저앉는다. 재려는 팽창은
-    «한 풀에서 온 행끼리의 공유가 라벨과 정렬될 때» 생긴다.
+    「한 풀에서 온 행끼리의 공유가 라벨과 정렬될 때」 생긴다.
 
 맞춘 것
   모델 4개 (LR · RF · XGB · SVM) · random_state=SEED · 결측은 평균 채움
   5접기 StratifiedKFold(shuffle, random_state=SEED) · cross_val_predict
-  조합당 «모델 4개 중 최댓값» 까지 같다
+  조합당 「모델 4개 중 최댓값」 까지 같다
 
 한계
   50/50 이라 실제 100/100 보다 클래스가 작다. 자릿수 추정으로 읽는다.
@@ -81,7 +81,7 @@ def load_negatives(base, panel, groups):
     for g in groups:
         f = '%s/%s/%s/step04_ML_classifier/%s_%s_%s.csv' % (base, panel, d, MR, g, d)
         df = pd.read_csv(f, index_col=0)
-        # ★ Type 은 라벨이다. 08_ML_classifier 도 drop 한다.
+        # 주의: Type 은 라벨이다. 08_ML_classifier 도 drop 한다.
         if 'Type' not in df.columns:
             raise SystemExit('Type 열이 없다 — 파일 형식이 바뀌었다: ' + f)
         df = df.drop(columns=['Type'])

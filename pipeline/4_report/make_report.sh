@@ -1,5 +1,5 @@
 #!/bin/bash
-# ── 4단계 · 결과 정리 ─────────────────────────────────────────────────
+# ── 4단계 · 결과 정리 ──
 #
 #   검증 채점 결과를 읽어 논문에 실을 표를 만든다. 읽기만 한다. 아무것도 안 쓴다.
 #
@@ -40,9 +40,9 @@ unset _v
 # 셸이 기본값을 채우면 conf 를 비웠을 때 관문이 못 잔다.
 #   정본은 config.conf 와 meth_config.py 둘이다. 셸은 값을 만들지 않는다.
 : "${GEN:?GEN 이 없습니다 — 0_setup/config.conf 의 GEN 을 채우십시오}"
-# 코호트 기본값을 우리 내부 이름으로 박지 않는다. 남이 받아서
-#   COHORT 를 안 주면 조용히 「없는 코호트」 를 읽고 표 아홉 개가 다 비는데
-#   exit 0 으로 끝났다. 주지 않으면 멈춘다.
+# 코호트 기본값을 우리 내부 이름으로 박지 않는다. 박아 두면 남이 받아서
+#   COHORT 를 안 줄 때 조용히 「없는 코호트」 를 읽고 표 아홉 개가 다 빈 채
+#   exit 0 으로 끝난다. 주지 않으면 멈춘다.
 : "${COHORT:?COHORT 를 주십시오 — 3단계에서 쓴 것과 같아야 합니다 (예: COHORT=<your_cohort>)}"
 # 3단계와 같은 관문을 여기에도 둔다. 코호트를 「고르는 자리」 가 둘이면 관문도 둘이어야
 #   한다. 3단계만 막으면 오타난 코호트로 표를 뽑는 길이 열린 채 남는다.
@@ -54,6 +54,16 @@ if [ -n "${VAL_COHORTS:-}" ]; then
   esac
 fi
 export COHORT
+# 혈장 코호트(NEG_SAMPLES 가 있는 설정)는 정상 공여자가 검체 자리에 있어 아래 표가 뜻이 없다.
+#   그 코호트는 steps/plasma_metric.py 로만 판정한다.
+for _c in "${COHORT_CONF:-}" "$HOME/cohorts/$COHORT.conf" "$_HERE/../3_validate/steps/cohorts/$COHORT.conf"; do
+  [ -n "$_c" ] && [ -f "$_c" ] || continue
+  if grep -qE '^[[:space:]]*NEG_SAMPLES=[[:space:]]*[^[:space:]]' "$_c"; then
+    echo "멈춤: $_c 에 NEG_SAMPLES 가 있습니다 — 혈장 코호트는 steps/plasma_metric.py 로 판정합니다" >&2
+    exit 1
+  fi
+  break
+done
 # DEPTH 는 primary_metric.py --depth 에만 간다. make_tables.py 는
 #   깊이를 스스로 돌기 때문에 이 값에 영향받지 않는다. 머리글이 「표가 바뀐다」로
 #   읽히지 않게 적어 둔다.
@@ -82,7 +92,7 @@ echo "=== 1차 지표: 짝지은 부트스트랩 (깊이 $DEPTH) ==="
 ( cd "$S" && python -u primary_metric.py --depth "$DEPTH" ) || _bad=1
 
 # 하나라도 실패했으면 0 이 아닌 값으로 끝낸다. 표 아홉 중 하나가
-#   죽어도 나머지 출력에 묻혀 「성공」 으로 보이던 것을 막는다.
+#   죽어도 나머지 출력에 묻혀 「성공」 으로 보이지 않게 한다.
 if [ "$_bad" -ne 0 ]; then
   echo "!! 실패한 표가 있습니다. 위 !! 줄을 보십시오" >&2
   exit 1

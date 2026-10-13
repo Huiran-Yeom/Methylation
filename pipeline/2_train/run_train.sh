@@ -1,5 +1,5 @@
 #!/bin/bash
-# ── 2단계 · 학습 ──────────────────────────────────────────────────────
+# ── 2단계 · 학습 ──
 #
 #   패널 영역에서 암·정상 조각을 비율마다 섞고(in-silico mixing), 피처 다섯을
 #   만들고, 조합마다 모델 넷을 교차검증해 가장 좋은 것을 굳힌다.
@@ -43,8 +43,8 @@ unset _v
 
 say(){ echo "[$(date +%H:%M:%S)] $*"; }
 step(){  # step <번호> <제목> <파일> [인자...]
-  # $3 만 쓰면 뒤에 붙인 플래그가 「조용히 버려진다」.
-  #   09 에 --allcombos --pooled 를 붙였는데 그대로 사라졌다. 전부 넘긴다.
+  # $3 만 쓰면 뒤에 붙인 플래그(09 의 --allcombos --pooled 등)가
+  #   「조용히 버려진다」. 전부 넘긴다.
   local no=$1 title=$2; shift 2
   if [ -n "$ONE" ] && [ "$ONE" != "$no" ]; then return 0; fi
   say "── $no  $title"
@@ -61,8 +61,8 @@ step(){  # step <번호> <제목> <파일> [인자...]
 : "${METH_ROOT:=/ssd_data/Methylation}"
 
 # 06·07 이 보는 후보·참조 경로를 「여기서」 내보낸다.
-#   예전에는 아무것도 안 내보내서 둘이 자기 기본값(세대 없는 j_candidates 등)으로
-#   내려갔고, 그 둘의 세대 관문이 즉시 멈췄다. 문서대로 돌리면 06 에서 끝났다.
+#   내보내지 않으면 둘이 자기 기본값(세대 없는 j_candidates 등)으로 내려가
+#   세대 관문에서 바로 멈춘다.
 #   검증 러너(3_validate/steps/run_one_sample.sh)와 「같은 값」 이어야 한다.
 export LLR_REF=${LLR_REF:-$METH_ROOT/results/dmr/j_llrref${GEN}/llrref_K${PATTERN_K:-3}_minr${MIN_READS_PER_WINDOW:-6}.parquet}
 export LLR_CAND=${LLR_CAND:-$METH_ROOT/results/dmr/j_candidates${GEN}}

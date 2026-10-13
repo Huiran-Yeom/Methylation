@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""최종 DMR 패널: 74검체 전체로 1회 (2026-08-13)
+"""최종 DMR 패널: 74검체 전체로 1회
 
   조각을 나누지 않는다. dmr_nested_cv.py 의 fold 안 절차와 같되
   학습 자료가 74검체 전부다.
@@ -51,17 +51,15 @@ import xgboost as xgb
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from moderated_t import moderated_ttest, bh, efp
 
-# ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
+# ── 이 단계가 쓰는 경로 ──
 #   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
 #   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
 #   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
-# 기본값이 `m_candidates`·`m_panel` 이었다 — 옛 m 판이다.
-#   `m_candidates` 는 서버에 아직 있고 `blocks_frac060.csv` 도 들어 있다. 그래서
-#   인자 없이 돌리면 죽지 않고 옛 세대 후보로 새 패널을 만든다. 조용히.
-#   이 파일은 원래 손으로 인자를 줘서 돌렸으므로(드라이버에 없다) 필수로 바꾼다.
+# --cand · --out 은 필수다(드라이버에 없고 손으로 인자를 줘서 돌린다).
+#   m 판 후보 폴더 `m_candidates` 가 서버에 남아 있어, 기본값을 두면 인자 없이
+#   돌려도 죽지 않고 그 세대 후보로 새 패널을 조용히 만든다.
 CAND  = None
 OUT   = None
-# ╚══════════════════════════════════════════════════════════════════╝
 DBETA = 30.0
 NBOOT = 100
 TOPN  = 2000
@@ -70,7 +68,7 @@ a = sys.argv
 if '--dbeta' in a: DBETA = float(a[a.index('--dbeta') + 1])
 if '--boot'  in a: NBOOT = int(a[a.index('--boot')  + 1])
 if '--topn'  in a: TOPN  = int(a[a.index('--topn')  + 1])
-if '--cand'  in a: CAND  = a[a.index('--cand')      + 1]   # 2026-09-10 후보 풀을 CLI 로
+if '--cand'  in a: CAND  = a[a.index('--cand')      + 1]   # 후보 풀을 CLI 로
 if '--out'   in a: OUT   = a[a.index('--out')       + 1]
 if CAND is None or OUT is None:
     sys.exit('사용: python 07_panel.py --cand <후보폴더> --out <산출폴더> [--topn N] [--dbeta X]\n'
@@ -78,9 +76,8 @@ if CAND is None or OUT is None:
              '  09-14 에 쓴 값: --cand %s/results/dmr/j_candidates15\n'
              '                 --out  %s/results/dmr/j_panel_dmr15/bl200_d10_cellline' % (_M, _M))
 # 세대가 어긋나면 멈춘다. 07_llrfeat 이 쓰는 것과 같은 관문이다.
-# 06_jsdfeat·07_llrfeat 과 같은 꼴로 맞춘다. 두 구멍이 있었다 —
-#   ① 「포함」(in)이라 j_candidates150 이 GEN=15 를 통과했다
-#   ② `if _gen and` 라서 환경에 GEN 이 없으면 관문이 통째로 꺼졌다(손으로 돌릴 때).
+# 06_jsdfeat·07_llrfeat 과 같은 꼴이다. 폴더 이름은 「포함」(in)이 아니라 같음으로
+#   본다 — 포함이면 j_candidates150 이 GEN=15 를 통과한다. GEN 이 비어도 관문을 끄지 않는다.
 _gen = _os.environ.get('GEN', '') or getattr(_cfg, 'GEN', '')
 _want_cand = 'j_candidates' + _gen
 if _os.path.basename(CAND.rstrip('/')) != _want_cand:
@@ -98,14 +95,12 @@ y0 = (M['type'] == _CANCER).astype(int).values
 if int(y0.sum()) == 0:
     sys.exit('samples.csv 에 type=%s 인 검체가 없습니다. CANCER_LABEL 과 1단계가 쓴 값이'
              ' 어긋났습니다 (현재 CANCER_LABEL=%s).' % (_CANCER, _CANCER))
-# 세포주 단위로 묶는다. 문서와 코드를 맞추는 교정이다.
+# 세포주 단위로 묶는다. SNU3-1·-2·-3 은 같은 세포주다 — 45파일을 독립으로 세면
+#   독립 단위가 부풀려진다(m 판이 부풀려진 원인이 「파일 단위로 세서」 였다).
 #   j판_DMR선정_20260820.md:441 "② 조정 t검정  정상 20 vs 암 10"
 #                          :442 "④ |Δβ|  세포주 평균끼리의 차이"
 #                          :449 "⑦ 부트스트랩 … (세포주 단위 재추출)"
-#   그런데 여기는 45파일을 독립으로 세고 있었다. SNU3-1·-2·-3 은 같은 세포주다.
-#   :1345 가 m 판이 부풀려진 원인으로 "파일 단위로 세서" 를 이미 지목했는데
-#   같은 구조가 j 판 Baseline 에 남아 있었다.
-#   06_select.py:28-31 (JSD 쪽)이 쓰는 것과 같은 묶음이다.
+#   06_select.py (JSD 쪽)이 쓰는 것과 같은 묶음이다.
 _c = [str(i) for i in range(X0.shape[1])]
 _D = pd.DataFrame(X0, columns=_c); _D['_g'] = M['group'].values; _D['_y'] = y0
 _A = _D.groupby('_g', sort=True).mean()
@@ -154,7 +149,6 @@ if len(sig) < TOPN:
     print('! 유의 블록 %d 개가 N=%d 보다 적다. 전부 사용' % (len(sig), TOPN))
 # 0 이면 여기서 멈춘다. 그대로 가면 stability() 안의 sklearn 이
 #   'Found array with 0 feature(s)' 로 터져 「왜 0인지」 를 알 수 없다.
-#   연기시험(작은 표본)에서 실제로 그 traceback 만 남았다.
 if len(sig) == 0:
     raise SystemExit(
         '유의 블록이 0 입니다. q<0.05 이고 |dbeta|>=%.0f 인 블록이 없습니다. '

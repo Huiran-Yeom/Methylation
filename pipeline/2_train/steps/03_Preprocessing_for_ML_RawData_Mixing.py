@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
-"""2_train/steps/03 (PE·SE 혼합판): 2026-08-20
+"""2_train/steps/03 (PE·SE 혼합판)
 
 m 판은 학습 자료가 전부 페어드엔드라 `--paired-end` 하나로 끝났다.
 j 판은 정상 20명 중 7명(GSM 5 · SRR 2)이 단일말단이라 그 방법을 못 쓴다.
 
   --single-end 로 통일하면 안 되는 이유
     페어드엔드 짝이 겹친 구간(cfDNA 166bp 에 2x100 리드면 약 34bp)이 두 번 세어진다.
-    커버리지가 비균일하게 부풀어, 우리가 계속 싸운 아티팩트가 하나 더 생긴다.
+    커버리지가 비균일하게 부풀어 커버리지 아티팩트가 하나 더 생긴다.
 
   그래서 섞인 BAM 을 flag 로 나눠 두 번 돌리고 cov 를 자리별로 합친다.
 """
@@ -16,7 +16,7 @@ j 판은 정상 20명 중 7명(GSM 5 · SRR 2)이 단일말단이라 그 방법�
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
-import gzip, os, subprocess, sys, time
+import gzip, os, subprocess, time
 import config as C
 
 BATCH_SIZE = int(os.environ.get('BATCH_SIZE', 40))

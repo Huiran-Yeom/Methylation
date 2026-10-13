@@ -3,26 +3,22 @@
 """
 step04_1: bedGraph → Mean / Entropy feature 행렬
 
-기준 : Methylation/scripts/step04_ML_classifier.py (최종 코드) 의
+기준 : 초기 공개본 scripts/step04_ML_classifier.py (저장소에서 삭제됨 · git 기록에 있음) 의
        `0) bed 파일 전처리`, `1) Mean`, `2) Entropy`
 
-최종 코드 구조를 그대로 따른다. F드라이브 250226 의 가중치 엔트로피
+최종 코드 구조를 그대로 따른다. 가중치 엔트로피
 (entropy_site / entropy_read / entropy_siteAread)는 최종 코드에 없으므로 넣지 않는다.
-2026-09-25: 리드 단위 엔트로피(readent)·MHL 은 (마) 결정으로 쓰지 않는다.
-  계산하던 step04_1b_readfeat.py 는 이 저장소에 없다(안 씀). 여기서는 안 만든다.
+리드 단위 엔트로피(readent)·MHL 은 쓰지 않으므로 여기서 만들지 않는다.
 
-고친 것 (엔트로피 관련만)
+최종 코드와 다른 점 (엔트로피 관련만)
   1. 엔트로피 계산식: `SITE_ENTROPY_METHOD`
        'value_counts' : 최종 코드 방식. 서로 다른 실수값을 각각 하나의 범주로 센다.
                         문제: 값 종류 수는 커버리지의 대리 지표다. GBM 리드가 섞이면
                         값 종류가 늘어 엔트로피가 올라간다(mut_0 5,555종 vs mut_5 6,441종).
                         즉 "외부 리드가 추가됐는지" 감지기로 작동할 수 있다.
-       'histogram'    : 베타값을 10구간으로 묶어 계산(F:\\학부연구\\250207 방식.
-                        F 드라이브는 옛 작업 기계로 이 저장소에 없다).
+       'histogram'    : 베타값을 10구간으로 묶어 계산한다.
                         값 종류 증가에 둔감해 위 문제에 면역이다.
-                        2026-08-20 부터 config 는 'histogram' 이다. 위 인공물을
-                        피하려고 바꿨다. 08-13 에 적힌 'value_counts 다' 는 지금 틀리다.
-                        지금 나오는 entropy 열은 히스토그램 방식이다.
+                        config 기본값이며, 지금 나오는 entropy 열은 히스토그램 방식이다.
   2. 좌표계: bedGraph 는 0-based, step02 의 DMR 좌표는 cov(1-based) 기준이다.
      읽을 때 +1 해서 좌표계를 맞춘다. 최종 코드는 이 보정이 없어 블록 경계에서
      약 1% 가 다른 블록에 배정됐다.
@@ -31,10 +27,10 @@ step04_1: bedGraph → Mean / Entropy feature 행렬
   4. 결측 블록 처리: `MIN_SAMPLE_COVERAGE`
      최종 코드의 `dropna(how='any')` 는 샘플 하나라도 비면 블록을 버린다.
      depth 가 658배였을 때는 문제가 없었지만 총 5,000 reads 에서는 위험하다.
-     250226 실측(5샘플): 5개 전부 커버한 블록 849/1,139 = 74.5%
+     실측(5샘플): 5개 전부 커버한 블록 849/1,139 = 74.5%
      반드시 `04_coverage_check.py` 를 먼저 돌려 실제 잔존 블록 수를 확인할 것.
        1.0  = 최종 코드와 동일
-       0.8  = 지금 설정. 20%까지 결측을 허용하고 아래에서 열평균으로 채운다.
+       0.8  = 지금 설정. 20%까지 결측을 허용한다. 채우기는 08 · 09 의 Imputer 가 한다.
        0.95 = 95% 이상 샘플에서 커버된 블록 유지
 
 원본 불변: bedGraph 는 읽기만 하고 출력은 v3 폴더로만 간다.
@@ -132,7 +128,7 @@ def _ent_histogram(x, bins=10):
     x = pd.Series(x).dropna()
     if x.empty:
         return np.nan
-    h = np.histogram(x, bins=bins, range=(0.0, 1.0))[0]   # 08-20: 눈금을 0~1 로 고정
+    h = np.histogram(x, bins=bins, range=(0.0, 1.0))[0]   # 눈금을 0~1 로 고정
     h = h[h > 0]
     if h.size == 0:
         return 0.0
@@ -171,8 +167,8 @@ def collect(folder, prefix, dmr):
 
 
 # 검증은 이 파일을 검체 폴더에 val04_1.py 로 복사해 돌린다.
-# [교정 2026-10-12 · 65 라] 파일 이름만으로 가르면 STEP_MAP 이름을 바꿀 때 조용히 학습 동작이 된다.
-#   검증 실행기(run_one_sample.sh)가 METH_VALIDATE=1 을 내보낸다.
+# 파일 이름만으로 가르면 STEP_MAP 이름을 바꿀 때 조용히 학습 동작이 되므로,
+#   검증 실행기(run_one_sample.sh)가 내보내는 METH_VALIDATE=1 도 본다 (사전등록 65 라).
 _VAL = os.path.basename(__file__).startswith('val') or os.environ.get('METH_VALIDATE') == '1'
 
 
@@ -182,8 +178,8 @@ def to_frame(rows_normal, rows_gbm, label):
     n_total = len(df)
     before = df.shape[1]
     if _VAL:
-        # [교정 2026-10-08 · 추기 44-6] 검증에서는 블록을 버리지도 채우지도 않는다.
-        #   검증의 «묶음»은 한 검체 · 한 비율의 양성 N + 음성 N 이다. 그 커버율로 블록을
+        # 검증에서는 블록을 버리지도 채우지도 않는다 (추기 44-6).
+        #   검증의 「묶음」은 한 검체 · 한 비율의 양성 N + 음성 N 이다. 그 커버율로 블록을
         #   버리면 반복 수에 따라 남는 블록이 달라지고, 묶음 평균으로 채우면 양성의
         #   빈칸이 양성·음성을 섞은 값으로 채워진다. 빈칸은 비운 채 넘기면
         #   score_one_sample 이 학습 평균(train_mean)으로 채운다.
@@ -194,14 +190,9 @@ def to_frame(rows_normal, rows_gbm, label):
         need = int(np.ceil(MIN_SAMPLE_COVERAGE * n_total))
         keep = df.notna().sum(axis=0) >= need
         df = df.loc[:, keep]
-        # 남은 결측은 그 블록의 샘플 평균으로 채운다(모델이 NaN 을 못 받으므로)
-        # 누출 주의: 이 평균은 정상·암을 모두 합쳐 낸 값이고, 학습/검증을
-        #    나누기 전에 채운다. 옳게 하려면 2_train/steps/08 에서 나눈 뒤 학습셋 평균으로
-        #    채워야 한다. 실측: mean 행렬은 607열 중 2열(0.3%)만
-        #    해당돼 영향이 작다. readent 는 크므로 반드시 확인할 것.
-        # [교정 2026-10-08 · 추기 44-6] 여기서 채우지 않는다. 옛 코드는 정상·암을 합친
-        #   묶음 평균으로 채웠다(라벨이 섞인 채우기). 08 · 09 의 Imputer 가 학습 접기
-        #   평균으로만 채운다. 블록 고르기(위 keep)는 라벨을 안 보므로 그대로 둔다.
+        # 남은 결측은 여기서 채우지 않는다 (추기 44-6). 정상·암을 합친 묶음 평균으로
+        #   채우면 라벨이 섞인다. 08 · 09 의 Imputer 가 학습 접기 평균으로만 채운다.
+        #   블록 고르기(위 keep)는 라벨을 안 보므로 그대로 둔다.
     print(f'    {label}: 블록 {before} -> {df.shape[1]} (커버율 기준 {MIN_SAMPLE_COVERAGE})')
     df['Type'] = [0 if s.startswith('Normal') else 1 for s in df.index]
     return df

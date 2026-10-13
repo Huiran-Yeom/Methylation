@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""보완판 JSD 패널: 2026-09-10
+"""보완판 JSD 패널
   필터  JSD > t_null   (귀무 백분위 · 규칙: 99.9% 기본 · 200 미달이면 99.5% · 그래도 미달이면 99%)
   정렬  freq 내림  ->  JSD 내림          (freq = 복원추출 100회 중 JSD 상위 TOPN 에 든 횟수)
   컷    상위 N
@@ -33,7 +33,7 @@ except ImportError:
         '  트리 밖에서 돌리려면 METH_CONF_DIR 로 0_setup 자리를 주십시오.')
 
 
-import os, sys, math
+import os, sys
 import numpy as np, pandas as pd
 
 # 산출 폴더는 GEN(패널 세대)을 따른다. 비우면 세대 없는 옛 폴더를 가리킨다.
@@ -44,15 +44,11 @@ if not _GEN:
     except Exception:
         raise SystemExit('GEN(패널 세대)을 못 읽었습니다 — config.conf 의 GEN 을 채우거나 '
                          '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
-# 표준 머리글을 끼울 때 04_jsd 의 D·OUT·K,MINR 대입이 함께 붙어왔다.
-#   아래에서 다시 대입하므로 동작에는 영향이 없었지만, OUT 이 한때 j_jsd 를
-#   가리키는 것은 읽는 사람을 속인다. 이 파일은 j_panel<GEN>_supplement 에 쓴다.
-#   경로·상수는 아래 한 곳에서만 정한다.
+# 이 파일은 j_panel<GEN>_supplement 에 쓴다. 경로·상수는 아래 한 곳에서만 정한다.
 
-import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # moderated_t 는 형제다
 from moderated_t import moderated_ttest, bh
-# ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
+# ── 이 단계가 쓰는 경로 ──
 #   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
 #   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
 #   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
@@ -62,7 +58,6 @@ K    = int(_os.environ.get("PATTERN_K", 0) or _cfg.PATTERN_K)
 MINR = int(_os.environ.get("MIN_READS_PER_WINDOW", 0) or _cfg.MIN_READS_PER_WINDOW)
 N    = int(_os.environ.get("PANEL_N", 0) or 200)
 OUT = R + "/j_panel" + _GEN + "_supplement"
-# ╚══════════════════════════════════════════════════════════════════╝
 boot = pd.read_parquet("%s/j_jsd%s/boot_K%d_minr%d.parquet" % (R, _GEN, K, MINR))
 null = pd.read_parquet("%s/j_jsd%s/null_K%d_minr%d.parquet" % (R, _GEN, K, MINR))["null_block_jsd"].values
 boot["chr"] = boot["chr"].astype(str); boot["blk"] = boot["blk"].astype("int64")

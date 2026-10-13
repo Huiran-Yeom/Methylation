@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""S3-0 패널 영역 리드만 모아 가벼운 합본 BAM 을 만든다 (2026-08-20).
+"""S3-0 패널 영역 리드만 모아 가벼운 합본 BAM 을 만든다.
 
 39G 를 통째로 합쳐 정렬할 필요가 없다. 패널 300칸은 유전체의 30kb 뿐이다.
 검체마다 한 번 훑으며 패널에 걸치는 리드만 뽑아 모은 뒤 정렬·색인한다.
@@ -39,7 +39,7 @@ except ImportError:
 import os, re, sys, glob, subprocess
 import pandas as pd, pysam
 
-# ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
+# ── 이 단계가 쓰는 경로 ──
 #   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
 #   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
 #   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
@@ -57,12 +57,11 @@ except Exception:
 a = sys.argv
 PANEL = a[a.index('--panel')+1]
 OUT   = a[a.index('--out')+1]
-# ╚══════════════════════════════════════════════════════════════════╝
 USE   = [x for x in open(a[a.index('--use')+1]).read().split() if x]
 PAD   = int(a[a.index('--pad')+1]) if '--pad' in a else 200
 
-# [교정 2026-10-08 · 사전등록 26-2] 학습 풀은 «혼합군» 만으로 만든다. 참조표(05_llrref)는
-#   «참조군» 만 쓴다. 가르는 단위와 모집단은 05 와 같아야 하므로 둘 다 후보 단계의
+# 학습 풀은 「혼합군」 만으로 만든다 (사전등록 26-2). 참조표(05_llrref)는
+#   「참조군」 만 쓴다. 가르는 단위와 모집단은 05 와 같아야 하므로 둘 다 후보 단계의
 #   samples.csv 에서 정한다 — 정상은 사람, 암은 group(세포주).
 if int(getattr(_cfg, 'LLR_HELDOUT', 0)):
     _cand = _os.environ.get('CAND_DIR') or (_M + '/results/dmr/j_candidates' + str(_cfg.GEN))
@@ -87,7 +86,7 @@ if int(getattr(_cfg, 'LLR_HELDOUT', 0)):
 
 # 파일 이름에서 검체 이름을 뽑는다. 기본은 첫 _ 앞까지 — cov 와 BAM 의 뒤쪽
 #   꼬리표가 달라도 짝이 맞게 하기 위해서다.
-#   자료마다 이름 규칙이 다르다. 안 맞으면 «자료를 고치지 말고» SID_RE 를 준다.
+#   자료마다 이름 규칙이 다르다. 안 맞으면 「자료를 고치지 말고」 SID_RE 를 준다.
 #   첫 괄호가 검체 이름이 되고, 안 걸리면 기본 규칙으로 떨어진다. 예:
 #     SID_RE='(.+?)__'   H1876_0d__SRR…  -> H1876_0d   (밑줄 둘로 가르는 자료)
 #                        H1876__SRR…     -> H1876
@@ -109,7 +108,7 @@ print('패널 %d칸 · 검체 %d개' % (len(keep), len(USE)))
 bams = []
 for s in USE:
     # 두 폴더가 같을 수 있다(정상·암 BAM 을 한 곳에 두는 배치). 그대로 두면 같은
-    #   파일이 두 번 걸려 len(hit)!=1 로 건너뛴다. 문자열이 아니라 «실경로» 로
+    #   파일이 두 번 걸려 len(hit)!=1 로 건너뛴다. 문자열이 아니라 「실경로」 로
     #   묶는다 — /data/bam 과 /data/bam/ 은 다른 문자열이지만 같은 폴더다.
     _seen, hit = set(), []
     for f in glob.glob(NB+'/*.bam') + glob.glob(GB+'/*.bam'):

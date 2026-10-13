@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""폐 Patient 병기별 보조 분석. 사전등록 추기 45 (20:51 박음). 2026-10-07
+"""폐 Patient 병기별 보조 분석. 사전등록 추기 45.
 쓰는 법: python lung_stage.py <트리> [최대반복]
   예) Patient_Test_val · Patient_Test10_val · Patient_Test10_val 7
 """

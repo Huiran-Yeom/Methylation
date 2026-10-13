@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""S0f LLR 참조표 (2026-09-02): 창마다 정상·암의 무늬 확률을 만들어 저장한다.
+"""S0f LLR 참조표: 창마다 정상·암의 무늬 확률을 만들어 저장한다.
 
   P_Normal  정상 20명의 무늬 분포        검체별로 합=1 로 만든 뒤 평균 (한 검체 = 한 표)
   P_GBM     암 10종의 무늬 분포          세포주 안에서 먼저 평균 → 세포주끼리 평균
@@ -62,7 +62,7 @@ if not _GEN:
     except Exception:
         raise SystemExit('GEN(패널 세대)을 못 읽었습니다 — config.conf 의 GEN 을 채우거나 '
                          '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
-# ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
+# ── 이 단계가 쓰는 경로 ──
 #   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
 #   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
 #   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
@@ -105,8 +105,8 @@ if int(len(gbm)) == 0:
              ' 어긋났습니다 (현재 CANCER_LABEL=%s).' % (_CANCER, _CANCER))
 lines = {}
 for s in gbm: lines.setdefault(grp[s], []).append(s)
-# [교정 2026-10-08 · 사전등록 26-2] 참조표는 «참조군» 만으로 만든다. 학습 풀(11_pool)은
-#   «혼합군» 만 쓴다. 같은 사람이 양쪽에 들어가면 학습 양성·음성이 자기 자신으로 만든
+# 참조표는 「참조군」 만으로 만든다(사전등록 26-2). 학습 풀(11_pool)은
+#   「혼합군」 만 쓴다. 같은 사람이 양쪽에 들어가면 학습 양성·음성이 자기 자신으로 만든
 #   참조로 채점돼 학습 CV 가 부풀려진다(추기 25~43). 가르는 규칙은 meth_config.split_ref_mix.
 if int(getattr(_cfg, 'LLR_HELDOUT', 0)):
     _ta = dict(zip(M_ALL['sample'], M_ALL['type'])); _ga = dict(zip(M_ALL['sample'], M_ALL['group']))
@@ -162,9 +162,8 @@ PN = np.zeros((nw, m)); PG = np.zeros((nw, m))
 PN[ok] = Qs[ok] / nQ[ok, None]
 PG[ok] = Ps[ok] / nP[ok, None]
 
-# [가드 자리 교정] 이 가드가 PG 를 「만들기 전」 에 있었다.
-#   암이 하나라도 있으면 np.isfinite(PG) 가 평가돼 NameError 로 죽는다 —
-#   (참조표는 08:38 산출, 즉 가드 전이다). 검사 내용은 그대로 두고 자리만 옮긴다.
+# 이 가드는 PG 를 만든 「뒤」 에 둔다. 앞에 두면 암이 하나라도 있을 때
+#   np.isfinite(PG) 가 평가돼 NameError 로 죽는다.
 if len(lines) == 0 or not np.isfinite(PG).any():
     sys.exit('중단: 암 %d종 · P_GBM 에 유효값이 없습니다 — 참조를 만들지 않습니다' % len(lines))
 print('쓸 수 있는 창 %s / %s (%.1f%%)' % (format(int(ok.sum()), ','), format(nw, ','), 100.0 * ok.sum() / nw))
@@ -178,7 +177,6 @@ R['nn'], R['ng'] = nQ, nP
 R['rd_n'], R['rd_g'] = rdN, rdG
 R['ok'] = ok
 R = R[R.ok].drop(columns=['ok']).reset_index(drop=True)
-# ╚══════════════════════════════════════════════════════════════════╝
 
 # 진단: 희귀 무늬가 LLR 을 지배하므로 그 안정성을 미리 본다
 z = (PN[ok] == 0).sum(1)

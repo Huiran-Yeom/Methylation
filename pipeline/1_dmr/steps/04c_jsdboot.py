@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""S0db JSD 부트스트랩 순위 안정성 (2026-08-20)
+"""S0db JSD 부트스트랩 순위 안정성
 
   독립단위를 복원추출로 다시 뽑아 JSD 를 다시 재고, 「JSD 상위 TOPN 에 몇 번
   들었나」를 센다(freq). 100회 반복한다.
@@ -10,9 +10,7 @@
   산출  <out>/boot_K<K>_minr<MINR>.parquet   열: chr · blk · jsd_obs · freq
   쓰는 곳  06b_select_supplement.py 가 freq 로 정렬해 jsdb200 판을 고른다.
 
-  ※ 순열 귀무분포(문턱 t)는 옆 파일 04b_jsdnull.py 가 만든다. 2026-09-29 에
-    이 독스트링이 04b 의 것과 「똑같아」 부트스트랩 스크립트가 순열 검정이라고
-    적혀 있었다 - 복원할 때 함께 복사된 것이다.
+  ※ 순열 귀무분포(문턱 t)는 옆 파일 04b_jsdnull.py 가 만든다.
 """
 
 # 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돌아
@@ -55,19 +53,17 @@ if not _GEN:
     except Exception:
         raise SystemExit('GEN(패널 세대)을 못 읽었습니다 — config.conf 의 GEN 을 채우거나 '
                          '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
-# ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
+# ── 이 단계가 쓰는 경로 ──
 #   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
 #   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
 #   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
 D    = _M + '/results/dmr/j_jsdcount' + _GEN
 CAND = _M + '/results/dmr/j_candidates' + _GEN
 OUT  = _M + '/results/dmr/j_jsd' + _GEN
-# ╚══════════════════════════════════════════════════════════════════╝
-# 기본값이 4 였다. 실제 실행은 6 이고(서버의 boot_K3_minr6.parquet),
-#   06b 가 설정의 MIN_READS_PER_WINDOW(=6)로 파일을 찾는다. 기본값을 설정에서
+# 06b 가 설정의 MIN_READS_PER_WINDOW(=6)로 파일을 찾는다. 기본값을 설정에서
 #   읽어 세 자리(04·04b·04c)가 같은 값을 쓰게 한다. --minr 로 덮을 수 있다.
 K, MINR, NEED_N, NEED_G, MINREP, NPERM, SEED = 3, 6, 12, 6, 2, 100, 42
-try:   # 2026-09-29: SEED 가 config.conf 에 있는데 여기서만 박혀 있었다.
+try:   # SEED 는 config.conf 에서 읽는다.
     SEED = int(_cfg.SEED)
 except Exception:
     pass
@@ -81,9 +77,8 @@ FRAC = 0.60          # 후보 풀과 같은 커버 기준
 a = sys.argv
 if '--k'     in a: K     = int(a[a.index('--k')+1])
 if '--frac' in a: FRAC = float(a[a.index('--frac')+1])
-if '--need'  in a: NEED_N = int(a[a.index('--need')+1])  # 2026-09-10 정상 커버 기준을 CLI 로
-# '--needg' 가 「있는지」 만 보고 값을 안 읽었다. 주면 자동계산만
-#   꺼지고 기본값 6 이 남았다. 연기시험에서 --needg 1 을 줬는데 「암 6종」 으로 돌았다.
+if '--need'  in a: NEED_N = int(a[a.index('--need')+1])  # 정상 커버 기준을 CLI 로
+# '--needg' 는 값까지 읽는다. 「있는지」 만 보면 자동계산만 꺼지고 기본값 6 이 남는다.
 if '--needg' in a: NEED_G = int(a[a.index('--needg')+1])
 if '--minr'  in a: MINR  = int(a[a.index('--minr')+1])
 if '--nperm' in a: NPERM = int(a[a.index('--nperm')+1])
@@ -180,7 +175,7 @@ for p in range(NPERM):
     if (p + 1) % 20 == 0:
         print('  복원추출 %d/%d' % (p + 1, NPERM), flush=True)
 out = pd.DataFrame({'jsd_obs': Bo, 'freq': freq}).reset_index()
-os.makedirs(OUT, exist_ok=True)   # 2026-09-29: 04b 에는 있고 여기만 빠져 있었다
+os.makedirs(OUT, exist_ok=True)   # 출력 폴더가 없으면 만든다
 fp = '%s/boot_K%d_minr%d.parquet' % (OUT, K, MINR)
 out.to_parquet(fp)
 print('freq: 만점 %d칸 · 90회이상 %d칸 · 50회이상 %d칸 · 1회이상 %d칸'

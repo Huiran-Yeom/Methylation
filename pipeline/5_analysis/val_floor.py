@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-검증 AUC 의 «재어진» 우연 기준선. 사전등록 추기 38항. 2026-10-07
+검증 AUC 의 「재어진」 우연 기준선. 사전등록 추기 38항.
 
-읽는 것은 검증 «음성» 행의 y_score 뿐이다. 양성 행은 읽는 즉시 버린다.
+읽는 것은 검증 「음성」 행의 y_score 뿐이다. 양성 행은 읽는 즉시 버린다.
 설계·읽는 규칙·쓰는 규칙은 추기 38항에 돌리기 전에 적었다.
 
 파일 이름 세대
   판마다 두 형식이 있다 — `y_prob_all_<판>.csv` 와 `y_prob_all_<판>_모든조합.csv`.
   bl200 만 기본형이 164개 있고(부분 실행), 세 판 전부 `_모든조합` 이 178개다.
-  **`_모든조합` 을 쓴다.** 어느 쪽을 읽었는지 찍는다 — 이 저장소에서 같은 함정에
-  한 번 걸려 make_tables.py 에 경고를 넣었다(커밋 1c8c87b9·a6e4c66f).
+  **`_모든조합` 을 쓴다.** 어느 쪽을 읽었는지 찍는다 — make_tables.py 의
+  이름세대 경고와 같은 함정이다.
 
 귀무 두 가지 (38-4)
   (가) 비율 섞음   검체의 음성 70행 중 무작위 10행을 위장 양성
-  (나) 비율 고정   검체의 음성 중 «비율 0.005 인 10행»을 위장 양성, 나머지를 음성
+  (나) 비율 고정   검체의 음성 중 「비율 0.005 인 10행」을 위장 양성, 나머지를 음성
                    → 실제 통계와 모양이 같다(양성은 한 비율, 음성은 전 비율)
   (나)를 주로 본다. (가)는 민감도다.
 """
@@ -60,7 +60,7 @@ def load_negatives(panel):
     for f in files:
         t = pd.read_csv(f, usecols=['sample', 'feature_set', 'ratio',
                                     'y_true', 'y_score'])
-        t = t[(t.feature_set == COMBO) & (t.y_true == 0)]   # ★ 양성 버림
+        t = t[(t.feature_set == COMBO) & (t.y_true == 0)]   # 주의: 양성 버림
         if not len(t):
             continue
         smp = str(t['sample'].iloc[0])
@@ -100,7 +100,7 @@ def main():
     for panel in PANELS:
         per, used, nf = load_negatives(panel)
         data[panel] = per
-        print('%-12s 파일 형식 «%s» · %d개 · 검체 %d'
+        print('%-12s 파일 형식 「%s」 · %d개 · 검체 %d'
               % (panel, used, nf, len(per)))
     common = sorted(set.intersection(*[set(data[p]) for p in PANELS]))
     print('세 판 공통 검체 %d' % len(common))

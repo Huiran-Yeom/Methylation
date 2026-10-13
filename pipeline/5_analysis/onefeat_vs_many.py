@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-칸 평균 «한 칸» 을 같은 CV 파이프라인에 넣으면 197칸보다 잘하나. 2026-10-07
+칸 평균 「한 칸」 을 같은 CV 파이프라인에 넣으면 197칸보다 잘하나.
 
 왜
   33-3 에서 entropy 칸 평균 한 축의 AUC 가 0.5% 에서 0.669(GBM bl200)인데
   같은 특징의 197칸 다변량 CV 는 0.52 였다. 두 수의 단위가 다르다 —
   앞은 적합 없는 통계량이고 뒤는 교차검증된 모델이다. 그래서 그냥 못 비교한다.
 
-  칸 평균을 «한 칸 특징»으로 만들어 같은 4모델·5접기·최댓값 파이프라인에 넣으면
+  칸 평균을 「한 칸 특징」으로 만들어 같은 4모델·5접기·최댓값 파이프라인에 넣으면
   단위가 맞는다. 그 값이 197칸보다 높으면 197칸은 과적합이다.
 
 읽는 규칙 (숫자 보기 전에)
@@ -90,7 +90,7 @@ def main():
             except Exception as e:
                 print('%-4s %-12s %-6s 못 읽음 %s' % (tag, panel, lab, e))
                 continue
-            # ★ Type 은 라벨이다. 08_ML_classifier 도 drop 한다.
+            # 주의: Type 은 라벨이다. 08_ML_classifier 도 drop 한다.
             if 'Type' not in df.columns:
                 raise SystemExit('Type 열이 없다 — 파일 형식이 바뀌었다: ' + f)
             df = df.drop(columns=['Type'])

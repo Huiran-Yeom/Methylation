@@ -1,10 +1,8 @@
 """버전 태그 -> 스크립트 폴더 · DMR 파일 (찾는 규칙은 이 파일 한 곳에만).
 
-2026-08-10: 스크립트가 scripts_<버전> 에서 runs/<그룹>/<버전> 으로 옮겨졌다.
-2026-08-14: 폴더를 보관함으로 옮겼더니 검증이 끊겼다. 한 자리만 보던 것을
-            여러 자리를 차례로 보도록 넓힌다. 앞으로 어디로 옮겨도 안 깨진다.
-2026-09-25: 정리본에서는 학습 코드가 2_train/steps/ 한 폴더에 평평하게 있다.
-            TRAIN_SRC 를 먼저 보고, 옛 배치는 그 뒤에 그대로 둔다.
+한 자리만 보지 않고 여러 자리를 차례로 본다. 폴더를 옮겨도 검증이 끊기지 않게.
+정리본에서는 학습 코드가 2_train/steps/ 한 폴더에 평평하게 있으므로 TRAIN_SRC 를
+먼저 보고, 옛 배치(runs/<그룹>/<버전> · 보관함 · scripts_<버전>)는 그 뒤에 본다.
 """
 import glob
 import os
@@ -30,13 +28,11 @@ try:
     #   부르는 쪽(make_val_config)이 또 다른 조회 경로를 만들지 않게 한다.
     VERSION_CONF = _cfg.VERSION
     # STEP_MAP 도 여기서 내보낸다 — 설정을 읽는 자리를 하나로 유지한다.
-    # 관문이 hasattr(_cfg, '값') 이었다 — 식별자 영어화 때 호출은
-    #   get() 으로 바꾸고 이 「이름 문자열」 은 안 바꿔서 영원히 False 였다.
-    #   결과: STEP_MAP_CONF 가 항상 '' 이라 config.conf 의 STEP_MAP 이 죽어 있었다.
+    #   hasattr 의 「이름 문자열」 은 실제 함수 이름(get)과 같아야 한다. 다르면 늘 False 라
+    #   STEP_MAP_CONF 가 '' 이 되고 config.conf 의 STEP_MAP 이 조용히 안 쓰인다.
     STEP_MAP_CONF = _cfg.get('STEP_MAP') if hasattr(_cfg, 'get') else ''
-    # WORK_ROOT 도 여기서 내보낸다. make_val_config 가 _cfg 를 직접
-    #   쓰려다 「import 하지 않은 이름」 을 써서 NameError 가 났다 (WORK_ROOT 가
-    #   빈 값일 때만 터지는 자리였다). 설정을 읽는 자리를 하나로 유지한다.
+    # WORK_ROOT 도 여기서 내보낸다. make_val_config 는 _cfg 를 import 하지 않으므로
+    #   이 이름을 쓴다. 설정을 읽는 자리를 하나로 유지한다.
     WORK_ROOT_CONF = getattr(_cfg, 'WORK_ROOT', '') or ''
     # 코호트 정의 폴더도 여기서 내보낸다 (설정을 읽는 자리는 하나다).
     COHORT_DIR_CONF = _os.environ.get('COHORT_DIR') or _os.path.expanduser('~/cohorts')
@@ -82,7 +78,7 @@ def script_dir_abs(v):
 
 
 def script_dir(v):
-    """예전 이름 그대로: ROOT 기준 상대경로."""
+    """script_dir_abs 의 ROOT 기준 상대경로판."""
     h = script_dir_abs(v)
     return os.path.relpath(h, ROOT) if h else None
 

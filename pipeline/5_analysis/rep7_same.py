@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """추기 44-3(가) — 반복 1~7 의 y_score 가 옛 트리와 같은가. 하나라도 다르면 rc=1."""
 import sys, glob
-import numpy as np, pandas as pd
+import pandas as pd
 S, V = '<검체>', 'j16bl200_5k_uni'
 def one(tree):
     f = glob.glob('<METH_ROOT>/lung/%s/%s/results/%s/step04_ML_classifier/y_prob_all_%s_all_combos.csv' % (tree, S, V, V))

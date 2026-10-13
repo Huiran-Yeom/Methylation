@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""실판 셋을 검증이 읽는 형식으로 내보낸다 (2026-09-14 · 파일로 굳힘 2026-09-26)
+"""실판 셋을 검증이 읽는 형식으로 내보낸다
 
 세 판은 서로 다른 코드가 만들어서 열 이름도 자리도 다르다. 검증(`config.py` 의
 `DMR_CSV`)은 `Feature,dbeta,q` 한 가지만 읽으므로 여기서 한 형식으로 맞춘다.
@@ -9,8 +9,7 @@
   jsd200  j_panel15/panel_jsd_jsd_mean_n200.csv                (06_select.py 산출)
   jsdb200 j_panel15_supplement/panel_jsd_supplement_n200.csv
 
-원래 인라인으로 돌려 파일이 없었다. 09-26 에 세션 기록에서 찾아 그대로 옮겼다.
-계산은 한 글자도 바꾸지 않았다. 바꾸면 기존 패널과 달라진다.
+처음 돌린 코드를 그대로 옮긴 것이다. 계산을 바꾸면 기존 패널과 달라진다.
 
   사용
     python 08_export_panels.py                  # 실제 자리에 쓴다
@@ -58,13 +57,12 @@ if not _GEN:
     except Exception:
         raise SystemExit('GEN(패널 세대)을 못 읽었습니다 — config.conf 의 GEN 을 채우거나 '
                          '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
-# ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
+# ── 이 단계가 쓰는 경로 ──
 #   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
 #   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
 #   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
 R = _M + '/results/dmr'
 OUT = R + '/j_panel_dmr' + _GEN + '_panels'
-# ╚══════════════════════════════════════════════════════════════════╝
 a = sys.argv
 if '--r' in a:
     R = a[a.index('--r') + 1].rstrip('/')
@@ -81,8 +79,7 @@ SRC = {'bl200':   R + '/j_panel_dmr' + _GEN + '/bl200_d10_cellline/DMR_confirmed
 _MADE_BY = {'bl200':   '07_panel.py  (Baseline 순위)',
             'jsd200':  '06_select.py (JSD 상위 N)',
             'jsdb200': '06b_select_supplement.py 를 먼저 돌리십시오 (j_panel<GEN>_supplement 에 씁니다)'}
-# 2026-09 까지 두 자리 이름이 한글이었다. 코드만 영문으로 바꾸고 저장된 산출물
-#   쪽 짝을 안 지어서, 옛 트리에 08 만 따로 돌리면 bl200·jsdb200 입력을 못 찾는다.
+# 이미 만들어진 옛 트리에는 bl200·jsdb200 입력이 한글 이름으로 있다.
 #   (처음부터 도는 실행은 07·06b 가 영문 이름으로 먼저 만드니 안 걸린다.)
 #   새 이름이 없을 때만 옛 이름을 본다.
 _OLD = {'bl200':   SRC['bl200'].replace('bl200_d10_cellline', 'bl200_d10_세포주'),

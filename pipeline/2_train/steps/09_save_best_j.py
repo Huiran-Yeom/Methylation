@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-"""검증에 넘길 모델과 문턱을 굳힌다. j 판용 (2026-08-21)
+"""검증에 넘길 모델과 문턱을 굳힌다. j 판용.
 
-없어진 save_best_pool.py 자리다. 전신 ~/tools/bin/save_best_mean.py (08-14) 와
-같은 방식을 쓰되 셋을 바꿨다.
+비율마다 교차검증으로 모델을 골라 저장하는 기본 방식에 셋을 더했다.
 
   ① 특징 조합을 인자로 받는다      mean|entropy · mean|entropy|jsd
   ② 비율을 합친 판(pooled)도 만든다  m 판에서 비율마다 AUC 가 전부 1.0 이라
@@ -13,7 +12,7 @@
   models/<조합>/pooled/BEST.joblib          비율을 합쳐 하나로
   models/<조합>/mut_<p>_reads/BEST.joblib   비율마다 따로
 
-문턱은 정상(y=0)의 교차검증 점수 95백분위. 전신과 같다.
+문턱은 정상(y=0)의 교차검증 점수 95백분위.
 
 합칠 때 정상을 한 번만 쓴다
   파일마다 Normal 100판이 들어 있는데 전부 같은 0% 판이다. 그대로 쌓으면
@@ -70,7 +69,7 @@ from sklearn.base import clone
 
 R = _M + '/results'
 SEED, NF = 42, 5
-try:   # 2026-09-29: SEED 가 config.conf 에 있는데 여기서만 박혀 있었다.
+try:   # SEED 는 config.conf 의 값을 따른다.
     SEED = int(_cfg.SEED)
 except Exception:
     pass
@@ -103,7 +102,7 @@ def models():
             'Random Forest': RandomForestClassifier(random_state=SEED, n_jobs=1),
             'XGBoost': XGBClassifier(random_state=SEED, eval_metric='logloss', n_jobs=1),
             'SVM': SVC(random_state=SEED)}
-    # [교정 2026-10-08] 모델을 미리 하나로 고정한다(config.conf FIXED_MODEL · 사전등록 41-2).
+    # 모델을 미리 하나로 고정한다(config.conf FIXED_MODEL · 사전등록 41-2).
     if FIXED:
         if FIXED not in ms:
             raise SystemExit('FIXED_MODEL=%r 은 모델 이름이 아니다: %s' % (FIXED, ' · '.join(ms)))
@@ -132,16 +131,15 @@ def load(D, V, p, feats):
 def fit_save(X, y, md, tag):
     """모델 4종을 교차검증으로 겨뤄 1등을 저장한다."""
     mu = X.mean()
-    # [실행차단 교정] 여기서 전체 자료 평균으로 채우고 있었다.
+    # 채우기는 접기 안에서 한다(접기마다 학습 접기 평균으로만).
     #   아래 교차검증이 만드는 thr 이 pooled/BEST.joblib 에 실리고,
     #   score_one_sample.py 가 그 thr_spec95 로 외부 검증 특이도를 판정한다.
-    #   즉 실제로 출하되는 문턱이 누출된 값이었다.
-    #   채우기를 접기 안으로 넣어 접기마다 학습 접기 평균으로만 채운다.
+    #   전체 자료 평균으로 미리 채우면 그 문턱이 누출된 값이 된다.
     #   (mu 는 train_mean 으로 저장되므로 계산은 남긴다.)
-    # [교정] pooled 는 같은 검체의 여러 비율판이 쌓여 있다.
+    # pooled 는 같은 검체의 여러 비율판이 쌓여 있다.
     #   StratifiedKFold 는 그것을 학습 접기와 검증 접기에 갈라 넣는다 — 누출이다.
     #   인덱스가 "<검체>@r<n>" 이므로 @ 앞을 그룹으로 쓴다.
-    #   비율별 판(중복 없음)에서는 그룹이 전부 달라 기존과 같게 동작한다.
+    #   비율별 판(중복 없음)에서는 그룹이 전부 달라 StratifiedKFold 로 돈다.
     _grp = [str(ix).split("@")[0] for ix in X.index]
     if len(set(_grp)) < len(_grp):
         cv = StratifiedGroupKFold(NF, shuffle=True, random_state=SEED)
@@ -220,9 +218,9 @@ def fit_save(X, y, md, tag):
 
 
 made = 0
-made_by_V = {}      # 2026-09-15 판마다 센다 (made 는 전체 누적이라 판별 부족을 못 잡는다)
+made_by_V = {}      # 판마다 센다 (made 는 전체 누적이라 판별 부족을 못 잡는다)
 expect_by_V = {}    # 판마다 기대치
-failures = []   # 2026-09-14 print 만 하면 아무도 못 읽는다. 기록하고 끝에서 멈춘다.
+failures = []   # print 만 하면 아무도 못 읽는다. 기록하고 끝에서 멈춘다.
 for V in VERS:
     D = '%s/panels/%s/%s/step04_ML_classifier' % (R, V.split('_')[0], V)
     if not os.path.isdir(D):
@@ -265,10 +263,9 @@ for V in VERS:
             ya.append(y[y == 1])
         Xp = pd.concat(Xa, axis=0)
         yp = pd.concat(ya, axis=0)
-        # 여기서 검체 이름을 r0,r1,... 로 덮어쓰고 있었다.
-        #   그러면 같은 검체의 다른 비율판이 학습 접기와 검증 접기에 갈라 들어가도
-        #   막을 수가 없다(GroupKFold 가 구조적으로 불가능해진다).
-        #   이름을 남긴다. 중복은 비율을 붙여 구분하되 검체 부분을 보존한다.
+        # 검체 이름을 r0,r1,... 로 덮어쓰면 같은 검체의 다른 비율판이 학습 접기와
+        #   검증 접기에 갈라 들어가도 막을 수가 없다(GroupKFold 가 구조적으로 불가능해진다).
+        #   이름을 남긴다. 중복은 @r<번호> 를 붙여 구분하되 검체 부분을 보존한다.
         Xp.index = ['%s@r%d' % (str(ix), k)
                     for k, ix in enumerate(Xp.index)]
         yp.index = Xp.index
@@ -280,12 +277,9 @@ print('')
 print('끝. 저장한 모델 %d개' % made)
 # 만들어야 할 수와 실제 만든 수를 대조한다.
 #   한 조합이 BEST 를 못 만들면 val04_2 의 pick() 이 조용히 다음 후보로 내려간다.
-# [고침] 판마다 센다. 그리고 방향을 단정하지 않는다.
-#   앞서는 made(판 루프 누적)를 _expect(판 하나 기준)와 비교했다. 범위가 달랐다.
-#   5k+15k 를 굳히니 254 vs 127, 네 판이면 508 vs 127 로 정상인데 실패가 떴다.
-#   그리고 문구가 "조용히 적게" 였는데 실제로는 많았다. 반대로 알려준 것이다.
-#   [배운 것] 관문이 거짓으로 울면 그 관문은 죽는다. 254 때 이미 울었는데 지나쳤다.
-#   멈추는 관문이어도 한 번 거짓이면 두 번째부터 안 읽힌다.
+# 판마다 센다(누적 made 를 판 하나 기준 기대치와 비교하면 범위가 다르다).
+#   방향(많음/적음)은 단정하지 않고 「어긋남」 으로만 알린다.
+#   관문이 거짓으로 울면 다음부터 안 읽힌다.
 for _V in sorted(made_by_V):
     _n = made_by_V[_V]
     _e = expect_by_V.get(_V)

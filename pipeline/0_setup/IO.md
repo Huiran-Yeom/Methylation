@@ -24,6 +24,7 @@
 | `08_export_panels.py` | 06·06b·07 의 셋 | `j_panel_dmr<G>_panels/<패널>/DMR_confirmed_<패널>.csv` |
 | `09_null_a.py` | 후보 | 귀무A 3판 (`rand1-3`) · 씨앗 `20260914+i` |
 | `10_null_b.py` | Baseline 모집단 | 귀무B 3판 (`randb1-3`) · 씨앗 `20260914+100+i` |
+| `10c_panel_union.py` | 08·09·10 의 `DMR_confirmed_<패널>.csv` + 후보의 `samples.csv` | `j_panel<G>/panel_union3_cellline.csv` · `panel_union_rand3.csv` · `panel_union_randb3.csv`<br>`use<G>_normal.txt` · `use<G>_gbm.txt` — 11 의 입력 |
 | `11_pool.py` (`run_pool.sh`) | 세포주·정상 BAM + `panel_union3_cellline.csv` | `j_pool<G>_cellline/pool_{gbm,normal}_all.bam` |
 | `moderated_t.py` |: | 06·06b·07 이 import 하는 조정 t검정·BH 보정 |
 
@@ -33,11 +34,10 @@
 2. `j_pool<G>_cellline/pool_{gbm,normal}_all.bam` — 2단계 step 01 이 **섞기의 원천
    풀**로 읽습니다(`config.py` 의 `FULL_GBM_BAM`·`FULL_NORMAL_BAM`).
 
-> 2026-09-29: 04b·04c·06b·11 을 「감도용·미사용」으로 보고 빼려다 되돌렸습니다.
-> 04b·04c 는 06b 의 입력이고 06b 는 보고하는 세 판 중 `jsdb200` 을 만듭니다.
-> 11 의 풀 BAM 은 2단계 첫 걸음이 읽습니다. 넷 다 본선입니다.
-> 다만 `run_pool.sh` 의 입력 `panel_union3_cellline.csv` 를 만드는 코드는 여기
-> 없습니다. 1단계 패널 산출물을 손으로 합친 것입니다(README 에 적어 두었습니다).
+> 04b·04c·06b·11 은 모두 본선입니다. 04b·04c 는 06b 의 입력이고 06b 는 보고하는
+> 세 판 중 `jsdb200` 을 만듭니다. 11 의 풀 BAM 은 2단계 첫 걸음이 읽습니다.
+> `run_pool.sh` 의 입력 `panel_union3_cellline.csv` 는 `10c_panel_union.py` 가
+> 판 파일과 `samples.csv` 에서 만듭니다(`run_dmr.sh` 가 부릅니다).
 
 ---
 
@@ -80,9 +80,9 @@
 진입점 `3_validate/run_validate.sh` 가 합니다. 그래서 이 단계에서 직접 부르는 것은
 진입점 하나뿐입니다.
 
-> 2026-09-29: 예전에는 여기에 병렬·보충 런처(`run_all_samples.sh` · `run_missing.sh` ·
-> `score_parallel.sh`)와 종합표(`aggregate_scores.py`)가 따로 있었습니다. 운영 편의용이고
-> 결과에는 영향이 없어 이 저장소에서는 뺐습니다. 진입점이 그 일을 직접 합니다.
+> 병렬·보충 런처(`run_all_samples.sh` · `run_missing.sh` · `score_parallel.sh`)와
+> 종합표(`aggregate_scores.py`)는 운영 편의용이고 결과에 영향이 없어 이 저장소에 넣지
+> 않았습니다. 진입점이 그 일을 직접 합니다.
 > (표는 검체별 채점 파일을 직접 읽으므로 종합표를 쓰지 않습니다.)
 
 ---

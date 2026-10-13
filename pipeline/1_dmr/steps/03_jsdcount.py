@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""S0b 리드 무늬 세기 (2026-08-20): 라벨을 쓰지 않는다.
+"""S0b 리드 무늬 세기: 라벨을 쓰지 않는다.
 
 표준 CpG 자리(02_blockcpg)로 창을 만들고 BAM 을 통째로 훑는다.
 창을 모두 덮은 리드의 무늬를 센다. 리드를 버리지 않고 전부 센다.
@@ -49,7 +49,7 @@ if not _GEN:
     except Exception:
         raise SystemExit('GEN(패널 세대)을 못 읽었습니다 — config.conf 의 GEN 을 채우거나 '
                          '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
-# ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
+# ── 이 단계가 쓰는 경로 ──
 #   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
 #   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
 #   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
@@ -64,15 +64,14 @@ NB   = _os.environ.get('NORMAL_BAM_DIR') or _D + '/for_in_silico_test/normal_cfD
 GB   = _os.environ.get('GBM_BAM_DIR')    or _D + '/training/GBM_cell-line/aligned_bam'
 ND   = _os.environ.get('NORMAL_SET')     or _M + '/sample_data/_input/normal_pub15'
 GD   = _os.environ.get('GBM_COV_DIR')    or _D + '/training/GBM_cell-line/cov'
-# ╚══════════════════════════════════════════════════════════════════╝
 BLOCK, KS = 100, (3, 4, 5)
-try:   # 2026-09-29: BLOCK_SIZE 가 config.conf 에 있는데 1단계는 100 을 박고 있었다.
+try:   # config.conf 의 BLOCK_SIZE 를 따른다. 01·02·11 과 같은 격자여야 한다.
     BLOCK = int(_cfg.BLOCK_SIZE)
 except Exception:
     pass
 
 a = sys.argv
-if '--nd'   in a: ND   = a[a.index('--nd')+1]        # 2026-09-10 학습 정상 폴더를 CLI 로
+if '--nd'   in a: ND   = a[a.index('--nd')+1]        # 학습 정상 폴더를 CLI 로
 if '--cand' in a: CAND = a[a.index('--cand')+1]
 if '--out'  in a: OUT  = a[a.index('--out')+1]
 ONLY  = a[a.index('--sample')+1] if '--sample' in a else None
@@ -80,7 +79,7 @@ LIMIT = int(a[a.index('--limit')+1]) if '--limit' in a else 0
 
 # 파일 이름에서 검체 이름을 뽑는다. 기본은 첫 _ 앞까지 — cov 와 BAM 의 뒤쪽
 #   꼬리표가 달라도 짝이 맞게 하기 위해서다.
-#   자료마다 이름 규칙이 다르다. 안 맞으면 «자료를 고치지 말고» SID_RE 를 준다.
+#   자료마다 이름 규칙이 다르다. 안 맞으면 「자료를 고치지 말고」 SID_RE 를 준다.
 #   첫 괄호가 검체 이름이 되고, 안 걸리면 기본 규칙으로 떨어진다. 예:
 #     SID_RE='(.+?)__'   H1876_0d__SRR…  -> H1876_0d   (밑줄 둘로 가르는 자료)
 #                        H1876__SRR…     -> H1876
@@ -150,14 +149,14 @@ def scan(bam):
 
 _CANCER = getattr(_cfg, 'CANCER_LABEL', 'GBM')   # samples.csv 의 type 값
 
-# 짝을 «아무것도 쓰기 전에» 맞춰 본다. 폴더를 만들거나 창 표를 쓴 뒤에 멈추면,
+# 짝을 「아무것도 쓰기 전에」 맞춰 본다. 폴더를 만들거나 창 표를 쓴 뒤에 멈추면,
 #   경로를 고쳐 다시 돌릴 때 run_dmr.sh 의 덮어쓰기 관문이 그 몇 개 때문에 막는다.
 jobs = [(sid(f), NB, 'Normal') for f in sorted(glob.glob(ND+'/*.cov.gz'))] + \
        [(sid(f), GB, _CANCER)    for f in sorted(glob.glob(GD+'/*.cov.gz'))]
 if ONLY: jobs = [j for j in jobs if j[0] == ONLY]
 if not jobs: sys.exit('대상 검체 없음')
 
-# 짝을 «스캔 전에» 맞춰 본다. 뒤에서 검사하면 암 30개를 다 읽고 90개 파일을 쓴 뒤에야
+# 짝을 「스캔 전에」 맞춰 본다. 뒤에서 검사하면 암 30개를 다 읽고 90개 파일을 쓴 뒤에야
 #   멈추고, 다시 돌리려면 run_dmr.sh 의 덮어쓰기 관문까지 풀어야 한다.
 _pair, _miss = [], []
 for s, bd, ty in jobs:
@@ -177,7 +176,7 @@ if _miss:
     if len(_miss) > 20: print('    … 외 %d개' % (len(_miss) - 20))
     # 넘어가면 01 이 쓴 samples.csv 와 여기서 센 검체 수가 어긋난다. 04_jsd 는
     #   NEED_N 을 samples.csv 로 잡으므로(04_jsd.py:91), 많이 빠지면 「쓸 수 있는
-    #   창이 0」 으로 죽고, 조금 빠지면 «줄어든 정상 기준»으로 조용히 다른 패널을
+    #   창이 0」 으로 죽고, 조금 빠지면 「줄어든 정상 기준」으로 조용히 다른 패널을
     #   고른다. 그래서 기본은 멈춤이고, 알고 넘기려면 ALLOW_SKIP=1 을 준다.
     if os.environ.get('ALLOW_SKIP') != '1':
         sys.exit('중단: 짝 BAM 을 못 찾은 검체가 %d개 있습니다.' % len(_miss) + chr(10) +

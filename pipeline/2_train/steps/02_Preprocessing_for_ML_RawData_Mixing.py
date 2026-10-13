@@ -3,7 +3,8 @@
 """
 2_train/steps/02: In-silico mixing.  depth 정의를 250430 Method 문서 스펙으로 고친 판
 
-원본 : Methylation/scripts/02_Preprocessing_for_ML_RawData_Mixing.py
+원본 : 초기 공개본 scripts/step03_2_Preprocessing_for_ML_RawData_Mixing.py
+       (저장소에서 삭제됨 · git 기록에 있음)
 
 무엇이 달라졌나
   1. depth  원본은 `baseline_total_pairs = total_blocks * target_depth // 2` 라서
@@ -45,9 +46,7 @@ import config as C
 PLAN_ONLY = '--plan-only' in sys.argv
 
 
-# =====================================================================
-# 계획 계산
-# =====================================================================
+# ── 계획 계산 ──
 def avg_reads_per_frag(bam_path, names):
     """조각(이름) 하나가 실제로 리드 몇 개인지. 페어드엔드 2 · 단일말단 1."""
     import pysam
@@ -127,9 +126,7 @@ def print_plan(rows, base, n_mut, n_wt, total_blocks):
     print()
 
 
-# =====================================================================
-# 실행
-# =====================================================================
+# ── 실행 ──
 def load_pairs_exactly_two(bam_path):
     import pysam
 
@@ -225,21 +222,21 @@ def main():
         if not os.path.exists(p):
             raise SystemExit(f'입력 BAM 이 없습니다. 2_train/steps/01 을 먼저 실행하세요.\n  {p}')
 
-    # ── 2) 입력 읽기 - BAM · 배경별 조각 · 블록 수 ────────────────────────────────────────
+    # ── 2) 입력 읽기 - BAM · 배경별 조각 · 블록 수 ──
     print('BAM 로딩...')
     mut_reads = load_pairs_exactly_two(C.MUT_SORTED)
     wt_reads = load_pairs_exactly_two(C.WT_SORTED)
     # 배경(공여자)별 정상 조각. 반복 i 가 배경 i 를 쓴다.
     #   없으면(=학습) 빈 목록이라 아래에서 병합본으로 간다.
     _bgnames = []
-    _bgreads = []   # 2026-09-14 배경별 리드 사전
-    _bgavg = []     # 2026-09-14 배경별 조각당 리드 (EGAD 1.99 · G3 1.00)
+    _bgreads = []   # 배경별 리드 사전
+    _bgavg = []     # 배경별 조각당 리드 (EGAD 1.99 · G3 1.00)
     for _k in range(1, len(getattr(C, 'NORMAL_BAMS', []) or []) + 1):
         _f = C.WT_SORTED.replace('.bam', '_bg%02d.bam' % _k)
         if os.path.exists(_f):
             _d = load_pairs_exactly_two(_f)
             _bgnames.append(list(_d))
-            _bgreads.append(_d)   # 2026-09-14 리드까지 배경에서 가져온다
+            _bgreads.append(_d)   # 리드까지 배경에서 가져온다
             _bgavg.append(sum(len(v) for v in _d.values()) / max(len(_d), 1))
         else:
             # [관문] 선언한 배경 BAM 이 없으면 멈춘다.
@@ -259,7 +256,7 @@ def main():
     am = avg_reads_per_frag(C.MUT_SORTED, mut_names)
     aw = avg_reads_per_frag(C.WT_SORTED, wt_names)
     print('  조각당 평균 리드: 암 %.2f · 정상 %.2f' % (am, aw))
-    # ── 3) 계획 세우기 ────────────────────────────────────────
+    # ── 3) 계획 세우기 ──
     rows, base, problems = build_plan(len(mut_names), len(wt_names), total_blocks, am, aw)
     print_plan(rows, base, len(mut_names), len(wt_names), total_blocks)
 
@@ -271,7 +268,7 @@ def main():
             f.write(','.join('' if r[c] is None else str(r[c]) for c in cols) + '\n')
     print(f'계획표 저장: {plan_csv}')
 
-    # ── 4) 계획 점검 - 모자란 비율을 어떻게 할까 ────────────────────────────────────────
+    # ── 4) 계획 점검 - 모자란 비율을 어떻게 할까 ──
     if problems:
         print('\n' + '!' * 74)
         print('풀이 부족한 비율이 있습니다:')
@@ -299,13 +296,13 @@ def main():
     if problems and not C.ALLOW_REPLACEMENT:
         raise SystemExit('풀 부족으로 중단했습니다.')
 
-    # ── 5) 출력 헤더 ────────────────────────────────────────
+    # ── 5) 출력 헤더 ──
     with pysam.AlignmentFile(C.MUT_SORTED, 'rb') as b:
         hdr = b.header.to_dict()
     hdr['HD'] = {'VN': '1.6', 'SO': 'unsorted', 'GO': 'query'}
     header = pysam.AlignmentHeader.from_dict(hdr)
 
-    # ── 6) 본체: 비율 × 복제본 마다 뽑아 BAM 을 쓴다 ────────────────────
+    # ── 6) 본체: 비율 × 복제본 마다 뽑아 BAM 을 쓴다 ──
     #        182줄. 함수로 빼낼 첫 후보다. 빼낼 때 rng 식을 건드리면
     #        학습과 검증이 서로 다른 섞기를 한다. 재현 시험으로 확인할 것.
     for r in rows:
@@ -329,43 +326,33 @@ def main():
         for i in range(1, C.NUM_FILES + 1):
             # 파일별 독립 시드: 부분 실행·재시작·순서 변경에도 같은 BAM 이 나온다.
             # 전역 시드 1회 방식은 앞 파일의 소비량에 결과가 달려 재현성이 깨진다.
-            # 파일마다 독립 시드: 원본은 파일 맨 위 random.seed(42) 하나뿐이라
-            # 중단·재시작·병렬 실행에서 결과가 달라졌다.
             # ×5000 은 원본 폴더 이름 규칙(mut_{ratio*5000}_reads)에서 온 것이고,
             # 지금 쓰는 10개 비율에서는 0·5·25·50·100·125·150·250·500·5000 으로
             # 전부 구분된다. 0.0001 처럼 촘촘한 비율을 추가하면 int() 에서
             # 0 으로 뭉개져 0% 와 시드가 겹친다. 그때는 v5/v6 처럼 ×10**6 으로
             # 바꿔야 하며, 바꾸면 기존 파일과 재현이 깨지므로 전체 재실행이 필요하다.
             # [시드] 검체 식별자를 넣는다.
-            #   옛 시드는 (SEED, 비율, 반복) 뿐이라 검체가 축에 없었다.
-            #   그래서 178검체의 음성이 리드 수준에서 100% 같았다(교집합 2,757/2,757).
-            #   점수에서도 확인된다. 음성 178검체의 검체평균 SD 가 llr 에서 0.0001 이다.
-            #   학습(2_train/steps/02)은 검체 개념이 없으므로 _smp 가 빈 문자열이고 옛 시드 그대로다.
-            #   → 학습 산출물은 비트 단위로 안 바뀐다. 검증만 바뀐다.
+            #   (SEED, 비율, 반복) 만으로는 검체가 축에 없어 검체마다 음성이 리드 수준에서
+            #   똑같아진다(178검체 교집합 2,757/2,757 · llr 검체평균 SD 0.0001).
+            #   학습(2_train/steps/02)은 검체 개념이 없으므로 _smp 가 빈 문자열이고
+            #   시드는 (SEED, 비율, 반복) 그대로다.
             _smp = (os.path.basename(os.getcwd())
                     if os.path.basename(__file__).startswith('val03_2') else '')
-            # [대칭] 검증 쪽에는 「검증인데 _smp 없음」 assert 가 있다.
-            #   반대(학습인데 _smp 있음)는 막혀 있지 않았다. 학습을 경로에 _val/ 이 낀
-            #   자리에서 한 번이라도 돌리면 학습 산출물이 조용히 바뀐다. 제일 비싼 사고다.
-            # [정정] 앞의 조건은 구조상 불가능했다 — _smp 는 파일명이
-            #   val03_2* 일 때만 채워지므로 학습에서는 늘 '' 이고 검증에서는 늘 찬다.
-            #   그래서 이 가드는 학습을 지키지 못하고 검증만 통째로 죽였다.
-            #   (
-            #    바로 다음 줄의 검증 시드 경로도 같이 도달 불가였다.)
-            #   막으려던 진짜 사고는 「학습 파일을 _val 경로에서 돌리는 것」 이다.
+            # [가드] 막는 사고는 「학습 파일을 _val 경로에서 돌리는 것」 이다.
+            #   그러면 학습 산출물이 조용히 바뀐다. 제일 비싼 사고다.
+            #   _smp 는 파일명이 val03_2* 일 때만 채워지므로 학습에서는 늘 '' 이고
+            #   검증에서는 늘 찬다. 그래서 _smp 가 아니라 경로로 본다.
             assert _smp or '_val' not in os.getcwd(), \
                 '학습인데 _val 경로다. 학습 산출물이 바뀐다'
             _sbase = C.SEED * 10**10 + int(r['ratio'] * 5000) * 10**4 + i
             rng = random.Random(_sbase if not _smp else '%d|%s' % (_sbase, _smp))
-            # 반복 i 는 배경 (i-1)%K 를 쓴다 — 음성이 서로 다른 사람에서 나온다.
-            #   조각이 모자라면 병합본으로 되돌리고 그 사실을 기록한다.
-            #   (깊은 판에서는 공여자 하나가 목표 깊이를 못 채울 수 있다.)
-            # [혼합] 반복 하나를 전원에서 비율대로 뽑아 만든다.
-            #   옛 방식 `_j = (i-1) % K` 는 한 반복 = 한 사람이었다. 그래서 목표 깊이를
-            #   혼자 못 채우는 사람은 통째로 빠졌다. 50k 를 혼자 채울 GSE 공여자가
-            #   하나도 없어(최대 bg07 49,599 < 50,000) EGAD 3명만 남았다.
-            #   새 방식: 사람마다 균등 몫(리드 기준 총정상리드/K)을 뽑고, 몫을 못 채우는
+            # [혼합] 반복 하나를 배경(공여자) 전원에서 비율대로 뽑아 만든다.
+            #   사람마다 균등 몫(리드 기준 총정상리드/K)을 뽑고, 몫을 못 채우는
             #   사람은 있는 만큼만 내고 부족분을 여유 있는 사람에게 비례 배분한다.
+            #   그래도 모자라면 fallback 으로 기록한다.
+            #   한 반복 = 한 사람(`_j = (i-1) % K`)으로 두면 목표 깊이를 혼자 못 채우는
+            #   사람이 통째로 빠진다. 50k 를 혼자 채울 GSE 공여자가 하나도 없어
+            #   (최대 bg07 49,599 < 50,000) EGAD 3명만 남는다.
             #
             #   [대가 · 사전등록에 적었다] 반복 10개가 전부 같은 K명을 포함하므로
             #   반복 사이 차이가 「사람 간 차이」가 아니라 「뽑기 잡음」이 된다.
@@ -413,7 +400,7 @@ def main():
                                              '정상bg%02d' % (_j + 1), rng))
                     _usereads.update(_bgreads[_j])
                 # 아래 리드 수 검사가 쓰는 「계획한 정상 조각 수」.
-                #   혼합에서는 사람별 몫의 합이다. 이 줄이 없으면 411행에서 NameError.
+                #   혼합에서는 사람별 몫의 합이다. 이 줄이 없으면 아래 검사에서 NameError.
                 _wp = sum(_take)
                 _bgid = 0
                 _bgmap.append({'ratio': r['ratio'], 'rep': i, 'bg': 0,
@@ -479,7 +466,7 @@ def main():
         # 어느 반복본이 어느 공여자 배경에서 나왔는지 남긴다.
         #   이게 없으면 나중에 음성을 사람 단위로 묶을 수 없다.
         if _bgmap:
-            import pandas as _pd          # 2026-09-14: 이 파일엔 pandas 가 없다. 지역 임포트.
+            import pandas as _pd          # 이 파일엔 pandas 가 없다. 지역 임포트.
             _bm = _pd.DataFrame(_bgmap)
             _bmp = f'{out_dir}/background_map_{C.VERSION}.csv'
             _bm.to_csv(_bmp, index=False)

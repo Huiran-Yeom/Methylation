@@ -3,7 +3,7 @@
 """
 2_train/steps/08: ML 분류 + 분류점수(y_prob) 저장.  step04_1 과 2_train/steps/08 의 feature 를 통합한다.
 
-원본 : Methylation/scripts/step04_ML_classifier.py 의 `3) 모델링`
+원본 : 초기 공개본 scripts/step04_ML_classifier.py (저장소에서 삭제됨 · git 기록에 있음) 의 `3) 모델링`
 
 회의록 250219 의 feature 조합 계획을 그대로 구현한다.
    1) Mean 으로만                    (step04_1  {p}_mean_v3.csv)
@@ -77,20 +77,19 @@ COMBOS = []
 # 손으로 적지 않는다. 특징이 늘어도 이 줄은 그대로 둔다.
 import glob as _g, itertools as _it
 _all = ['mean', 'entropy']
-# (마) readent·mhl 을 뺀다. 사용자 결정.
+# readent·mhl 은 쓰지 않는다.
 #   채움률이 1차 지표 깊이(5k)에서 47.9% · 48.7% 다(음성 행만 보면 83.3% · 83.4%).
 #   칸 절반이 그 검체에서 잰 값이 아니라 다른 검체들의 평균이다.
 #   근거는 채움률이지 성능이 아니다. 성능을 근거로 삼지 않는다.
-#   조합 2^7-1=127 -> 2^5-1=31. 옛 127 결과는 지우지 않는다.
+#   조합은 2^5-1=31 이다.
 for _k in ('jsd', 'llr', 'pdr'):
     if _g.glob('%s/*_%s_%s.csv' % (C.ML_OUT, _k, C.VERSION)):
         SOURCES[_k] = (C.ML_OUT, _k)
         _all.append(_k)
 # [관문] _g.glob 이 조용히 비면 조합 수가 줄어든 채 에러 없이 끝난다.
-#   실제로 2_train/steps/08 가 jsd·pdr 이 만들어지기 16분 전에 돌아 2^5-1=31 조합만 학습했다.
-#   R109 에서 잡은 llr 비대칭(본판 63 · 대조 31)과 똑같은 구조가 판 안에서 재현됐다.
-#   세는 곳이 없으면 또 놓친다. 여기서 멈춘다.
-# (마) 이후 5종. 관문은 끄지 않는다 — 4종이나 6종이면 여전히 잡는다.
+#   앞 단계(jsd·pdr)가 끝나기 전에 돌면 일부 조합만 학습한다.
+#   세는 곳이 없으면 놓친다. 여기서 멈춘다.
+# 특징은 5종이다. 4종이나 6종이면 관문이 잡는다.
 _want = ['mean', 'entropy', 'jsd', 'llr', 'pdr']
 if len(_all) != len(_want):
     _miss = [x for x in _want if x not in _all]
@@ -114,7 +113,7 @@ def make_models():
     학습 결과에 영향이 없고(xgboost 1.x 에서 경고만 없애는 역할), 2.x 에서는 에러다.
     """
     ms = {
-        # [교정 2026-10-12 · 65] 09 와 같은 설정 — 08 의 CV 로 고른 모델을 09 가 다른 설정으로 다시 적합하지 않게
+        # 09 와 같은 설정 — 08 의 CV 로 고른 모델을 09 가 다른 설정으로 다시 적합하지 않게 (사전등록 65)
         'Logistic Regression': LogisticRegression(random_state=C.SEED, max_iter=2000),
         'Random Forest': RandomForestClassifier(random_state=C.SEED, n_jobs=C.N_JOBS),
         'XGBoost': XGBClassifier(
@@ -122,7 +121,7 @@ def make_models():
         ),
         'SVM': SVC(random_state=C.SEED, probability=C.SVM_PROBABILITY),
     }
-    # [교정 2026-10-08] 모델을 미리 하나로 고정한다(config.conf FIXED_MODEL).
+    # 모델을 미리 하나로 고정한다(config.conf FIXED_MODEL).
     #   넷 중 최고를 고르면 고르는 것만으로 값이 오른다(사전등록 41-2).
     fixed = (getattr(C, 'FIXED_MODEL', '') or '').strip()
     if fixed:
@@ -171,7 +170,7 @@ def load_combo(p, keys):
 
 
 def main():
-    """피처 조합마다 모델 넷을 학습·교차검증하고 y_prob 를 남긴다. 242줄.
+    """피처 조합마다 모델 넷을 학습·교차검증하고 y_prob 를 남긴다.
 
     받는 것
       ML_OUT/<비율>_<피처>_<판>.csv   피처 행렬 (mean·entropy·jsd·pdr·llr)
@@ -197,7 +196,7 @@ def main():
           f'train 점수 저장={C.SAVE_TRAIN_SCORES}\n')
 
     all_scores, failures = [], []
-    _cvcount = {}   # 2026-09-14 비율별 cv 행수
+    _cvcount = {}   # 비율별 cv 행수
 
     for p in C.MUT_READ_COUNTS:
         if p == 0:
@@ -254,8 +253,8 @@ def main():
                     #    (로지스틱·SVM 은 0.89~0.91 로 정상: 외우지 못하기 때문)
                     try:
                         cvm = 'predict_proba' if hasattr(model, 'predict_proba') else 'decision_function'
-                        # [교정 2026-10-12 · 사전등록 65 가] 미리 채운 Xtr 는 «학습셋 전체 · 정상·암 합친» 평균으로
-                        #   채워져 접기 밖 값이 섞인다. 아래 cv_auc 와 같게 접기마다 학습 접기 평균으로 채운다.
+                        # 미리 채운 Xtr 는 「학습셋 전체 · 정상·암 합친」 평균으로 채워져 접기 밖 값이 섞인다.
+                        #   아래 cv_auc 와 같게 접기마다 학습 접기 평균으로 채운다 (사전등록 65 가).
                         oof = cross_val_predict(
                             _Pipe([('imp', _Imputer(strategy='mean', keep_empty_features=True)), ('m', clone(model))]),
                             Xtr_raw, ytr, method=cvm, n_jobs=1,
@@ -293,11 +292,9 @@ def main():
                     #    최고 모델을 고르는 기준은 이 AUC 다.
                     try:
                         cm2 = 'predict_proba' if hasattr(model, 'predict_proba') else 'decision_function'
-                        # [실행차단 교정] 여기서 안 채운 X 를 그대로 넣고 있었다.
-                        #   결측이 있는 피처(jsd·pdr·llr)가 든 조합은 sklearn 이 ValueError 를
-                        #   내고 except 로 빠져 cv 표에 아예 안 들어갔다. 실측: 0.1% 에서
-                        #   127조합 중 31조합만 남았다. 사라진 96개가 전부 jsd·pdr 조합이고
-                        #   거기에 1차 조합(mean|entropy|jsd|llr|pdr)이 들어 있다.
+                        # 결측이 있는 피처(jsd·pdr·llr)를 안 채운 채 넣으면 sklearn 이 ValueError 를
+                        #   내고 except 로 빠져 그 조합이 cv 표에서 사라진다
+                        #   (1차 조합 mean|entropy|jsd|llr|pdr 도 여기에 든다).
                         #   채우기를 파이프라인 안에 넣어 접기마다 학습 접기 평균으로만 채운다.
                         #   밖에서 미리 채우면 검증 접기 값이 섞여 누출이다.
                         _mdl = _Pipe([('imp', _Imputer(strategy='mean', keep_empty_features=True)),
@@ -362,9 +359,8 @@ def main():
             print(f"   최고 {b['feature_set']} + {b['model']}  교차검증 AUC {b['cv_auc']:.4f}")
             try:
                 Xb, yb = load_combo(p, tuple(b['feature_set'].split('|')))
-                # [교정] 전체 자료 평균으로 채우고 있었다.
-                #   이 CV 가 만드는 thr 이 BEST.joblib 에 실려
-                #   외부 검증 특이도를 판정한다. 출하되는 문턱이 누출이었다.
+                # 채우기는 파이프라인 안에서 한다. 이 CV 가 만드는 thr 이 BEST.joblib 에 실려
+                #   외부 검증 특이도를 판정하므로, 전체 자료 평균으로 미리 채우면 문턱이 누출된다.
                 mb = Xb.mean()
                 best = _Pipe([('imp', _Imputer(strategy='mean', keep_empty_features=True)),
                               ('m', make_models()[b['model']])])

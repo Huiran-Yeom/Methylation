@@ -30,7 +30,7 @@ except ImportError:
 
 
 # coding: utf-8
-"""2_train/steps/07 - Multi-θ LLR 피처.  2026-09-03 미팅에서 정한 것.
+"""2_train/steps/07 - Multi-θ LLR 피처.
 
 무엇을 만드나
   샘플 하나당 한 줄. 여러 종양 분획 θ 에 대한 로그우도비를 모아 놓은 것.
@@ -48,7 +48,7 @@ except ImportError:
     Type             mean CSV 에서 그대로 복사 (2_train/steps/08 가 라벨로 쓴다)
 
 참조표는 새로 만들지 않는다
-  `_dmr/05_llrref.py` 가 2026-09-02 에 만들어 둔 것을 그대로 읽는다.
+  `_dmr/05_llrref.py` 가 만들어 둔 것을 그대로 읽는다.
   그쪽이 더 정확하다. P_GBM 을 세포주 안에서 먼저 평균 낸 뒤 세포주끼리 평균하므로
   반복 수가 많은 세포주에 치우치지 않는다.
 
@@ -62,14 +62,10 @@ except ImportError:
 
   바닥값(floor=0.0005)과 비교하면 무평활 쪽이 낫다. 같은 LOO 검사에서 바닥값은
   +77 ~ +863 (양성)으로 부호가 뒤집힌다. 그래서 "무평활 + P_N=0 무늬 제외" 를 쓴다.
-     "eps 혼합을 채택했다" 고 적었던 것은 잘못된 이름이었다 (2026-09-03 정정).
 
-  [2026-10-07 정정] 전에 여기 "leave-one-donor-out 정상이 −2.5 ~ −180.8 (음수)로
-  유지된다" 고 적혀 있었다. θ 를 안 적어 «전역 보증» 으로 읽혔는데 그렇지 않다.
-  근거로 적힌 `~/tmp/results/llr_stability_normalLOO.csv` 도 디스크에 없다.
-  2026-10-06~07 에 학습 정상 15명으로 다시 재어 보니 θ 에 따라 갈린다:
+  leave-one-donor-out(LOO) 정상의 LLR 부호는 θ 에 따라 갈린다 (학습 정상 15명):
 
-      θ=0.05    LOO 가 음수 10/15 · 중앙 −281   ← 옛 주석이 말한 구간
+      θ=0.05    LOO 가 음수 10/15 · 중앙 −281
       θ=0.005   LOO 가 음수  1/15 · 중앙 +31    ← 1차 지표의 비율. 부호가 뒤집힌다
       θ=0.0005  LOO 가 음수  1/15 · 중앙  +4
 
@@ -77,7 +73,7 @@ except ImportError:
   같은 방향이다(부호순위 양측 p=0.00006). 참조를 15명→14명으로 줄이는 효과는
   −5.90 으로 부호가 반대다 — 즉 "참조가 작아져서" 가 아니라 "자기가 빠져서" 다.
 
-  → LOO 로 검증된 것은 «평활 방식의 선택» 이고, LLR 의 외부 적용 가능성이 아니다.
+  → LOO 로 검증된 것은 「평활 방식의 선택」 이고, LLR 의 외부 적용 가능성이 아니다.
      산출물: ~/tmp/llr_loo_paired_20261007.csv · 사전등록 추기 25·27-5항.
 
   주의: P_Normal(x)=0 은 "정상에서 한 번도 안 나온 무늬" 라 우도비로는 증거력이 가장 크다.
@@ -90,7 +86,7 @@ except ImportError:
   창의 K 자리를 다 덮은 조각만 센다
 
 창 번호(wid) 정합성을 런타임에 검사한다
-  2_train/steps/06 는 blocks_cpg.parquet 로 wid 를 재구성하면서 검사가 없었다.
+  2_train/steps/06 는 blocks_cpg.parquet 로 wid 를 재구성하지만 이 검사가 없다.
   02_blockcpg 를 다른 조건으로 다시 돌리면 조용히 어긋난다.
   여기서는 참조표의 pos1~pos3 과 재구성한 창 좌표를 대조해 다르면 즉시 멈춘다.
 
@@ -111,24 +107,22 @@ import pandas as pd
 import pysam
 import config as C
 
-# ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
+# ── 이 단계가 쓰는 경로 ──
 #   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
 #   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
 #   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
-# 폴더 구조 변경 반영. 2_train/steps/06 는 아직 옛 경로라 고장나 있다.
 CAND = _os.environ.get('METH_ROOT', _M) + '/results/dmr/j_candidates'
-if '--cand' in sys.argv:            # 2026-09-14 판마다 후보 풀이 다르다
+if '--cand' in sys.argv:            # 판마다 후보 풀이 다르다
     CAND = sys.argv[sys.argv.index('--cand') + 1]
 # 검증(run_one_sample.sh)은 인자 없이 부른다. 환경변수로도 받는다.
 CAND = os.environ.get('LLR_CAND', CAND)
 # [세대 검사] 인자를 빠뜨리면 조용히 옛 후보 풀로 돈다.
-#   실제로 복구 스크립트가 --cand 를 빠뜨려 정상 20명 기준으로 돌기 시작했다.
-#   호출하는 쪽을 전부 맞추는 것은 계속 실패한다. 지나가는 잎에서 한 번 막는다.
+#   호출하는 쪽을 전부 맞추기보다 지나가는 잎에서 한 번 막는다.
 # 'j15' 를 못 박으면 다음 세대에 관문이 스스로 꺼진다. GEN 을 따른다.
 _G = getattr(C, 'GEN')
 _want = 'j_candidates' + _G
-# 06_jsdfeat 과 같은 이유로 VERSION 조건을 없앤다 — 판 이름이
-#   j<GEN> 으로 시작하지 않으면 관문이 스스로 꺼지고 세대 없는 풀로 조용히 돌았다.
+# 06_jsdfeat 과 같은 이유로 VERSION 조건 없이 늘 검사한다 — 판 이름이
+#   j<GEN> 으로 시작하지 않아도 관문이 꺼지지 않게.
 if os.path.basename(CAND.rstrip('/')) != _want:
     sys.exit('중단: 세대 불일치 — VERSION=%s · GEN=%s 인데 CAND=%s (기대 %s)'
              % (C.VERSION, _G, CAND, _want))
@@ -136,8 +130,7 @@ REF_DEFAULT = _os.environ.get('METH_ROOT', _M) + '/results/dmr/j_llrref/llrref_K
 
 # [자기 증명] 실행 중인 코드가 자기 소스를 해시해 찍는다.
 #   이 줄은 이 코드를 실제로 돌려야만 로그에 생긴다. 사후에 못 만든다.
-#   해석된 입력 경로도 같이 찍는다. 참조표 두 개가 파일 이름이 같아 로그로
-#   구분이 안 됐던 일(R114)이 경로를 안 찍어서 생겼다.
+#   해석된 입력 경로도 같이 찍는다. 참조표는 파일 이름이 같을 수 있어 경로가 있어야 구분된다.
 def _self_proof():
     import hashlib as _h
     try:
@@ -158,7 +151,7 @@ def _self_proof():
 
 
 
-# getattr 의 셋째 인자를 지웠다. 기본값이 곧 조용한 오답이다 —
+# getattr 에 기본값을 주지 않는다. 기본값이 곧 조용한 오답이다 —
 #   MIN_READS_PER_WINDOW 의 기본값 4 는 쓰지 않는다. 설정의 값(6)을 따른다.
 #   복사본이 config 를 못 읽으면 06 은 4 로 세고 07 은 minr6 참조표를 읽어
 #   두 피처가 다른 문턱으로 계산된다. 파일이 따로라 아무 에러도 안 난다.
@@ -166,7 +159,7 @@ K = getattr(C, 'PATTERN_K')
 BLOCK = C.BLOCK_SIZE
 M_PAT = 1 << K
 
-# 미팅 화면의 θ 다섯(0.0005~0.01)에 0.02 · 0.05 를 더한 것.
+# 처음 정한 θ 다섯(0.0005~0.01)에 0.02 · 0.05 를 더한 것.
 #   실제 혼합비가 5% 까지 있어 그대로 두면 2~5% 검체가 전부 best_theta=0.01 에 뭉친다.
 #   θ=0 은 목록에 넣지 않는다. LLR(0)≡0 이라 열로 두면 쓸모가 없다.
 #   대신 LLR_max · best_theta 계산에는 0 을 후보로 참여시킨다.
@@ -177,14 +170,12 @@ THETAS = ([float(x) for x in _env.replace(' ', '').split(',') if x]
           if _env else list(THETAS_DEFAULT))
 EPS = float(os.environ.get('LLR_EPS', 0.0))
 REF_PATH = os.environ.get('LLR_REF', REF_DEFAULT)
-# ╚══════════════════════════════════════════════════════════════════╝
-# [세대 관문 · REF] CAND 만 보던 관문이 참조표는 안 봤다.
-#   j_llrref (33,903창) 와 j_llrref15 (22,685창) 는 값이 다른 표다.
-#   REF_DEFAULT 는 15 가 아니므로, 러너가 LLR_REF 를 안 내보내면 조용히 옛 표를 쓴다.
+# [세대 관문 · REF] 참조표도 세대를 검사한다.
+#   j_llrref (33,903창) 와 j_llrref15 (22,685창) 는 값이 다른 표인데 「파일 이름이 같다」.
+#   REF_DEFAULT 는 세대 없는 경로라, 러너가 LLR_REF 를 안 내보내면 조용히 옛 표를 쓴다.
 #   러너가 내보내고 있지만, 관문이 그것을 증명해야 한다.
 _wref = 'j_llrref' + _G
-# 위 CAND 관문과 같은 이유로 VERSION 조건을 없앤다. 여기가 더 위험하다 —
-#   j_llrref(33,903창) 와 j_llrref15(22,685창) 는 「파일 이름이 같다」.
+# 위 CAND 관문과 같은 이유로 VERSION 조건 없이 검사한다.
 if os.path.basename(os.path.dirname(REF_PATH)) != _wref:
     sys.exit('중단: 세대 불일치 — VERSION=%s 인데 LLR_REF=%s\n'
              '  러너가 LLR_REF 를 내보내는지 보십시오 (3_validate/steps/run_one_sample.sh).'
@@ -268,7 +259,7 @@ def load_reference(nwin, blkwin):
 def scan(bam, blkwin, nwin):
     """무늬 세기. 03_jsdcount · 2_train/steps/06 의 scan 과 같은 규칙.
 
-    덤으로 온타겟 조각 수와 고유 조각 수를 센다 (2026-09-03 추가).
+    덤으로 온타겟 조각 수와 고유 조각 수를 센다.
       이 파이프라인은 PCR 중복을 어디에서도 제거하지 않는다
       (is_duplicate · markdup · rmdup 어디에도 없다 — 실측 확인).
       중복은 새 정보가 아니므로 LLR 의 리드 합을 부풀린다.
@@ -397,7 +388,7 @@ def llr_row(Cm, PN, PG, have):
 
 
 def main():
-    """theta 별 LLR 과 LLR_max·best_theta 를 만든다. 163줄.
+    """theta 별 LLR 과 LLR_max·best_theta 를 만든다.
 
     받는 것
       REF_PATH   j_llrref<GEN>/llrref_K3_minr<MINR>.parquet  (정상 기준 무늬 분포)
@@ -429,7 +420,7 @@ def main():
                    key=lambda p: int(re.search(r'[/\\](\d+)_mean_', p).group(1)))
     if not means:
         sys.exit('mean CSV 가 없습니다. step04_1 을 먼저 돌리세요: ' + out_dir)
-    # [교정 2026-10-12 · 사전등록 54-2 · 65] 검증에서는 블록 집합을 «학습» 의 mean 표에서 가져온다.
+    # 검증에서는 블록 집합을 「학습」 의 mean 표에서 가져온다 (사전등록 54-2 · 65).
     #   검증 검체의 mean 표는 블록을 안 버려(50) 학습 mean 표와 블록이 다르다. 그대로 쓰면 llr 이
     #   학습과 다른 창들을 합산한다(실측 창 1,272 → 1,273). 검증 실행기(run_one_sample.sh)가
     #   LLR_KEEP_FROM 에 학습 step04_ML_classifier 자리를 준다. 학습은 이 값을 안 주므로 그대로다.

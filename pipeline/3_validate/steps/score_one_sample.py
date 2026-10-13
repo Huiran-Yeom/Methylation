@@ -1,24 +1,17 @@
 # -*- coding: utf-8 -*-
-"""학습에서 저장한 모델을 환자 검체에 적용: j 판용 (2026-08-24)
+"""학습에서 저장한 모델을 환자 검체에 적용: j 판용.
 
-  ~/tools/bin/val04_2_apply.py 를 j 판 모델 구조에 맞춘 것.
-  바꾼 것은 모델을 찾는 자리뿐이다.
-      m 판   models/BEST_POOL.joblib
-      j 판   models/<조합>/pooled/BEST.joblib   (09_save_best_j.py 가 만든다)
-  조합은 mean|entropy(Baseline·JSD-1) 와 mean|entropy|jsd(JSD-2) 둘.
-  jsd 행렬이 없는 검체는 앞의 것으로 내려간다.
-
+  모델 자리: models/<조합>/pooled/BEST.joblib   (09_save_best_j.py 가 만든다)
+  검체에 없는 행렬이 든 조합은 건너뛰고 더 짧은 조합으로 내려간다 (pick()).
 
   다시 학습하지 않는다. joblib 의 모델·특징순서·문턱·학습셋평균을 그대로 쓴다.
   모델은 비율을 합쳐 학습한 것이라 하나뿐이다. 검체의 암 비율을 몰라도 쓸 수 있다.
 
-  모델 고르기
-    BEST_POOL      특징 전부. 검체에 그 행렬이 다 있어야 쓴다
-    BEST_POOLMEAN  mean 단독. 위가 안 되면 이것
   없는 블록은 joblib 의 train_mean 으로 채우고, 채운 비율을 기록한다.
 
-  사용: python val04_2_apply.py            (검체 폴더 안에서)
-        python val04_2_apply.py --model BEST_POOLMEAN
+  사용: python score_one_sample.py                (검체 폴더 안에서)
+        python score_one_sample.py --model 'mean|entropy|jsd'
+        python score_one_sample.py --allmodels    (굳힌 조합 전부)
 """
 
 # 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돌아
@@ -64,7 +57,7 @@ ALL = '--allmodels' in a
 import glob as _glob
 
 def _md5f(p):
-    """2026-09-15 채점 행에 모델 파일 지문을 남긴다. 어느 모델이 이 점수를 냈는지."""
+    """채점 행에 모델 파일 지문을 남긴다. 어느 모델이 이 점수를 냈는지."""
     import hashlib
     h = hashlib.md5()
     with open(p, 'rb') as _fh:
@@ -79,11 +72,8 @@ TRAIN = os.environ.get('MODELS_DIR') or TRAIN
 SM = os.path.basename(os.getcwd())
 RATIOS = [r for r in C.MUT_RATIOS if r > 0]
 
-# ─── [이미 된 일 관문] 잎에 한 번 두어 런처마다 기억하지 않는다 ───
-#   오늘 이미 끝난 5k 178검체를 다시 채점시켜 3~6시간을 버릴 뻔했다.
-#   런처들에는 건너뛰기가 있는데
-#   잎에는 하나도 없었다. 호출하는 쪽을 전부 고치는 방식은 계속 실패한다.
-#
+# ── 이미 된 일 관문 ──
+#   잎에 한 번 두어 런처마다 기억하지 않는다. 끝난 검체를 다시 채점하면 몇 시간을 버린다.
 #   "파일 있으면 건너뛰기" 가 아니라 지문이 현재 모델과 같으면 건너뛴다.
 #   모델을 다시 굳히면 지문이 달라져 스스로 다시 채점한다.
 def _already_done():
@@ -109,7 +99,6 @@ def _already_done():
 
 if _already_done():
     sys.exit(0)
-# ──────────────────────────────────────────────────────────────────────
 
 def have(key, p):
     return os.path.exists('%s/%d_%s_%s.csv' % (ML, p, key, V))
@@ -117,10 +106,8 @@ def have(key, p):
 def pick():
     """검체에 있는 행렬만으로 쓸 수 있는 모델을 고른다."""
     # j 판은 조합마다 폴더가 따로다. jsd 가 든 것을 먼저 본다.
-    # [실행차단 교정] 기본 후보에 1차 조합이 없었다.
-    #   --model 을 안 주면 영원히 'mean|entropy|jsd' 로 검증한다.
-    #   그러면 사전등록의 1차 지표(mean|entropy|jsd|llr|pdr)가 통째로 안 나온다.
-    #   검증이 다 돌아간 뒤에야 드러날 자리였다. 긴 것부터 본다.
+    # 기본 후보에 사전등록 1차 조합(mean|entropy|jsd|llr|pdr)을 넣고 긴 것부터 본다.
+    #   빠지면 --model 을 안 줄 때 1차 지표가 통째로 안 나온다.
     cands = [WANT] if WANT else ['mean|entropy|jsd|llr|pdr',
                                  'mean|entropy|jsd|llr',
                                  'mean|entropy|jsd',
@@ -141,8 +128,7 @@ def pick():
 
 name, B, keys = (None, None, None) if ALL else pick()
 if B is None and not ALL:
-    # [교정] cands 는 pick() 지역변수라 여기서 NameError 가 났다.
-    #   진짜 원인 메시지가 그 예외에 덮였다. 목록을 밖에 둔다.
+    # cands 는 pick() 의 지역변수라 여기서 못 쓴다. 목록을 밖에 다시 둔다.
     _cands = [WANT] if WANT else ['mean|entropy|jsd|llr|pdr', 'mean|entropy|jsd|llr',
                                   'mean|entropy|jsd', 'mean|entropy']
     _has = any(os.path.exists('%s/%s/pooled/BEST.joblib' % (TRAIN, n)) for n in _cands)
@@ -212,10 +198,8 @@ def run_model(name, B, keys, rows):
                 #   사전등록이 요구하는 특이도·위양성(⑪·②)을 그 칸에서 못 낸다.
                 #   로지스틱은 predict_proba = sigmoid(decision_function) 이므로
                 #   logit(thr) 이 정확히 같은 지점이다. 재학습도 재보정도 필요 없다.
-                #   (2026-09 시점에 다섯 칸 전부 LogisticRegression 이었다.
-                #    모델이 바뀌면 이 말은 안 맞을 수 있다 — 그래서 아래에서
-                #    런타임에 type 을 확인한다. 주석을 믿지 않는다.
-                #    다른 모형은 이 등식이 안 서므로 그대로 공백으로 둔다.)
+                #   (모델이 바뀌면 이 등식이 안 맞을 수 있어 아래에서 런타임에
+                #    type 을 확인한다. 다른 모형은 이 등식이 안 서므로 그대로 공백으로 둔다.)
                 _e = m
                 if hasattr(_e, 'named_steps'):
                     _e = list(_e.named_steps.values())[-1]
@@ -275,9 +259,8 @@ os.makedirs(ML, exist_ok=True)
 # --model 을 주면 파일명에 넣어 나눈다. 안 그러면 +JSD 결과를 덮어쓴다.
 _tag = '_all_combos' if ALL else (('_' + name.replace('|', '-')) if WANT else '')
 out = '%s/y_prob_all_%s%s.csv' % (ML, V, _tag)
-# 원자적 쓰기. 중간에 죽으면 머리줄만 남은 표가 생기고,
-#   score_parallel.sh 의 "머리에 model_md5 있으면 건너뛴다"가 그걸 완료로 본다.
-_tmp = out + '.writing'   # 2026-09-29: 산출 이름은 ASCII 로 (한글 파일명 금지)
+# 원자적 쓰기. 중간에 죽으면 머리줄만 남은 표가 생겨 완료로 오인될 수 있다.
+_tmp = out + '.writing'   # 산출 이름은 ASCII 로 (한글 파일명 금지)
 T.to_csv(_tmp, index=False)
 os.replace(_tmp, out)
 pos = T[T.y_true == 1]

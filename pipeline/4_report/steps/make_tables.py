@@ -32,19 +32,18 @@ except ImportError:
 #   검체 단위 : 행 그대로
 #   사람 단위 : 양성만 person 으로 묶는다(평균). 음성은 검체 단위로 묶는다.
 #               aggregate_scores.py 의 [사람 단위] 집계와 같은 규칙.
-#               (앞판은 음성을 공여자로 묶어 분포를 뭉갰다. 지금은 안 묶는다)
+#               (음성을 공여자로 묶으면 분포가 뭉개지므로 묶지 않는다)
 import pandas as pd, numpy as np, glob, os, re, sys
-import os
-# 기본값을 우리 내부 코호트 이름으로 두지 않는다. 안 주면 남이 받아
-#   돌릴 때 「없는 코호트」 를 읽어 표가 다 비는데도 정상 종료했다.
+# 기본값을 우리 내부 코호트 이름으로 두지 않는다. 두면 남이 받아
+#   돌릴 때 「없는 코호트」 를 읽어 표가 다 빈 채 정상 종료한다.
 COHORT = os.environ.get('COHORT') or ''
 if not COHORT:
     raise SystemExit('COHORT 를 주십시오: 3단계에서 쓴 것과 같아야 합니다.'
                      '  예: COHORT=<your_cohort> python ' + os.path.basename(__file__))
 V = _M + '/%s_val' % COHORT
 NTOT = len(glob.glob(V + '/*/results'))   # 분모를 178 로 박지 않는다
-# 기본값 'j15bl200' 을 지웠다. 인자 없이 돌리면 조용히 특정
-#   세대·특정 판을 본다. 07_panel 의 m_candidates 기본값과 같은 모양이다.
+# 판 이름에 기본값을 두지 않는다. 두면 인자 없이 돌릴 때 조용히 특정
+#   세대·특정 판을 본다.
 if len(sys.argv) < 2:
     sys.exit('사용: python make_tables.py <판이름>   예) python make_tables.py %s'
              '   ·  판 명단은 config.conf 의 PANELS · NULL_PANELS 에 있습니다: %s'
@@ -61,7 +60,7 @@ SHORT = {'mean|entropy': 'ME', 'mean|entropy|jsd': 'ME+JSD', 'llr': 'LLR',
 # 읽을 깊이. 자료를 바꾸면 DEPTHS='5k 50k' 처럼 준다.
 DEPTHS = tuple((os.environ.get('DEPTHS') or '5k 15k 50k 100k').split())
 
-# 검체 이름에서 «사람»을 뽑는다. 사람 단위로 묶어 한 사람이 표를 여럿 쥐지 않게 한다.
+# 검체 이름에서 「사람」을 뽑는다. 사람 단위로 묶어 한 사람이 표를 여럿 쥐지 않게 한다.
 #   기본값은 이 논문의 이름 규칙(pat_1_... · ind_3_...)이다.
 #   다른 자료를 쓰면 PERSON_RE 로 바꾼다. 괄호 하나가 사람 이름이 된다.
 #   예: PERSON_RE='^([A-Z0-9]+)-'
@@ -106,9 +105,8 @@ def _width(f):
 def _allcombo(prefix):
     """all_combos 채점 파일을 찾는다.
 
-    2026-09 까지 이 꼬리가 _모든조합.csv 였다. 한글->영문 이름바꿈을 코드만 하고
-    저장된 산출물 쪽 짝을 안 지어서, 옛 트리에 대고 돌리면 한 칸도 못 읽는다.
-    새 이름이 하나도 없을 때만 옛 이름을 본다. 끝을 맞춰 글롭하므로
+    옛 산출물은 꼬리가 _모든조합.csv 다. 새 이름만 찾으면 옛 트리에서는
+    한 칸도 못 읽는다. 새 이름이 하나도 없을 때만 옛 이름을 본다. 끝을 맞춰 글롭하므로
     _모든조합_포화전.csv (중간 산출물) 는 안 걸린다.
     """
     _k = prefix.split('/')[-1][len('y_prob_all_'):]
@@ -121,7 +119,7 @@ def _allcombo(prefix):
         # [기록] 이름만이 아니라 보고 조합이 몇 개 있는지까지 남긴다. 이름이
         #   다른 것은 그 자체로 해롭지 않다. 해로운 것은 보고 조합인데 칸이
         #   없는 것이다. 이름만 찍으면 읽는 사람이 「이름만 다르겠지」 로
-        #   넘긴다 — 실제로 그렇게 읽혔다(2026-10-06).
+        #   넘긴다.
         _GEN_SEEN[_k] = ('모든조합', _width(fs[0]))
         print('   [옛 이름으로 읽음] %s_모든조합.csv (%d개)' % (prefix.split('/')[-1], len(fs)))
     return fs
@@ -159,7 +157,7 @@ def auc(y, s):
 def tie_width(y, s):
     """동점 때문에 정해지지 않는 AUC 폭. (최소, 최대, 고유값 수)
 
-    2026-09-22: RandomForest 를 고른 칸에서 predict_proba 가 k/100 으로 양자화되고,
+    RandomForest 를 고른 칸에서 predict_proba 가 k/100 으로 양자화되고,
       학습이 양성 90% 라 표가 몰려 3,300행에 고유값 10개 까지 떨어진다.
       같은 점수끼리는 누가 위인지 모르므로 AUC 가 한 점이 아니라 구간이 된다.
       보고값(auc)은 동점을 반반으로 센 구간 안의 한 점일 뿐이다.

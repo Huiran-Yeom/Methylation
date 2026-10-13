@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""2026-10-08 결함 수정 세 가지가 실제로 그렇게 도는지 태워 본다. 자료·서버 없이 돈다.
+"""결함 수정이 실제로 그렇게 도는지 태워 본다. 자료·서버 없이 돈다.
 
   1. LLR 누수   split_ref_mix 가 사전등록 26-2 의 명단을 그대로 내고,
                 11_pool 이 혼합군만 남기는가
@@ -13,6 +13,7 @@ import ast
 import io
 import os
 import sys
+import tempfile
 
 import numpy as np
 import pandas as pd
@@ -47,7 +48,7 @@ def block_src(path, start, end):
     return src[i:j]
 
 
-# ── 1. LLR 누수 ────────────────────────────────────────────
+# ── 1. LLR 누수 ──
 print('1. LLR 참조군 · 혼합군')
 # 실제 명단은 사전등록 26-2 에 있다(공여자 이름이라 저장소에 넣지 않는다). 여기는 같은 정렬
 #   성질을 가진 가짜 이름이다 — 대문자가 소문자보다 앞, 'A-3' 이 'A-24' 뒤(문자열 순).
@@ -66,8 +67,7 @@ ok(ref == ['SNU1', 'SNU2', 'SNU4', 'SNU6', 'SNU8'] and mix == ['SNU10', 'SNU3', 
 
 pool = block_src(os.path.join(TREE, '1_dmr/steps/11_pool.py'),
                  "if int(getattr(_cfg, 'LLR_HELDOUT', 0)):", "\nP = pd.read_csv(PANEL)")
-tmp = os.path.join(HERE, '_check_cand')
-os.makedirs(tmp, exist_ok=True)
+tmp = tempfile.mkdtemp()
 rows = [(n, 'Normal', n) for n in normals] + \
        [('SNU%d-%d' % (i, r), 'GBM', 'SNU%d' % i) for i in range(1, 11) for r in (1, 2)]
 pd.DataFrame(rows, columns=['sample', 'type', 'group']).to_csv(os.path.join(tmp, 'samples.csv'), index=False)
@@ -99,7 +99,7 @@ except SystemExit:
 import shutil  # noqa: E402
 shutil.rmtree(tmp, ignore_errors=True)
 
-# ── 2. 모델 고정 ───────────────────────────────────────────
+# ── 2. 모델 고정 ──
 print('2. 모델 고정')
 from sklearn.ensemble import RandomForestClassifier  # noqa: E402
 from sklearn.linear_model import LogisticRegression  # noqa: E402
@@ -133,7 +133,7 @@ for name, fn in (('08', 'make_models'), ('09', 'models')):
     except SystemExit:
         ok(True, '%s 틀린 이름에서 멈춘다' % name)
 
-# ── 3. 묶음 평균 채우기 ────────────────────────────────────
+# ── 3. 묶음 평균 채우기 ──
 print('3. 채우기 · 블록 버리기')
 ft = func_src(os.path.join(TREE, '2_train/steps/05_Feature_Matrix.py'), 'to_frame')
 rows_n = {'Normal%d' % i: {'1_10': 0.1 * i, '1_20': np.nan if i == 1 else 0.5, '1_30': np.nan}
@@ -153,9 +153,8 @@ for val in (False, True):
         ok(bool(np.isnan(X.loc['Normal1', '1_20'])), '학습: 빈칸을 묶음 평균으로 채우지 않는다')
     ok(df['Type'].tolist() == [0] * 5 + [1] * 5, '라벨 열은 그대로')
 
-# ── 4. 다음 판 준비 (2026-10-12 · 사전등록 65) ─────────────────
+# ── 4. 다음 판 준비 (사전등록 65) ──
 print('4. 다음 판 준비')
-import tempfile  # noqa: E402
 
 # 4-1 검증 판별을 환경변수로도 (65 라)
 src05 = io.open(os.path.join(TREE, '2_train/steps/05_Feature_Matrix.py'), encoding='utf-8').read()
@@ -175,7 +174,7 @@ blk = block_src(os.path.join(TREE, '1_dmr/steps/05_llrref.py'), "M = pd.read_csv
 with tempfile.TemporaryDirectory() as td:
     rows = [(n, n, 'Normal') for n in normals] + [('C%d-%d' % (g, r), 'C%d' % g, 'SCLC') for g in range(1, 7) for r in (1, 2)]
     pd.DataFrame(rows, columns=['sample', 'group', 'type']).to_csv(td + '/samples.csv', index=False)
-    # 옛 코드(부분집합을 다시 가름)와 새 코드(전체로 가름)가 다른 답을 내는 명단이어야 한다 — 우연히 같으면 시험이 못 잡는다
+    # 부분집합을 다시 가르는 방식과 전체로 가르는 방식이 다른 답을 내는 명단이어야 한다 — 우연히 같으면 시험이 못 잡는다
     use = set(normals[1:7]) | {'C2-1', 'C3-1', 'C4-1', 'C5-1'}
     class _Cf:
         LLR_HELDOUT = 1; CANCER_LABEL = 'SCLC'

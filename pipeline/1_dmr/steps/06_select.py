@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""S0e JSD 순위로 패널 뽑기 (2026-08-20)
+"""S0e JSD 순위로 패널 뽑기
 
-지시대로 JSD 순위 상위 N 개를 그대로 패널로 쓴다.
+JSD 순위 상위 N 개를 그대로 패널로 쓴다.
 q값과 |dbeta| 는 '기존 기준으로 보면 얼마나 겹치나' 를 보고하려고 함께 계산만 한다.
 선정에는 쓰지 않는다.
 """
@@ -48,17 +48,15 @@ if not _GEN:
     except Exception:
         raise SystemExit('GEN(패널 세대)을 못 읽었습니다 — config.conf 의 GEN 을 채우거나 '
                          '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
-# ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
+# ── 이 단계가 쓰는 경로 ──
 #   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
 #   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
 #   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
-# 기본값이 `j_candidates_d5` · `jsd_K3_minr4` 였다 — 깊이5 감도 변종이고
-#   minr 도 4 다. 실제로 쓴 것은 `j_candidates<GEN>` 과 `jsd_K3_minr6` 다.
-#   그대로 두면 인자를 빠뜨린 사람이 「다른 JSD 표」로 패널을 고른다. 필수로 바꾼다.
+# --jsd 는 필수다. 실제로 쓴 것은 `j_candidates<GEN>` 과 `jsd_K3_minr6` 이고,
+#   기본값을 두면 인자를 빠뜨린 사람이 「다른 JSD 표」(깊이5 감도 변종 등)로 패널을 고른다.
 CAND = _M + '/results/dmr/j_candidates' + _GEN
 JSD  = None
 OUT  = _M + '/results/dmr/j_panel' + _GEN
-# ╚══════════════════════════════════════════════════════════════════╝
 N, COL = 300, 'jsd_mean'
 a = sys.argv
 if '--cand' in a: CAND = a[a.index('--cand')+1]

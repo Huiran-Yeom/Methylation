@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""S0c JSD 계산 (2026-08-20): 여기서 처음으로 암/정상 표지를 쓴다.
+"""S0c JSD 계산: 여기서 처음으로 암/정상 표지를 쓴다.
 
 저장해둔 무늬 카운트로 창마다 JSD 를 잰다. 칸의 JSD 는 창들의 평균(기본).
 최종 선정에서는 조각마다 다시 계산해야 한다. 이 실행은 문턱을 정하기 위한 진단이다.
@@ -48,14 +48,13 @@ if not _GEN:
     except Exception:
         raise SystemExit('GEN(패널 세대)을 못 읽었습니다 — config.conf 의 GEN 을 채우거나 '
                          '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
-# ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
+# ── 이 단계가 쓰는 경로 ──
 #   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
 #   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
 #   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
 D    = _M + '/results/dmr/j_jsdcount' + _GEN
 CAND = _M + '/results/dmr/j_candidates' + _GEN
 OUT  = _M + '/results/dmr/j_jsd' + _GEN
-# ╚══════════════════════════════════════════════════════════════════╝
 K, MINR, NEED_N, NEED_G, MINREP = 3, 6, 12, 6, 2
 try:   # 04b·04c 와 같은 값을 쓰게 설정에서 읽는다 (--minr 이 이김)
     MINR = int(_cfg.MIN_READS_PER_WINDOW)
@@ -67,10 +66,9 @@ FRAC = 0.60          # 후보 풀과 같은 커버 기준
 a = sys.argv
 if '--k'    in a: K    = int(a[a.index('--k')+1])
 if '--frac' in a: FRAC = float(a[a.index('--frac')+1])
-if '--need' in a: NEED_N = int(a[a.index('--need')+1])   # 2026-09-10 정상 커버 기준을 CLI 로 (60%%)
-# '--needg' 는 「있는지」 만 보고 값을 안 읽어서, 주면
-#   자동계산만 꺼지고 기본값이 남았다. 연기시험에서 --needg 1 을 줬는데
-#   「암 6종 이상」 으로 돌았다. 조용히 무시되는 인자였다.
+if '--need' in a: NEED_N = int(a[a.index('--need')+1])   # 정상 커버 기준을 CLI 로 (60%%)
+# '--needg' 는 값까지 읽는다. 「있는지」 만 보면 자동계산만 꺼지고 기본값이 남아
+#   인자가 조용히 무시된다.
 if '--needg' in a: NEED_G = int(a[a.index('--needg')+1])
 if '--minr' in a: MINR = int(a[a.index('--minr')+1])
 if '--dir'  in a: D    = a[a.index('--dir')+1]

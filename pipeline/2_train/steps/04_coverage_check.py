@@ -121,7 +121,7 @@ def main():
         raise SystemExit('읽은 파일이 없습니다. 2_train/steps/03 출력 경로를 확인하세요.')
 
     N = len(per_sample)
-    # 동률 블록의 순서가 glob 순서에 달려 파일 md5 가 실행마다 달랐다
+    # 동률 블록의 순서가 glob 순서에 달리면 파일 md5 가 실행마다 달라진다
     #   (내용은 같고 행 순서만 다름). 인덱스로 먼저 정렬한 뒤 안정 정렬하면 결정적이다.
     cov = (pd.Series(counts, dtype=int).sort_index()
              .sort_values(ascending=False, kind='mergesort'))

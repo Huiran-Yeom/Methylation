@@ -42,7 +42,7 @@ unset _v
 #   사용:  run_one_sample.sh <검체이름> <판이름>
 #   폴더가 없으면 make_val_config.py 로 만든다. 각 단계는 산출물이 있으면 건너뛴다.
 set -u
-# ─── 멈출 때는 죽이지 말고 비운다 ───────────────────────────────
+# ── 멈출 때는 죽이지 말고 비운다 ──
 #   드라이버를 죽이면 CSV 를 쓰던 자식이 잘린 파일을 남기고, 그 파일이
 #   존재 검사를 통과한다. 대신 표시 파일을 보고 새로 걸지 않는다.
 #   도는 것은 끝까지 간다.
@@ -59,7 +59,6 @@ if [ -f "$TMP_ROOT/lock/STOP" ]; then
   echo "[$(date +%H:%M:%S)] 그만 표시 — $1 $2 새로 걸지 않습니다" >> "$TMP_ROOT/drop_caches.log"
   exit 0
 fi
-# ──────────────────────────────────────────────────────────────
 s="$1"; v="$2"
 # COHORT 에 기본값을 두지 않는다. 기본값이 있으면 빠뜨렸을 때 조용히
 #   남의 코호트로 돌고 그 트리에 쓴다.
@@ -70,8 +69,7 @@ W=${WORK_ROOT:-$HOME}/${C}_val/$v/$s
 # 로그 자리에 코호트를 넣는다. 없으면 코호트가 달라도 같은 판·같은 검체가
 #   한 로그에 겹쳐 쓰여 옛 줄과 새 줄을 못 가린다.
 D=$TMP_ROOT/logs/${C}/${v%%_*}/${v}
-# 옛 로그 자리(코호트 이름이 붙기 전)를 이어 쓰던 분기다. 코호트 이름을
-#   환경변수로 받게 된 뒤로는 새 자리만 쓴다.
+# 옛 로그 자리(코호트 이름이 없는 자리)를 이어 쓰는 분기다. 비워 두어 새 자리만 쓴다.
 O=
 # 로그는 판별 폴더에 둔다. 옛 자리에 이미 있으면 그대로 쓴다 — 세는 곳이 둘로 갈리지 않게.
 if [ -n "$O" ] && [ -f "$O" ]; then L="$O"; else mkdir -p "$D"; L="$D/${s}.log"; fi
@@ -183,8 +181,7 @@ SINGLE
 else
   # 여기서 경고만 하고 계속하면 안 된다. 위 _MISS 분기와 같은 실패다.
   #   검체 폴더에 남아 있는 옛 스크립트가 그대로 돌아 그 피처만 빠진 채 완주하고,
-  #   채점이 결측을 학습 평균으로 메워 AUC 0.500 이 난다. 그쪽은 exit 1 인데
-  #   이쪽만 경고였다. 같은 결말에는 같은 처리를 한다.
+  #   채점이 결측을 학습 평균으로 메워 AUC 0.500 이 난다. 같은 결말이므로 같이 exit 1 한다.
   echo "!! 원본 폴더를 못 찾았습니다. TRAIN_SRC=$TRAIN_SRC" >> "$L"
   echo "   학습 스크립트를 최신화할 수 없습니다. 그대로 두면 옛 스크립트가 돌아" >> "$L"
   echo "   그 피처만 빠진 채 완주합니다 (AUC 0.500). config.conf 의 TRAIN_SRC 를 보십시오." >> "$L"
@@ -220,10 +217,10 @@ export LLR_CAND=${LLR_CAND:-$METH_ROOT/results/dmr/j_candidates${GEN}}
 export JSD_CAND=${JSD_CAND:-$METH_ROOT/results/dmr/j_candidates${GEN}}
 export JSD_JCOUNT=${JSD_JCOUNT:-$METH_ROOT/results/dmr/j_jsdcount${GEN}}
 [ -f "$LLR_REF" ] || { echo "!! 참조표 없음 $LLR_REF" >> "$L"; exit 1; }
-# [교정 2026-10-12 · 사전등록 54-2 · 65] llr 의 블록 집합은 학습 mean 표에서 가져온다(JSD_COLS 와 같은 원칙).
+# llr 의 블록 집합은 학습 mean 표에서 가져온다(JSD_COLS 와 같은 원칙 · 사전등록 54-2 · 65).
 #   검증 검체의 mean 표는 블록을 안 버려 학습과 블록이 다르다. 07_llrfeat.py 가 이 자리를 본다.
 export LLR_KEEP_FROM=$METH_ROOT/results/panels/${v%%_*}/$v/step04_ML_classifier
-# [교정 2026-10-12 · 65 라] 검증임을 파일 이름(val…)만이 아니라 환경변수로도 알린다.
+# 검증임을 파일 이름(val…)만이 아니라 환경변수로도 알린다 (사전등록 65 라).
 #   STEP_MAP 에서 이름을 바꾸면 05_Feature_Matrix 가 조용히 학습 동작(블록 버리기)으로 돌아간다.
 export METH_VALIDATE=1
 # 파일 이름을 박지 않는다. 설정의 K·MINR 을 바꾸면 학습과 여기가

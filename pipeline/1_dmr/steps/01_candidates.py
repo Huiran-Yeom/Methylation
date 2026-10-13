@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""S1 후보 블록 생성: 라벨을 쓰지 않는다 (2026-08-12)"""
+"""S1 후보 블록 생성: 라벨을 쓰지 않는다"""
 
 # 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돌아
 # 실제 자료를 덮어쓴다. 실행은 `python <파일>` 로만 한다.
@@ -33,7 +33,7 @@ except ImportError:
 import os, re, sys, glob, math
 import numpy as np, pandas as pd
 
-# ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
+# ── 이 단계가 쓰는 경로 ──
 #   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
 #   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
 #   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
@@ -56,19 +56,19 @@ try:   # 02·03·11 과 같은 격자를 써야 한다. 여기만 100 을 박으
     BLOCK = int(_cfg.BLOCK_SIZE)   #   「쓸 수 있는 창이 0」 으로 죽는다.
 except Exception:
     pass
-MINREP = 2   # 2026-08-20: 한 독립단위(세포주)는 파일 이만큼 관측돼야 관측으로 친다
+MINREP = 2   # 한 독립단위(세포주)는 파일 이만큼 관측돼야 관측으로 친다
 
 a = sys.argv
 if '--frac'  in a: FRAC   = float(a[a.index('--frac')+1])
 if '--depth' in a: MINCOV = int(a[a.index('--depth')+1]) - 1
-if '--nd'    in a: ND     = a[a.index('--nd')+1]        # 2026-09-10 학습 정상 폴더를 CLI 로
+if '--nd'    in a: ND     = a[a.index('--nd')+1]        # 학습 정상 폴더를 CLI 로
 if '--cpg'   in a: MINCPG = int(a[a.index('--cpg')+1])
 if '--out' in a: OUT = a[a.index('--out')+1]
 DRY = '--dry' in a
 
 # 파일 이름에서 검체 이름을 뽑는다. 기본은 첫 _ 앞까지 — cov 와 BAM 의 뒤쪽
 #   꼬리표가 달라도 짝이 맞게 하기 위해서다.
-#   자료마다 이름 규칙이 다르다. 안 맞으면 «자료를 고치지 말고» SID_RE 를 준다.
+#   자료마다 이름 규칙이 다르다. 안 맞으면 「자료를 고치지 말고」 SID_RE 를 준다.
 #   첫 괄호가 검체 이름이 되고, 안 걸리면 기본 규칙으로 떨어진다. 예:
 #     SID_RE='(.+?)__'   H1876_0d__SRR…  -> H1876_0d   (밑줄 둘로 가르는 자료)
 #                        H1876__SRR…     -> H1876
@@ -98,7 +98,7 @@ _grx = re.compile(_GRE) if _GRE else None
 _CANCER = getattr(_cfg, 'CANCER_LABEL', 'GBM')   # samples.csv 의 type 값
 
 def grp(s, t=_CANCER):
-    # GROUP_RE 는 «암 쪽에만» 쓴다. 반복본 묶기는 세포주 개념이고, 정상은
+    # GROUP_RE 는 「암 쪽에만」 쓴다. 반복본 묶기는 세포주 개념이고, 정상은
     #   한 사람당 한 파일이 전제다(아래 assert u_norm == n_norm 이 그것을 지킨다).
     #   정상까지 묶으면 NC-P-1·NC-P-3·… 아홉이 'NC' 하나가 되어 커버 기준이
     #   9명에서 5명으로 느슨해진다.
@@ -124,7 +124,7 @@ files = [(f,'Normal') for f in sorted(glob.glob(ND+'/*.cov.gz'))] + \
         [(f,_CANCER)    for f in sorted(glob.glob(GD+'/*.cov.gz'))]
 if not files: sys.exit('cov 파일 없음')
 # 같은 sid 가 둘 이상이면 멈춘다. sid 는 검체 이름이자 표의 열 이름이라,
-#   겹치면 pivot_table(aggfunc='first') 이 뒤엣것을 «조용히 버린다».
+#   겹치면 pivot_table(aggfunc='first') 이 뒤엣것을 「조용히 버린다」.
 _byid = {}
 for _f, _t in files: _byid.setdefault(sid(_f), []).append(_os.path.basename(_f))
 _dup = {k: v for k, v in _byid.items() if len(v) > 1}
@@ -141,11 +141,11 @@ if _dup:
 _nn = sum(1 for _, _t in files if _t == 'Normal')
 if _nn == 0:        sys.exit('정상 cov 가 없다 — NORMAL_SET 또는 --nd 를 확인하라: ' + ND)
 if _nn == len(files): sys.exit('암 cov 가 없다 — GBM_COV_DIR 을 확인하라: ' + GD)
-if DRY: files = files[:1] + files[-1:]   # 2026-08-20: 정상 1 + 암 1 (암 경로도 지나가게)
+if DRY: files = files[:1] + files[-1:]   # 정상 1 + 암 1 (암 경로도 지나가게)
 # 커버 기준을 집단별로 나눈다.
 #   한 덩어리로 세면 한쪽으로 몰린 블록이 통과해 t검정에서 NaN 이 된다.
 #   검체 수가 바뀔 때 문턱이 요동치는 문제도 같이 없앤다.
-# 문턴을 파일 수가 아니라 독립단위 수로 잡는다.
+# 문턱을 파일 수가 아니라 독립단위 수로 잡는다.
 #   SNU 30파일 = 세포주 10종 x 3복제. 파일로 세면 암 표본이 3배로 부푼다.
 n_norm = sum(1 for _, t in files if t == 'Normal')
 n_gbm  = len(files) - n_norm
@@ -212,7 +212,6 @@ A = A.set_index(['chr','blk'])
 A = A.loc[A.index.isin(keep)].reset_index()
 B = A.pivot_table(index=['chr','blk'], columns='sample', values='beta',  aggfunc='first')
 D = A.pivot_table(index=['chr','blk'], columns='sample', values='reads', aggfunc='first')
-# ╚══════════════════════════════════════════════════════════════════╝
 C = A.pivot_table(index=['chr','blk'], columns='sample', values='n_cpg', aggfunc='first')
 
 os.makedirs(OUT, exist_ok=True)

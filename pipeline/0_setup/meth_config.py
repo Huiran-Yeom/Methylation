@@ -14,10 +14,8 @@ import os
 import re
 import sys
 
-# 코드가 있는 자리에서 기본값을 만든다. 예전에는 우리 서버의
-#   ~/Methylation_rev1/... 을 기본값으로 박아 두었는데, 받아서 돌리는 사람에게는
-#   없는 경로다. 검증이 「학습 스크립트를 못 찾은 채」 돌아 그 피처만 빠진다.
-#   저장소 안을 가리키면 내려받은 그대로 동작한다.
+# 코드가 있는 자리에서 기본값을 만든다. 저장소 안을 가리키면 내려받은 그대로 동작한다.
+#   서버 고유 경로를 박아 두면 검증이 「학습 스크립트를 못 찾은 채」 돌아 그 피처만 빠진다.
 _TREE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 _DEFAULTS = {
@@ -28,7 +26,7 @@ _DEFAULTS = {
     'TRAIN_SRC': os.path.join(_TREE, '2_train', 'steps'),
     'ANALYSIS_DIR': os.path.join(_TREE, '3_validate', 'steps'),
     'GEN': '15',
-    # samples.csv 의 type 열에 적히는 «암» 쪽 이름. 쓰는 곳과 읽는 곳이 모두
+    # samples.csv 의 type 열에 적히는 「암」 쪽 이름. 쓰는 곳과 읽는 곳이 모두
     #   이 값을 본다. 바꾸면 1단계를 처음부터 다시 돌려야 한다.
     'CANCER_LABEL': 'GBM',
     # 빈 값이면 「어느 코호트든 허용」. 이름을 적으면 그 목록만 허용한다.
@@ -47,9 +45,9 @@ _DEFAULTS = {
     'SEED': '42',
     'TEST_SIZE': '0.2',
     'N_JOBS': '1',
-    # 비우면 모델 넷을 교차검증으로 겨뤄 1등 (옛 동작).
+    # 비우면 모델 넷을 교차검증으로 겨뤄 1등.
     'FIXED_MODEL': '',
-    # 0 이면 옛 동작 — LLR 참조표와 학습 풀에 같은 사람이 들어간다.
+    # 0 이면 LLR 참조표와 학습 풀에 같은 사람이 들어간다.
     'LLR_HELDOUT': '0',
 }
 _CACHE = None
@@ -88,7 +86,7 @@ def _conf():
 def get(key):
     """환경변수 -> conf -> 기본값. 출처를 출처[key] 에 적어 둔다.
 
-    2026-09-28: 셸 헤더가 `set -a; . config.conf` 로 conf 를 환경에 export 하므로
+    셸 헤더가 `set -a; . config.conf` 로 conf 를 환경에 export 하므로
       conf 값도 os.environ 에 올라온다. 그것을 「환경변수」 로 적으면 스냅샷의
       출처 열이 「항상」 거짓이 된다. 기록() 의 목적이 무너진다.
       그래서 두 값이 같으면 출처는 conf 로 적는다.
@@ -140,16 +138,13 @@ GEN = get('GEN')
 CANCER_LABEL = get('CANCER_LABEL')
 VAL_COHORTS = [x.strip() for x in get('VAL_COHORTS').split(',') if x.strip()]
 PANELS = [x.strip() for x in get('PANELS').split(',') if x.strip()]
-# 자체점검이 「conf 에 있는데 모듈 속성으로 없다」 를 잡았다.
-#   paths.py 는 값('STEP_MAP') 으로 읽어 동작은 했지만, 다른 키와 다루는 법이
-#   달라 읽는 사람이 헷갈린다. 노출 방식을 하나로 맞춘다.
+# STEP_MAP 도 다른 키처럼 모듈 속성으로 노출한다. 다루는 법을 하나로 맞춘다.
 STEP_MAP = get('STEP_MAP')
 NULL_PANELS = [x.strip() for x in get('NULL_PANELS').split(',') if x.strip()]
 
 def version_name(panel, depth):
     """접두(세대) + 명단(자료) + 깊이 를 한 곳에서 조립한다."""
     return 'j%s%s_%s_uni' % (GEN, panel, depth)
-          # 패널 산출물 폴더 접미사 (j_candidates<GEN> 등)
 VERSION = get('VERSION')
 PANEL = get('PANEL')
 DEPTH_MODE = get('DEPTH_MODE')
@@ -176,14 +171,13 @@ def split_ref_mix(units):
 
     바이트 순 = `LC_ALL=C sort`. 기본 로케일 정렬은 대소문자를 무시해 다른 명단을 낸다.
     1·3·5…번째가 참조군, 2·4·6…번째가 혼합군. 시드를 쓰지 않는다 — 고르는 행위가 선택이 된다.
-    단위는 «사람·세포주» 다. 같은 세포주의 반복을 쪼개면 누수가 남는다.
+    단위는 「사람·세포주」 다. 같은 세포주의 반복을 쪼개면 누수가 남는다.
     """
     u = sorted(set(units), key=lambda s: s.encode('utf-8'))
     return u[0::2], u[1::2]
 
 # VERSION 이름 안의 깊이와 TARGET_DEPTH_READS 가 어긋나면 멈춘다.
-#   옛 구조는 config.py 를 「생성」 해 둘이 같이 박혔으므로 어긋날 수 없었다.
-#   설정을 한 파일로 빼면서 어긋날 수 있게 됐다. 적어 두는 것은 방어가 아니다.
+#   둘은 conf 에 따로 적히므로 어긋날 수 있다. 적어 두는 것은 방어가 아니다.
 _depth_match = re.search(r'_(\d+)k_', VERSION)
 if _depth_match is None:
     # 못 찾은 것을 「통과」 로 두면 이름이 조금만 달라져도 가드가 조용히 사라진다.
@@ -207,9 +201,7 @@ def snapshot(folder):
       폴더 이름을 정하는 것은 ROOT 와 VERSION 뿐이다. MIN_READS_PER_WINDOW ·
       PATTERN_K · SEED · MUT_RATIOS · DEPTH_MODE 는 **경로를 안 바꾸면서
       산출물을 바꾼다.** 그래서 한 폴더에 서로 다른 설정의 산출물이 섞일 수 있다.
-      실제로 섞인 적이 있다. 09-14 에 MIN_READS_PER_WINDOW 를 4에서 6으로
-      바꿨고, 「DMR 과 LLR 참조표의 깊이가 달랐다」·「3-1 표의 LLR참조
-      193·193·194 는 100k 값이다」가 그 흔적이다.
+      MIN_READS_PER_WINDOW 를 4에서 6으로 바꿨을 때 실제로 섞였다.
       덮어쓰면 마지막 실행의 설정 하나만 남아 「이 폴더는 하나다」 라고
       단언한다. 없는 것보다 나쁘다. 이어쓰면 블록이 갈려 섞인 것이 보인다.
       폴더가 정말 한 설정이면 같은 블록이 반복될 뿐이라 잃는 것이 없다.

@@ -2,20 +2,19 @@
 # coding: utf-8
 """외부검증용 작업 폴더와 config.py 를 만든다 (코호트 무관).
 
-make_snu_config.py 를 일반화한 것. 코호트 정의를 COHORT_DIR(기본 ~/cohorts)의 <이름>.conf 에서
-읽으므로 SNU 말고 다른 데이터(EGAD 등)도 같은 코드로 돌릴 수 있다.
+코호트 정의를 COHORT_DIR(기본 ~/cohorts)의 <이름>.conf 에서 읽으므로
+어느 데이터(EGAD 등)든 같은 코드로 돌릴 수 있다.
 
 버전의 config.py 를 그대로 읽어 뒤에 오버라이드 블록만 붙인다.
 깊이·믹싱 방식·엔트로피 계산은 손대지 않는다. 학습 때와 같아야 하기 때문이다.
 바꾸는 것은 입력 BAM 과 출력 경로뿐이다.
 
-경로는 {코호트}_val/{검체}/... 로 잡는다. 코호트가 snu 면 기존 snu_val/... 과
-같아져서 이미 만든 결과를 그대로 쓴다.
+경로는 {코호트}_val/{검체}/... 로 잡는다.
 
 사용: python make_val_config.py <코호트> <검체> <version> [반복수]
 """
 # 아무도 import 하지 않는다 (run_one_sample.sh 가 인자를 주고 부른다).
-#   사고가 가드 없는 스크립트를 importlib 로 부른 데서 났다.
+#   가드 없는 스크립트를 import 하면 본체가 그대로 돈다.
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
@@ -23,11 +22,10 @@ import io
 import os
 import re
 import shutil
-_LAYOUT = [None]   # 코호트 리드 방식 자동 감지 (2026-08-11)
+_LAYOUT = [None]   # 코호트 리드 방식 자동 감지
 import sys
 
-# 폴더가 runs/<그룹>/<버전> 으로 옮겨졌고, e·f·g 세트도
-# 검증에 써야 해서 고정 딕셔너리를 없앴다. 찾는 규칙은 paths.py 한 곳에 있다.
+# 버전 폴더를 찾는 규칙은 paths.py 한 곳에 있다.
 from paths import (script_dir, script_dir_abs, VERSION_CONF, WORK_ROOT_CONF,
                    COHORT_DIR_CONF)
 
@@ -42,17 +40,14 @@ _STEPS_DEFAULT = {'01_Preprocessing_for_ML_RawData_Mixing.py': 'val03_1.py',
          '03_Preprocessing_for_ML_RawData_Mixing.py': 'val03_3.py',
          '04_coverage_check.py': 'val04_0.py',
          '05_Feature_Matrix.py': 'val04_1.py',
-         # 리드 엔트로피·MHL 을 검증에서도 만들 수 있게 추가.
-         # 없는 버전에서는 위 복사 루프가 조용히 넘어간다.
-         # readent·mhl 은 (마) 결정으로 안 쓴다. 복사하지 않는다.
+         # readent·mhl 은 쓰지 않으므로 복사하지 않는다.
          #   되살리려면 그 파일을 2_train/steps/ 에 먼저 두어야 한다 — 이 저장소에는 없다.
          # 'step04_1b_readfeat.py': 'val04_1b.py',
-         # JSD 피처. 이 목록에 없으면
-         #   검증에서 JSD-2 를 못 쟀다. 파일은 판 폴더가 아니라 한 단계 위에 있다.
+         # JSD 피처. 이 목록에 없으면 검증에서 JSD-2 를 못 잰다.
+         #   파일은 판 폴더가 아니라 한 단계 위에 있다.
          '06_jsdfeat.py': 'val04_1c.py',
-         # [실행차단 교정] LLR 이 이 목록에 없어 검증이 llr 을 아예 안 만들었다.
-         #   사전등록 1차 조합 mean|entropy|jsd|llr|pdr 이 통째로 계산될 수 없는 상태였다.
-         #   옛 판은 별도 드라이버로 따로 깔아 돌렸다. 그래서 안 보였다.
+         # LLR 피처. 이 목록에 없으면 검증이 llr 을 안 만들어
+         #   사전등록 1차 조합 mean|entropy|jsd|llr|pdr 을 계산할 수 없다.
          '07_llrfeat.py': 'val04_1d.py'}
 
 try:
@@ -198,10 +193,10 @@ if _os.path.exists(_skip_f):
 
 def load_conf(cohort):
     """COHORT_DIR 의 <이름>.conf 를 읽는다 (기본은 홈의 cohorts). KEY=값 한 줄씩, # 은 주석."""
-    # 조회 자리가 run_validate.sh 와 갈려 있었다. 같은 순서로 맞춘다 —
+    # 조회 순서는 run_validate.sh 와 같다 —
     #   ~/cohorts 먼저(기관 자료), 없으면 저장소의 cohorts/ (예시·동봉본).
-    # COHORT_CONF 로 못 박을 수 있게 한다. 작성자 기계에서는
-    #   ~/cohorts 가 먼저라 저장소의 예시가 「검사된 적 없는 파일」 로 남는다.
+    # COHORT_CONF 로 못 박을 수 있다. ~/cohorts 가 있으면 저장소의 예시는
+    #   읽히지 않으므로, 예시를 시험할 때는 이것으로 가리킨다.
     _env = os.environ.get('COHORT_CONF')
     if _env:
         if not os.path.exists(_env):
@@ -258,7 +253,7 @@ def main():
     # ~/Methylation_rev1 로 되짚지 않는다 — paths 가 이미 절대경로를 안다.
     #   되짚으면 TRAIN_SRC 를 딴 데로 옮겼을 때 조용히 옛 코드를 복사한다.
     src = script_dir_abs(v)
-    # ── [판이름 ↔ VERSION] ────────────────────────────────
+    # ── 판이름 ↔ VERSION ──
     #   평평 배치(steps/ 에 config.py 하나)에서는 어떤 v 를 줘도 같은 config.py 를
     #   복사한다. 그 config.py 의 VERSION·깊이는 config.conf 에서 온다.
     #   작업 폴더는 v 로 만들고 산출 자리는 VERSION 으로 만들기 때문에, 둘이

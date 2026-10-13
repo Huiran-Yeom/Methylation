@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""S0a 후보 칸의 표준 CpG 자리 (2026-08-20) — 라벨을 쓰지 않는다.
+"""S0a 후보 칸의 표준 CpG 자리 — 라벨을 쓰지 않는다.
 
 JSD 창은 모든 검체에서 같아야 한다. 검체마다 관측된 자리로 창을 만들면
 서로 다른 자리의 분포를 맞대게 되어 JSD 가 성립하지 않는다.
@@ -39,7 +39,7 @@ except ImportError:
 import os, re, sys, glob, math
 import numpy as np, pandas as pd
 
-# ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
+# ── 이 단계가 쓰는 경로 ──
 #   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
 #   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
 #   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
@@ -58,21 +58,20 @@ if not _GEN:
                          '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
 CAND = _M + '/results/dmr/j_candidates' + _GEN
 BLOCK, MINCOV, FRAC, MINREP = 100, 9, 0.60, 2
-try:   # 2026-09-29: BLOCK_SIZE 가 config.conf 에 있는데 1단계는 100 을 박고 있었다.
+try:   # config.conf 의 BLOCK_SIZE 를 따른다. 01·03·11 과 같은 격자여야 한다.
     BLOCK = int(_cfg.BLOCK_SIZE)
 except Exception:
     pass
 
 a = sys.argv
-if '--nd'   in a: ND   = a[a.index('--nd')+1]        # 2026-09-10 학습 정상 폴더를 CLI 로
+if '--nd'   in a: ND   = a[a.index('--nd')+1]        # 학습 정상 폴더를 CLI 로
 if '--cand' in a: CAND = a[a.index('--cand')+1]
 if '--depth' in a: MINCOV = int(a[a.index('--depth')+1]) - 1
 OUT = a[a.index('--out')+1] if '--out' in a else CAND
-# ╚══════════════════════════════════════════════════════════════════╝
 
 # 파일 이름에서 검체 이름을 뽑는다. 기본은 첫 _ 앞까지 — cov 와 BAM 의 뒤쪽
 #   꼬리표가 달라도 짝이 맞게 하기 위해서다.
-#   자료마다 이름 규칙이 다르다. 안 맞으면 «자료를 고치지 말고» SID_RE 를 준다.
+#   자료마다 이름 규칙이 다르다. 안 맞으면 「자료를 고치지 말고」 SID_RE 를 준다.
 #   첫 괄호가 검체 이름이 되고, 안 걸리면 기본 규칙으로 떨어진다. 예:
 #     SID_RE='(.+?)__'   H1876_0d__SRR…  -> H1876_0d   (밑줄 둘로 가르는 자료)
 #                        H1876__SRR…     -> H1876
@@ -102,7 +101,7 @@ _grx = re.compile(_GRE) if _GRE else None
 _CANCER = getattr(_cfg, 'CANCER_LABEL', 'GBM')   # samples.csv 의 type 값
 
 def grp(s, t=_CANCER):
-    # GROUP_RE 는 «암 쪽에만» 쓴다. 반복본 묶기는 세포주 개념이고, 정상은
+    # GROUP_RE 는 「암 쪽에만」 쓴다. 반복본 묶기는 세포주 개념이고, 정상은
     #   한 사람당 한 파일이 전제다(아래 assert u_norm == n_norm 이 그것을 지킨다).
     #   정상까지 묶으면 NC-P-1·NC-P-3·… 아홉이 'NC' 하나가 되어 커버 기준이
     #   9명에서 5명으로 느슨해진다.
@@ -115,7 +114,7 @@ files = [(f,'Normal') for f in sorted(glob.glob(ND+'/*.cov.gz'))] + \
         [(f,_CANCER)    for f in sorted(glob.glob(GD+'/*.cov.gz'))]
 if not files: sys.exit('cov 파일 없음')
 # 같은 sid 가 둘 이상이면 멈춘다. sid 는 검체 이름이자 표의 열 이름이라,
-#   겹치면 pivot_table(aggfunc='first') 이 뒤엣것을 «조용히 버린다».
+#   겹치면 pivot_table(aggfunc='first') 이 뒤엣것을 「조용히 버린다」.
 _byid = {}
 for _f, _t in files: _byid.setdefault(sid(_f), []).append(_os.path.basename(_f))
 _dup = {k: v for k, v in _byid.items() if len(v) > 1}

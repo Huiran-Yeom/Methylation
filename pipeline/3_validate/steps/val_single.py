@@ -2,9 +2,6 @@
 # 학습 스크립트는 건드리지 않는다.
 import io, os
 
-# detect_layout 정의가 두 번 있었다. 둘 다 같은 일을 하고 「뒤의 것이」
-#   앞의 것을 덮고 있었다. 앞의 것은 죽은 코드다. 지워도 동작은 그대로다.
-#   (지운 쪽 독스트링이 짧아, 아래 남긴 쪽이 더 설명이 낫다.)
 
 def to_single(path):
     b = os.path.basename(path)

@@ -1,10 +1,11 @@
 # 파일 이름 대응표
 #
-# 논문 방법 서술과 이 저장소의 scripts/ 폴더는 왼쪽 이름을 씁니다.
+# 논문 방법 서술과 초기 공개본(scripts/, 저장소에서 삭제됨 · git 기록에 있음)은
+# 왼쪽 이름을 씁니다.
 # pipeline/ 은 번호를 의존 순서로 다시 붙였습니다. 그 사이를 잇습니다.
 
 
-# ── scripts/ (초기 공개본) -> pipeline/ ────────────────────────────
+# ── scripts/ (초기 공개본, 삭제됨 · git 기록에 있음) -> pipeline/ ──
 scripts/step02_1_DMR.py                                 -> 1_dmr/steps/ 계열 (옛 판)
 scripts/step02_2_DMR.py                                 -> 1_dmr/steps/07_panel.py (옛 판)
 scripts/step03_1_Preprocessing_for_ML_RawData_Mixing.py -> 2_train/steps/01_...
@@ -13,7 +14,7 @@ scripts/step03_3_Preprocessing_for_ML_RawData_Mixing.py -> 2_train/steps/03_...
 scripts/step04_ML_classifier.py                         -> 2_train/steps/08_ML_classifier.py
 
 
-# ── 1_dmr/steps ───────────────────────────────────────────────────
+# ── 1_dmr/steps ──
 step02_1_candidates.py    -> 01_candidates.py
 step02_0a_blockcpg.py     -> 02_blockcpg.py
 step02_0b_jsdcount.py     -> 03_jsdcount.py
@@ -32,7 +33,7 @@ pool15.sh · pool15_rand.sh · pool15_randb.sh -> run_pool.sh (인자로 가른�
 #   jsdb200 은 보고하는 세 판 중 하나입니다.
 
 
-# ── 2_train/steps ─────────────────────────────────────────────────
+# ── 2_train/steps ──
 step03_1_Preprocessing_for_ML_RawData_Mixing.py -> 01_Preprocessing_for_ML_RawData_Mixing.py
 step03_2_Preprocessing_for_ML_RawData_Mixing.py -> 02_Preprocessing_for_ML_RawData_Mixing.py
 step03_3_Preprocessing_for_ML_RawData_Mixing.py -> 03_Preprocessing_for_ML_RawData_Mixing.py
@@ -44,11 +45,11 @@ step04_2_ML_classifier.py  -> 08_ML_classifier.py
 save_best_j.py             -> 09_save_best_j.py
 
 
-# ── 3_validate/steps · 4_report/steps ─────────────────────────────
+# ── 3_validate/steps · 4_report/steps ──
 #   이름이 그대로입니다.
 
 
-# ── 이 저장소에 없는 것 ───────────────────────────────────────────
+# ── 이 저장소에 없는 것 ──
 step02_3_export_dmr.py   열이 Feature,Logistic_Regression,p_value 로, 쓰는 패널
                          아홉과 형식이 다릅니다. 08_export_panels.py 가 대신합니다.
 step04_1b_readfeat.py    readent·mhl 은 채움률 때문에 결과를 보기 전에 뺐습니다

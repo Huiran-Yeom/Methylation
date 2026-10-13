@@ -1,4 +1,4 @@
-# ── 올리지 않는 것 ──────────────────────────────────────────────────
+# ── 올리지 않는 것 ──
 # 실제 코호트 정의: 검체 식별자 목록과 참여자 이름이 들어갑니다.
 #   예시만 올립니다: 3_validate/steps/cohorts/sample_cohort.conf.example
 3_validate/steps/cohorts/*.conf

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""폐 외부검증 보고서를 서버 표에서 다시 만든다. 2026-10-07
+"""폐 외부검증 보고서를 서버 표에서 다시 만든다.
 
 틀    업로드된 「폐암 외부검증 결과 (4).html」. 머리·CSS·글·스크립트는 그대로 쓰고
-      표와 그림은 «전부» 서버 표에서 새로 채운다. 손으로 넣는 숫자가 없다.
+      표와 그림은 「전부」 서버 표에서 새로 채운다. 손으로 넣는 숫자가 없다.
 입력  입력/silico.txt · patient.txt   (4_report/make_report.sh 출력)
       입력/gbm.txt                    (GBM 외부검증 표 · <WORK>/표/02_GBM/stored_5k_v2.txt
                                       · 코호트 patient178_j51 · 5k·50k·100k 가 다 들어 있다.
@@ -44,7 +44,7 @@ DAG = (' <span class="dag" title="동점이 많아 순위를 주장할 수 없�
 NL = '\n'
 
 
-# ── 서버 표 읽기 ──────────────────────────────────────────────
+# ── 서버 표 읽기 ──
 def parse(path):
     """-> rows{(판,깊이,조합): {model, 검체[7], 사람[7], tie}}, heads{(판,깊이): {...}}"""
     rows, heads = {}, {}
@@ -82,7 +82,7 @@ def md5(path):
     return hashlib.md5(open(path, 'rb').read()).hexdigest()
 
 
-# ── 칸 그리기 (틀의 마크업을 그대로 따른다) ─────────────────────
+# ── 칸 그리기 (틀의 마크업을 그대로 따른다) ──
 def alpha(v):
     return min(max((v - 0.5) / 0.5, 0.0), 1.0)
 
@@ -126,7 +126,7 @@ def trio(rows, heads, gen, depth, panels):
             % ''.join(figure(rows, heads, gen, p, depth) for p in panels))
 
 
-# ── 0장 1차 지표 ────────────────────────────────────────────
+# ── 0장 1차 지표 ──
 def parse_primary(path):
     """표 끝의 「=== 1차 지표」 블록 (4_report 의 primary_metric.py 출력).
     음성은 모든 비율의 음성 행을 합친다 — 사전등록 계산법. 비율별 표 칸과 계산이 달라
@@ -188,7 +188,7 @@ def section_primary(data):
         '</section>'])
 
 
-# ── 3장 학습 CV ─────────────────────────────────────────────
+# ── 3장 학습 CV ──
 def section_dev_tables(dev):
     figs = []
     for p in PANELS:
@@ -209,7 +209,7 @@ def section_dev_tables(dev):
     return '<div class="trio">%s</div>' % ''.join(figs)
 
 
-# ── 6장 비교 표·그림 ────────────────────────────────────────
+# ── 6장 비교 표·그림 ──
 def gbm_table(sets):
     head1 = ''.join('<th scope="col" class="grp" colspan="3">%s</th>' % n for n, _, _ in sets)
     head2 = ''.join('<th scope="col" class="num">%s</th>' % p for _ in sets for p in PANELS)
@@ -268,7 +268,7 @@ def chart_series(sets):
     return ''.join(out)
 
 
-# ── 조립 ───────────────────────────────────────────────────
+# ── 조립 ──
 def replace_once(s, old, new, what):
     n = s.count(old)
     if n != 1:

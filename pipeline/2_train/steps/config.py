@@ -8,7 +8,7 @@
   깊이  5k | 50k | 100k     TARGET_DEPTH_READS = 샘플 하나의 총 리드 수
   믹싱  uni | cov           균일 무작위 | 커버리지 일치
 
-m 판과 다른 곳 (2026-08-20)
+m 판과 다른 곳
   - 정상 풀이 EGAD 44파일(3명) -> 공개·랩 20명
   - 풀 BAM 을 패널 영역만 뽑아 만든다 (39G -> 28.8MB)
   - DMR 은 버전이 아니라 패널 이름으로 찾는다
@@ -58,7 +58,7 @@ MUT_RATIOS = _cfg.MUT_RATIOS
 NUM_FILES = 100
 POOL_HEADROOM = 2             # cov 전용
 
-SITE_ENTROPY_METHOD = 'histogram'   # 08-20 변경. value_counts 는 커버리지 대리지표
+SITE_ENTROPY_METHOD = 'histogram'   # value_counts 는 커버리지 대리지표가 된다
 INPUT_FORMAT = 'bedgraph'
 FILE_ORDER = 'numeric'
 MIN_SAMPLE_COVERAGE = _cfg.MIN_SAMPLE_COVERAGE
@@ -70,31 +70,29 @@ N_JOBS = _cfg.N_JOBS
 
 MERGE_STRANDS = True
 PATTERN_K = _cfg.PATTERN_K                 # m200 학습·검증 모두 3 (로그 확인). m736 만 4였다
-MIN_READS_PER_WINDOW = _cfg.MIN_READS_PER_WINDOW      # 2026-09-14 사용자 지시 4->6. DMR선정(04_jsd)·LLR참조(05_llrref)가
-#                               둘 다 6이라 특징만 4로 느슨했다. 네 단계 문턱을 맞춘다.
-#                               창당 4리드면 엔트로피가 가질 수 있는 값이 5개뿐이었다(최대 0.6667).
+MIN_READS_PER_WINDOW = _cfg.MIN_READS_PER_WINDOW      # 창당 최소 리드 6 (엔트로피 해상도). DMR선정(04_jsd)·LLR참조(05_llrref)가
+#                               둘 다 6이다. 네 단계 문턱을 맞춘다.
+#                               창당 4리드면 엔트로피가 가질 수 있는 값이 5개뿐이다(최대 0.6667).
 #                               6이면 11개. 믹싱 BAM 창당 리드 중앙 97이라 창은 거의 안 준다.
 NORMALIZE_PATTERN = True
 
-# ╔══ 이 단계가 쓰는 경로 ═══════════════════════════════════════════╗
+# ── 이 단계가 쓰는 경로 ──
 #   배치가 다르면 「여기만」 고친다. config.conf 에는 뿌리 둘과 실험 설정만 둔다.
 GENOME_FOLDER = ROOT + '/data/Bisulfite_Genome/'   # bismark 인덱스 (없으면 --genome_folder 없이 돈다)
-# ╚══════════════════════════════════════════════════════════════════╝
 
-# RAW_NORMAL_COV_DIR · RAW_GBM_COV_DIR 을 지웠다 — 트리의 어느 코드도
-#   읽지 않는 죽은 값이었다. 정상·암 cov 자리는 1단계가 자기 경로 블록에서 정하고,
+# 정상·암 cov 자리는 여기 두지 않는다. 1단계가 자기 경로 블록에서 정하고,
 #   환경변수 NORMAL_SET·GBM_COV_DIR 로 옮긴다. 여기에 또 두면 둘이 어긋난다.
 COV_SUFFIX = '.cov.gz'
 TOP_N_SAMPLES = 0
 DMR_PER_GROUP = 0
 DMR_GROUP_RE = r'^([A-Za-z]+[0-9]*)[_-]'
 
-# 판마다 「자기 풀」 을 본다. 예전에는 _cellline 하나로 박혀 있었다.
+# 판마다 「자기 풀」 을 본다.
 #   풀 BAM 은 패널 영역의 리드만 담는다. 귀무판은 무작위 블록이라 실판 합집합
-#   영역 밖이고, cellline 풀에는 그 자리의 리드가 없다. 실측:
+#   영역 밖이고, cellline 풀에는 그 자리의 리드가 없다. cellline 풀로 돌린 실측:
 #     rand1200  통과 블록 8 / 200
 #     rand3200  「풀 부족으로 중단」 (정상 2,678 보유 / 2,936 요청)
-#   원본은 판마다 config.py 가 따로 있어 각자 자기 풀을 가리켰다:
+#   판 -> 풀:
 #     j15rand*  -> j_pool<GEN>_rand    (무작위 패널 전용 풀)
 #     j15randb* -> j_pool<GEN>_randb   (귀무B 전용 · bl200 CpG 분포 맞춤)
 #     그 외     -> j_pool<GEN>_cellline (정상15 · 암30 · 세포주 단위)
@@ -104,8 +102,8 @@ if PANEL.startswith('randb'):  _POOLDIR = 'j_pool' + GEN + '_randb'
 elif PANEL.startswith('rand'): _POOLDIR = 'j_pool' + GEN + '_rand'
 else:                          _POOLDIR = 'j_pool' + GEN + '_cellline'
 _POOL = os.environ.get('POOL_DIR') or (ROOT + '/results/dmr/' + _POOLDIR)
-# 2026-09 까지 실판 풀 폴더 이름이 j_pool<GEN>_세포주 였다. 옛 트리에는 영문 이름이
-#   없어 풀을 못 찾고 2단계 첫 걸음이 죽는다. 새 이름이 없으면 옛 이름을 본다.
+# 옛 트리에서는 실판 풀 폴더 이름이 j_pool<GEN>_세포주 다. 영문 이름이 없으면
+#   풀을 못 찾고 2단계 첫 걸음이 죽으므로, 새 이름이 없으면 옛 이름을 본다.
 #   POOL_DIR 을 직접 준 경우에는 그 값을 그대로 둔다 — 없는 폴더를 줬으면 그렇게 멈춘다.
 if (not os.environ.get('POOL_DIR') and not os.path.isdir(_POOL)
         and _POOLDIR.endswith('_cellline')):
@@ -114,8 +112,6 @@ if (not os.environ.get('POOL_DIR') and not os.path.isdir(_POOL)
         _POOL = _old
 FULL_NORMAL_BAM = _POOL + '/pool_normal_all.bam'
 FULL_GBM_BAM    = _POOL + '/pool_gbm_all.bam'
-# NEGCTRL_BG_BAM · NEGCTRL_MIX_BAM 을 지웠다 — 읽는 코드가 없고,
-#   가리키던 pool_normal_A/B.bam 을 만드는 코드도 없다(11_pool 은 *_all.bam 만 쓴다).
 
 _R = ROOT.rstrip('/\\')
 _P = VERSION.split('_')[0]          # 패널 폴더 (jbl200 · jjsd300 …)

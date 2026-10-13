@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""업로드된 HTML 보고서의 숫자를 서버 표와 전수 대조한다. 2026-10-07
+"""업로드된 HTML 보고서의 숫자를 서버 표와 전수 대조한다.
 
 서버 표(silico.txt · patient.txt)는 피처·모델마다 두 줄을 낸다 — 「검체」와 「사람」.
 HTML 은 본문에 「AUC는 사람 단위로 보고합니다」라고 적혀 있으므로 「사람」 줄과
@@ -90,7 +90,7 @@ def main():
                     notfound += 1
                     bad.append((combo, vals, []))
     print()
-    print('대조한 줄 %d · 서버와 «사람» 줄이 일치 %d · 불일치 %d · 조합 없음 %d'
+    print('대조한 줄 %d · 서버와 「사람」 줄이 일치 %d · 불일치 %d · 조합 없음 %d'
           % (total, same, diff, notfound))
     if bad:
         print()

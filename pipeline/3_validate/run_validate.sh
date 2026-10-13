@@ -1,5 +1,5 @@
 #!/bin/bash
-# ── 3단계 · 외부검증 ──────────────────────────────────────────────────
+# ── 3단계 · 외부검증 ──
 #
 #   학습에 쓰지 않은 정상을 배경으로, 외부 코호트의 암 검체를 학습과 「똑같은」
 #   비율·깊이·믹싱 방식으로 섞어 학습된 모델로 채점한다.
@@ -45,14 +45,13 @@ unset _v
 
 # flock 이 없으면 아래 회계가 「잠금을 못 잡았다」 로 읽어 전부
 #   「다른 실행이 쥐고 있다」가 된다. 판정이 거꾸로 선다. 먼저 확인한다.
-#   (껍데기 시험에서 실제로 그렇게 나왔다. Git Bash 에는 flock 이 없다.)
+#   (Git Bash 에는 flock 이 없다.)
 command -v flock >/dev/null 2>&1 || {
   echo "멈춤: flock 이 없습니다 (util-linux). 이 파이프라인은 검체별 잠금에 씁니다." >&2
   echo "      없으면 「빠짐」과 「남이 쥐고 있음」을 구분하지 못합니다." >&2
   exit 1; }
 
-# 예전에는 이 관문이 aggregate_scores.py 에 있었다. 그 파일을 이 저장소에서
-#   빼면서 관문도 같이 사라졌으므로, 코호트를 「고르는 자리」 인 여기로 옮긴다.
+# 코호트 관문은 코호트를 「고르는 자리」 인 여기에 둔다.
 #   목적: 옛 코호트나 오타를 넣으면 조용히 빈 결과를 내는 대신 멈춘다.
 #   VAL_COHORTS 가 비어 있으면 아무 코호트나 허용한다 (내려받은 그대로 쓸 수 있게).
 #   구분자 뒤 공백을 허용한다. 없으면 `a, b` 로 적었을 때 b 를 거절한다.
@@ -89,7 +88,7 @@ fi
 #   판만으로는 서로의 목록을 밟는다.
 #   `tr -d '\r'` : 코호트 정의가 CRLF 로 저장돼 있으면 마지막 검체 이름에 CR 이
 #   붙어 경로가 어긋나고, 그런데도 wc -w 는 그것을 하나로 세어 「1개 빠짐」으로만
-#   보인다. 여기서 한 번 걷어낸다. [CRLF 가 셸을 죽인다]
+#   보인다. 여기서 한 번 걷어낸다.
 _TMP=${TMP_ROOT:-$HOME/tmp}
 mkdir -p "$_TMP"
 _LIST=$_TMP/samples_${COHORT}_$V.txt
@@ -115,24 +114,19 @@ if [ "$_rc1" -ne 0 ]; then
 fi
 
 # ② 검체마다 채점
-#   예전에는 별도 병렬 런처(score_parallel.sh)가 임시 스크립트를 써서
-#     돌렸다. 그 방식에 결함이 둘 있었다. (가) 임시 스크립트가 단일인용 heredoc
-#     안에서 $_APPLY 를 쓰는데 export 하지 않아 검체 전부가 조용히 실패할 수 있었고,
-#     (나) 검체 목록을 valj_samples.txt 로 읽는데 여기서는 valj_samples_$V.txt 를
-#     쓰고 있어 아예 다른 파일을 봤다.
-#   그래서 런처를 없애고 여기서 바로 돈다. 필요한 값은 「위치 인자로」 넘긴다 —
-#     export 에 기대지 않으면 (가) 부류가 구조적으로 생기지 않는다.
+#   별도 런처 없이 여기서 바로 돈다. 필요한 값은 「위치 인자로」 넘긴다 —
+#     export 에 기대지 않으면 단일인용 안에서 변수가 비는 부류가 구조적으로 생기지 않는다.
 _APPLY=$S/score_one_sample.py
 [ -f "$_APPLY" ] || { echo "score_one_sample.py 가 없습니다: $_APPLY" >&2; exit 1; }
 _M=$METH_ROOT/results/panels/${V%%_*}/$V/step04_ML_classifier/models
 _nm=$(ls -d "$_M"/*/pooled 2>/dev/null | wc -l)
 [ "$_nm" -ge 1 ] || { say "!! 모델이 없습니다 ($V) — 2_train 의 09 굳히기를 먼저"; exit 1; }
 say "② 채점: pooled 모델 ${_nm}개"
-# 채점 로그를 버리지 않는다. 예전에는 > /dev/null 2>&1 이라 결측 특징 %·비율 건너뜀·
-#   그러지 않으면 트레이스백이 사라지고 「파일이 있나」만 남는다.
-# 이름에 PID 를 넣는다. 코호트·판으로만 갈랐더니 드라이버 둘이 같은
-#   파일에 썼고(run_one_sample.sh:73 이 같은 이유로 코호트·판을 다 넣는다),
-#   지난 줄이 섞여 판정을 흐렸다. 이제 판정은 잠금 실측으로 하므로 로그는 기록용이다.
+# 채점 로그를 버리지 않는다. 버리면 결측 특징 %·비율 건너뜀·트레이스백이 사라지고
+#   「파일이 있나」만 남는다.
+# 이름에 PID 를 넣는다. 코호트·판으로만 가르면 드라이버 둘이 같은 파일에 써서
+#   지난 줄이 섞인다(run_one_sample.sh:73 이 같은 이유로 코호트·판을 다 넣는다).
+#   판정은 잠금 실측으로 하므로 로그는 기록용이다.
 _SLOG=${TMP_ROOT:-$HOME/tmp}/logs/${COHORT}/score_${V}_$$.log
 mkdir -p "$(dirname "$_SLOG")"
 say "  채점 로그  $_SLOG"
@@ -156,18 +150,18 @@ tr '\n' '\0' < "$_LIST" | xargs -0 -P"$PAR" -I{} bash -c '
   python -u "$apply" --allmodels >> "$slog" 2>&1 || echo "!! $s 채점 실패" >> "$slog"
 ' _ {} "$V" "$_APPLY" "$METH_ROOT" "$COHORT" "${WORK_ROOT:-$HOME}" "$_SLOG" "$_TMP"
 
-# 판정 근거를 「로그 세기」 에서 「잠금 실측」 으로 바꾼다.
+# 판정 근거는 「로그 세기」 가 아니라 「잠금 실측」 이다.
 #   로그로 세면 셋이 어긋난다. (가) 「잠겨 건너뜀」은 ② 에만 적히는데 이어달리기
 #   충돌은 ① 에서 나고, (나) 로그 파일을 코호트·판으로만 갈라 드라이버 둘이 같은
 #   파일을 쓰며, (다) 「파일 있음」과 「이번에 건너뜀」이 겹쳐 두 번 세어진다.
 #   그래서 남은 검체마다 「그 잠금을 지금 누가 쥐고 있나」 를 직접 본다. 겹치지 않는다.
-# ②: 잠금 폴더를 「여기서도」 만든다. 없으면 `exec 9>` 가 flock 에 닿기도
+# 잠금 폴더를 「여기서도」 만든다. 없으면 `exec 9>` 가 flock 에 닿기도
 #   전에 실패하고, 그 실패가 「다른 실행이 쥐고 있다」로 읽힌다. 즉 ① 이 전 검체에서
 #   죽은 상황이 「실패 아님 · exit 0」 이 된다. 판정이 정확히 거꾸로 선다.
 mkdir -p "${TMP_ROOT:-$HOME/tmp}/lock/val"
 _d=0; _busy=0; _miss=""
 while read -r s; do
-  # 2026-09 까지 꼬리가 _모든조합.csv 였다. 옛 트리도 끝난 것으로 세도록 둘 다 본다.
+  # 옛 트리의 꼬리 _모든조합.csv 도 끝난 것으로 세도록 둘 다 본다.
   if [ -s "$METH_ROOT/${COHORT}_val/$s/results/$V/step04_ML_classifier/y_prob_all_${V}_all_combos.csv" ] || [ -s "$METH_ROOT/${COHORT}_val/$s/results/$V/step04_ML_classifier/y_prob_all_${V}_모든조합.csv" ]; then
     _d=$((_d+1)); continue
   fi
@@ -181,9 +175,9 @@ done < "$_LIST"
 say "  채점된 검체 $_d/$N"
 say "검증 끝 — 검체별 채점: <뿌리>/${COHORT}_val/*/results/$V/step04_ML_classifier/"
 
-# 다 못 했으면 「0 이 아닌 값」 으로 끝낸다. 예전에는 마지막 명령이 say 라 0/N 이어도
-#   exit 0 이었고, `run_validate.sh && make_report.sh` 가 빈 표로 넘어갔다.
-# ②: 「다른 실행이 쥐고 있다」도 「이 실행은 못 끝냈다」 이다. 뒤 단계로
+# 다 못 했으면 「0 이 아닌 값」 으로 끝낸다. 마지막 명령이 say 면 0/N 이어도
+#   exit 0 이 되어 `run_validate.sh && make_report.sh` 가 빈 표로 넘어간다.
+# 「다른 실행이 쥐고 있다」도 「이 실행은 못 끝냈다」 이다. 뒤 단계로
 #   넘어가면 안 된다. 표는 빠진 것을 메우지 않는다. 다만 원인이 다르므로 말은 나눈다.
 if [ -n "$_miss" ] || [ "$_busy" -gt 0 ]; then
   [ "$_busy" -gt 0 ] && {
@@ -196,4 +190,4 @@ if [ -n "$_miss" ] || [ "$_busy" -gt 0 ]; then
   say "   $_d/$N 만 끝났습니다. 다음 단계로 넘어가지 마십시오."
   exit 1
 fi
-say "  다음: bash ../4_report/make_report.sh   (표는 위 파일들을 직접 읽는다)"
+say "  다음: COHORT=$COHORT bash 4_report/make_report.sh   (pipeline/ 에서 · 표는 위 파일들을 직접 읽는다 · 혈장 코호트는 4_report/steps/plasma_metric.py)"

@@ -68,7 +68,7 @@ reference and the training pool, so a sample at 100k usually cannot be filled.
 Those cells stop in stage 2 with `풀 부족으로 중단` and the loop moves on; the
 reported tables contain 5k and 50k for GBM, plus `jsdb200` at 100k for lung.
 
-On a 32-core server, stage 1 took 26 minutes for all nine panels; one stage-2 panel-depth takes about 7 hours; one stage-3 sample
+On a 32-core server, stage 1 from empty output roots took 59 minutes for GBM and 99 minutes for lung; one stage-2 panel-depth takes about 7 hours; one stage-3 sample
 takes about 34 minutes, 33 of them in `bismark`. Stage 3 runs samples in parallel,
 up to the memory gate described below.
 
@@ -269,9 +269,21 @@ Which commit made which numbers:
 | this branch | `e8d5fe5d` plus four changes from `79979d24`: the held-out split in `05_llrref` uses the whole `samples.csv`; validation llr blocks come from the training mean table (`LLR_KEEP_FROM`); validation mode is also signalled by `METH_VALIDATE=1`; in stage 2 the threshold predictions are imputed inside each fold and Logistic Regression uses `max_iter=2000`. These change `cv_all.csv` and the thresholds, so this branch does not regenerate `../results/`. |
 
 A from-scratch re-run of `e8d5fe5d` (all of stage 1 on empty output roots, then
-stages 2–3) against the stored outputs is in progress; its result will be added
-here. The comparison tolerance (1e-9 on CV tables and per-row scores) was fixed
-before the run.
+stages 2–3) was compared with the stored outputs at a tolerance fixed before the
+run (1e-9 on CV tables and per-row scores). It did not pass that tolerance:
+
+- stage 1 (nine panels, LLR reference, pooled BAMs) matched byte for byte;
+- in stage 2, Random Forest, SVM and XGBoost CV values matched exactly, but 4–10%
+  of the Logistic Regression rows differed (at most 0.0135). At this commit the
+  Logistic Regression runs with the default `max_iter` and stops before
+  converging, which makes it sensitive to floating-point order; `main` raises
+  `max_iter` to 2000. Two of 403 lung BEST models switched between Logistic
+  Regression and XGBoost;
+- the primary metric matched to four decimals in all nine cells, because the
+  primary feature combination's BEST models are Random Forest and XGBoost.
+
+`../results/main/` holds the same tables re-run on `main`; the primary metric
+moves by at most 0.002 and every cell stays below 0.70.
 
 An earlier check, on the code as of 2026-09-30 (before the held-out LLR change),
 re-ran parts of the pipeline and matched the stored outputs byte for byte:

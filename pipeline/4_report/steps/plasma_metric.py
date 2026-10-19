@@ -111,10 +111,14 @@ def bounds(s, y):
 
 
 def scores(v, combo, rows):
+    # 단위 맞추기(SCORE_UNIT=consistent)는 코호트 전체에서 정해야 해서 검체 파일을 한꺼번에 읽는다.
+    fs = glob.glob('%s/*/results/%s/step04_ML_classifier/y_prob_all_%s_all_combos.csv' % (R, v, v))
+    if not fs:
+        return {}
+    D = pd.concat([pd.read_csv(f).assign(_s=f.split('/')[len(R.split('/'))]) for f in fs], ignore_index=True)
+    D, _ = _cfg.unify_score_unit(D)
     out = {}
-    for f in glob.glob('%s/*/results/%s/step04_ML_classifier/y_prob_all_%s_all_combos.csv' % (R, v, v)):
-        s = f.split('/')[len(R.split('/'))]
-        d = pd.read_csv(f)
+    for s, d in D.groupby('_s', sort=False):
         d = d[(d.feature_set == combo) & (d.ratio.astype(float) == 1.0) & d.rep.astype(str).str.startswith(rows)]
         out[s] = (d.y_score.mean(), len(d), d.score_type.astype(str).str.contains('df').any())
     return out

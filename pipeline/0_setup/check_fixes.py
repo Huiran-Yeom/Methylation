@@ -249,5 +249,25 @@ ok(lr8.get_params()['max_iter'] == lr9.get_params()['max_iter'], '08 · 09 Logis
    % (lr8.get_params()['max_iter'], lr9.get_params()['max_iter']))
 
 print()
+# ── 5. 점수 단위 맞추기 (SCORE_UNIT · meth_config.unify_score_unit) ──
+print('5. 점수 단위 맞추기')
+_D = pd.DataFrame({'feature_set': ['a', 'a', 'a', 'b', 'b'],
+                   'score_type': ['predict_proba', 'predict_proba+df(포화)', 'predict_proba', 'predict_proba', 'predict_proba'],
+                   'y_score': [0.9, 7.0, 0.8, 0.3, 0.4], 'y_df': [2.0, 7.0, 1.5, -0.8, -0.4]})
+_old = M.SCORE_UNIT
+try:
+    M.SCORE_UNIT = 'as_is'
+    _o, _n = M.unify_score_unit(_D)
+    ok(_o.equals(_D) and _n == 0, 'as_is: 아무것도 바꾸지 않는다')
+    M.SCORE_UNIT = 'consistent'
+    _o, _n = M.unify_score_unit(_D)
+    ok(_n == 1 and _o.y_score.tolist() == [2.0, 7.0, 1.5, 0.3, 0.4], 'consistent: 섞인 조합(a)만 y_df 로 맞추고 b 는 그대로')
+    try:
+        M.unify_score_unit(_D.drop(columns=['y_df'])); ok(False, 'consistent: y_df 가 없으면 멈춘다')
+    except SystemExit:
+        ok(True, 'consistent: y_df 가 없으면 멈춘다')
+finally:
+    M.SCORE_UNIT = _old
+
 print('결과: %s' % ('전부 통과' if not bad else '실패 %d개' % len(bad)))
 sys.exit(1 if bad else 0)

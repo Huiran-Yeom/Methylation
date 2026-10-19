@@ -40,6 +40,11 @@ for _k in $_PREKEYS; do
 done
 unset _v
 : "${METH_CONF_DIR:?0_setup/config.conf 를 못 찾았다}"
+# 수치 연산(BLAS) 스레드. 로지스틱 회귀 값이 스레드 수에 따라 달라진다(사전등록 84-7 · 84-8).
+#   환경변수로 이미 주어졌으면 그 값을 따른다. BLAS_THREADS=none 이면 고정하지 않는다.
+if [ "${BLAS_THREADS:-1}" != none ]; then
+  export OMP_NUM_THREADS=${OMP_NUM_THREADS:-${BLAS_THREADS:-1}} OPENBLAS_NUM_THREADS=${OPENBLAS_NUM_THREADS:-${BLAS_THREADS:-1}} MKL_NUM_THREADS=${MKL_NUM_THREADS:-${BLAS_THREADS:-1}}
+fi
 : "${METH_ROOT:=/ssd_data/Methylation}"
 # 셸이 기본값을 채우면 conf 를 비웠을 때 관문이 못 잔다.
 #   정본은 config.conf 와 meth_config.py 둘이다. 셸은 값을 만들지 않는다.

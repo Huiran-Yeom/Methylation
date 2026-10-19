@@ -86,6 +86,8 @@ def _already_done():
         _t = pd.read_csv(p, usecols=['model_file', 'model_md5'])
     except Exception:
         return False                      # 지문 열이 없는 옛 표 → 다시 한다
+    if _cfg.SCORE_UNIT == 'consistent' and 'y_df' not in pd.read_csv(p, nrows=0).columns:
+        return False                      # y_df 없이 채점된 표 → consistent 로 다시 한다
     have = set(map(tuple, _t.drop_duplicates().values))
     now = set()
     for _f in _glob.glob(TRAIN + '/*/pooled/BEST.joblib'):
@@ -184,6 +186,8 @@ def run_model(name, B, keys, rows):
         #   모델은 그대로다. 같은 z 를 다른 방식으로 읽을 뿐이라 판정 규칙을 안 바꾼다.
         _sat = ''
         _thr_z = None      # 포화로 df 를 쓸 때의 문턱 (z 공간)
+        # consistent: 전환 여부와 상관없이 decision_function 을 같이 적는다(표에서 단위를 맞춘다).
+        _ydf = (m.decision_function(X) if hasattr(m, 'decision_function') else np.full(len(X), np.nan))             if _cfg.SCORE_UNIT == 'consistent' else None
         if st == 'predict_proba' and hasattr(m, 'predict_proba'):
             sc = m.predict_proba(X)[:, 1]
             # 「고유값 2개 미만」 만으로는 부족하다.
@@ -220,7 +224,8 @@ def run_model(name, B, keys, rows):
                          'thr_spec95': (thr if _thr_z is None else _thr_z),
                          'y_pred': (int(sc[i] > thr) if (thr == thr and not _sat)
                                     else (int(sc[i] > _thr_z) if _thr_z is not None else -1)),
-                         'feat_missing_pct': round(miss, 2)})
+                         'feat_missing_pct': round(miss, 2),
+                         **({} if _ydf is None else {'y_df': float(_ydf[i])})})
     return rows
 
 # ---- 어느 모델들을 채점할지 ----

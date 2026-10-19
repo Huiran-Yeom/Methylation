@@ -43,6 +43,8 @@ _DEFAULTS = {
     'BLOCK_SIZE': '100',
     'MIN_SAMPLE_COVERAGE': '0.8',
     'COLSET_FROM': 'all',
+    'BLAS_THREADS': '1',
+    'SCORE_UNIT': 'as_is',
     'SEED': '42',
     'TEST_SIZE': '0.2',
     'N_JOBS': '1',
@@ -158,6 +160,10 @@ SEED = int(get('SEED'))
 N_JOBS = int(get('N_JOBS'))
 MIN_SAMPLE_COVERAGE = float(get('MIN_SAMPLE_COVERAGE'))
 COLSET_FROM = get('COLSET_FROM').strip().lower()
+BLAS_THREADS = get('BLAS_THREADS').strip().lower()
+SCORE_UNIT = get('SCORE_UNIT').strip().lower()
+if SCORE_UNIT not in ('as_is', 'consistent'):
+    raise SystemExit('SCORE_UNIT 은 as_is 또는 consistent 이어야 합니다: %r' % SCORE_UNIT)
 if COLSET_FROM not in ('all', 'normal'):
     raise SystemExit('COLSET_FROM 은 all 또는 normal 이어야 합니다: %r' % COLSET_FROM)
 TEST_SIZE = float(get('TEST_SIZE'))
@@ -226,6 +232,33 @@ if __name__ == '__main__':
     for k in ('METH_ROOT', 'DATASET_ROOT', 'WORK_ROOT', 'TMP_ROOT',
               'TRAIN_SRC', 'ANALYSIS_DIR', 'GEN', 'VAL_COHORTS', 'PANELS', 'NULL_PANELS', 'VERSION', 'PANEL',
               'TARGET_DEPTH_READS', 'DEPTH_MODE', 'MUT_RATIOS', 'PATTERN_K',
-              'MIN_READS_PER_WINDOW', 'BLOCK_SIZE', 'MIN_SAMPLE_COVERAGE', 'COLSET_FROM',
+              'MIN_READS_PER_WINDOW', 'BLOCK_SIZE', 'MIN_SAMPLE_COVERAGE', 'COLSET_FROM', 'BLAS_THREADS', 'SCORE_UNIT',
               'SEED', 'TEST_SIZE', 'N_JOBS', 'FIXED_MODEL', 'LLR_HELDOUT'):
         print('%-22s %-44s (%s)' % (k, globals()[k], SOURCE.get(k, '-')))
+    # 실제로 수치 연산이 본 스레드 값(진입점이 내보낸 값 · 없으면 라이브러리 기본)
+    for k in ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS'):
+        print('%-22s %-44s (%s)' % (k, os.environ.get(k, '없음(라이브러리 기본)'), 'env'))
+
+
+def unify_score_unit(D, keys=('feature_set',)):
+    """SCORE_UNIT=consistent 이면 keys 묶음마다 점수 단위를 하나로 맞춘다.
+
+    채점(score_one_sample.py)은 검체마다 점수 폭이 1e-6 미만으로 뭉치면 그 검체만
+    decision_function 으로 바꾼다. 그러면 한 칸 안에 확률과 decision_function 이 섞여
+    AUC 를 해석할 수 없다. consistent 에서는 채점이 y_df 열을 늘 같이 적고, 여기서
+    묶음 안에 전환된 행이 하나라도 있으면 그 묶음 전체를 y_df 로 바꾼다.
+    as_is 면 D 를 그대로 돌려준다(지금까지의 표를 낸 동작).
+    돌려주는 값: (D, 단위를 바꾼 묶음 수)
+    """
+    if SCORE_UNIT != 'consistent' or not len(D):
+        return D, 0
+    if 'y_df' not in D.columns:
+        raise SystemExit('SCORE_UNIT=consistent 인데 채점 파일에 y_df 열이 없습니다 — 같은 설정으로 다시 채점하십시오')
+    sw = D['score_type'].astype(str).str.contains('df')
+    g = sw.groupby([D[k] for k in keys]).transform('any')
+    if D.loc[g, 'y_df'].isna().any():
+        raise SystemExit('단위를 맞출 묶음에 y_df 가 빈 행이 있습니다 (decision_function 이 없는 모형)')
+    D = D.copy()
+    D.loc[g, 'y_score'] = D.loc[g, 'y_df']
+    D.loc[g, 'score_type'] = 'decision_function(통일)'
+    return D, int(D.loc[g, list(keys)].drop_duplicates().shape[0])

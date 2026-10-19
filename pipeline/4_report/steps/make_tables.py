@@ -192,6 +192,9 @@ for depth in DEPTHS:
     if not fs:
         print('\n== %s 리드: all_combos 채점 파일 없음' % depth); continue
     D = pd.concat([pd.read_csv(f) for f in fs], ignore_index=True)
+    D, _nu = _cfg.unify_score_unit(D)          # SCORE_UNIT=consistent 일 때만 바뀐다
+    if _nu:
+        print('  [점수 단위] 확률과 decision_function 이 섞인 조합 %d개를 decision_function 으로 맞췄다' % _nu)
     D['person'] = D['sample'].map(person)
     person_warn()
     # [교집합 · 비율별] 사전등록 2-2(94·256줄): 「세 패널이 모두 값을 낸 검증 검체만」.

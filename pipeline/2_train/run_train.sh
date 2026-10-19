@@ -40,6 +40,11 @@ for _k in $_PREKEYS; do
 done
 unset _v
 : "${METH_CONF_DIR:?0_setup/config.conf 를 못 찾았다}"
+# 수치 연산(BLAS) 스레드. 로지스틱 회귀 값이 스레드 수에 따라 달라진다(사전등록 84-7 · 84-8).
+#   환경변수로 이미 주어졌으면 그 값을 따른다. BLAS_THREADS=none 이면 고정하지 않는다.
+if [ "${BLAS_THREADS:-1}" != none ]; then
+  export OMP_NUM_THREADS=${OMP_NUM_THREADS:-${BLAS_THREADS:-1}} OPENBLAS_NUM_THREADS=${OPENBLAS_NUM_THREADS:-${BLAS_THREADS:-1}} MKL_NUM_THREADS=${MKL_NUM_THREADS:-${BLAS_THREADS:-1}}
+fi
 
 say(){ echo "[$(date +%H:%M:%S)] $*"; }
 step(){  # step <번호> <제목> <파일> [인자...]

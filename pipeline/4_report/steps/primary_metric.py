@@ -209,6 +209,7 @@ def load(panel, combo):
     if not fs:
         return None, '채점 파일 없음: %s' % pat
     d = pd.concat([pd.read_csv(f) for f in fs], ignore_index=True)
+    d, _nu = _cfg.unify_score_unit(d)          # SCORE_UNIT=consistent 일 때만 바뀐다
     d = d[d.feature_set == combo]
     if not len(d):
         return None, '조합 %s 가 %d개 파일에 없음' % (combo, len(fs))

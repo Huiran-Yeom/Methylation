@@ -221,6 +221,7 @@ made = 0
 made_by_V = {}      # 판마다 센다 (made 는 전체 누적이라 판별 부족을 못 잡는다)
 expect_by_V = {}    # 판마다 기대치
 failures = []   # print 만 하면 아무도 못 읽는다. 기록하고 끝에서 멈춘다.
+_conv = _cfg.count_convergence()
 for V in VERS:
     D = '%s/panels/%s/%s/step04_ML_classifier' % (R, V.split('_')[0], V)
     if not os.path.isdir(D):
@@ -289,6 +290,7 @@ for _V in sorted(made_by_V):
           % (_V, _n, _e, '' if _n == _e else '   <-- 어긋남'))
     if _n != _e:
         failures.append('%s: 저장 %d / 기대 %d — 어긋남' % (_V, _n, _e))
+_cfg.convergence_check(_conv, failures, '09')
 if failures:
     print('')
     print('실패 %d건:' % len(failures))

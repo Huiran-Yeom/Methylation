@@ -283,22 +283,31 @@ finally:
     M.SCORE_UNIT = _old
 
 print()
-# ── 6. 08 의 수렴 경고 세기 (CONVERGENCE_GATE) ──
+# ── 6. 08 · 09 의 수렴 경고 세기 (CONVERGENCE_GATE · meth_config.count_convergence) ──
 print('6. 수렴 경고 세기')
 import contextlib, warnings  # noqa: E401,E402
 from sklearn.exceptions import ConvergenceWarning  # noqa: E402
-from sklearn.linear_model import LogisticRegression  # noqa: E402
-_seg = block_src(os.path.join(TREE, '2_train/steps/08_ML_classifier.py'), '# 수렴 경고를 센다', 'def main():')
 _err = io.StringIO()
 with warnings.catch_warnings(), contextlib.redirect_stderr(_err):
-    nsw = {'warnings': warnings, 'ConvergenceWarning': ConvergenceWarning}
-    exec(_seg, nsw)
-    _rx = np.random.RandomState(0).randn(60, 5); _ry = (_rx[:, 0] > 0).astype(int)
+    _n = M.count_convergence()
     for _ in range(3):
-        LogisticRegression(max_iter=1).fit(_rx, _ry)
-ok(nsw['_conv'][0] == 3, '08: 같은 자리 수렴 경고도 다 센다 (%d)' % nsw['_conv'][0])
-ok(_err.getvalue().count('ConvergenceWarning') == 1, '08: 화면에는 처음 하나만 낸다')
-ok("failures.append('수렴 경고" in src08 and "C.CONVERGENCE_GATE == 'on'" in src08, '08: CONVERGENCE_GATE=on 이면 실패로 넣는다')
+        warnings.warn('같은 자리', ConvergenceWarning)   # 한 줄에서 세 번 — always 가 없으면 한 번만 온다
+    warnings.warn('다른 경고', UserWarning)
+ok(_n[0] == 3, '같은 자리 수렴 경고도 다 센다 (%d)' % _n[0])
+ok(_err.getvalue().count('ConvergenceWarning: ') == 1, '화면에는 수렴 경고를 처음 하나만 낸다')
+ok('다른 경고' in _err.getvalue(), '다른 경고는 그대로 지나간다')
+_old = M.CONVERGENCE_GATE
+try:
+    for _g, _want in (('off', 0), ('on', 1)):
+        M.CONVERGENCE_GATE = _g; _f = []
+        with contextlib.redirect_stdout(io.StringIO()):
+            M.convergence_check([2], _f, 't'); M.convergence_check([0], _f, 't')
+        ok(len(_f) == _want, 'CONVERGENCE_GATE=%s: 경고 2건이면 실패 %d건 · 0건이면 그대로' % (_g, _want))
+finally:
+    M.CONVERGENCE_GATE = _old
+for _st, _call in (('08_ML_classifier.py', 'C.convergence_check(_conv, failures'), ('09_save_best_j.py', '_cfg.convergence_check(_conv, failures')):
+    _s = io.open(os.path.join(TREE, '2_train/steps', _st), encoding='utf-8').read()
+    ok(_call in _s and _s.index(_call) < _s.rindex('if failures:'), '%s: 실패 판정 앞에서 수렴 경고를 넣는다' % _st[:2])
 
 print('결과: %s' % ('전부 통과' if not bad else '실패 %d개' % len(bad)))
 sys.exit(1 if bad else 0)

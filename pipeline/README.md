@@ -315,7 +315,8 @@ feature CSVs gave bit-identical results run to run; with threads pinned to 1 it
 matched the re-run, and with threads unpinned it matched the stored tables in all
 1,116 rows. The early run scripts that trained the stored tables did not pin
 threads (checked cell by cell for this one cell only). Logistic
-Regression on `main` (`max_iter=2000`, no convergence warnings) still differs
+Regression on `main` (`max_iter=2000`, no convergence warnings in step 08 on that
+cell) still differs
 between the two thread settings (at most 0.0005), so record the thread setting
 as part of any reproduction.
 
@@ -328,11 +329,13 @@ one thread. To regenerate the `e8d5fe5d` tables in `../results/`, check out tag
 `results-e8d5fe5d` and run with the three variables unset (on `main`, the same
 is `BLAS_THREADS=none`).
 
-Step 08 prints the number of convergence warnings at the end. With
-`CONVERGENCE_GATE=on` (default `off`) any warning makes the step fail.
-
 `../results/main/` holds the same tables re-run on `main`; the primary metric
 moves by at most 0.002 and every cell stays below 0.70.
+
+Steps 08 and 09 print the number of convergence warnings at the end. With
+`CONVERGENCE_GATE=on` (default `off`) any warning makes the step fail. Only
+warnings raised in the step's own process are counted; every cross-validation
+call in 08 and 09 runs with `n_jobs=1`.
 
 An earlier check, on the code as of 2026-09-30 (before the held-out LLR change),
 re-ran parts of the pipeline and matched the stored outputs byte for byte:

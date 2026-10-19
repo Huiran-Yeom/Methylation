@@ -56,8 +56,8 @@
 | `05_Feature_Matrix.py` | bismark cov | `RS/step04_ML_classifier/<n>_mean_<판>.csv`<br>`<n>_entropy_<판>.csv` |
 | `06_jsdfeat.py` | 섞은 BAM + `j_jsdcount` 기준 분포 | `<n>_jsd_<판>.csv` · `<n>_pdr_<판>.csv` |
 | `07_llrfeat.py` | 섞은 BAM + `llrref_K<K>_minr<MINR>.parquet` | `<n>_llr_<판>.csv` |
-| `08_ML_classifier.py` | 피처 5종 | `cv_<n>_<판>.csv` (조합 31 × 모델 4) |
-| `09_save_best_j.py` | `cv_*.csv` + 피처 | `RS/step04_ML_classifier/models/<조합>/pooled/BEST.joblib` |
+| `08_ML_classifier.py` | 피처 5종 | `cv_<n>_<판>.csv` (조합 31 × 모델 4) · 끝에 수렴 경고 건수(`CONVERGENCE_GATE=on` 이면 1건 이상일 때 실패) |
+| `09_save_best_j.py` | `cv_*.csv` + 피처 | `RS/step04_ML_classifier/models/<조합>/pooled/BEST.joblib` · 끝에 수렴 경고 건수(08 과 같다) |
 | `split_ab.py` (선택 · 교차 채점 준비) | `j_candidates<GEN>/samples.csv` · 사용 목록 | `<out>/use_normal_A.txt` 등 넷(정상·암 × A·B) |
 
 `<n>` 은 비율의 종양 리드 수입니다(예 `25` = 0.5%).

@@ -23,8 +23,8 @@
   4. 예외를 삼키지 않고 traceback 을 찍고 실패 목록을 요약한다.
 
 바뀌지 않은 것
-  - train_test_split(test_size=0.2, random_state=SEED), 모델 4종과 하이퍼파라미터,
-    LogisticRegression 기본 max_iter(원본 동작 — 수렴 경고가 나는 것도 원본과 같음)
+  - train_test_split(test_size=0.2, random_state=SEED), 모델 4종과 하이퍼파라미터
+    (LogisticRegression 만 max_iter=2000 — 09 와 같게, 사전등록 65),
   - stratify 는 기본 꺼짐(원본과 동일). config.STRATIFY=True 로 켤 수 있다.
 
 SVM 점수
@@ -42,7 +42,6 @@ import itertools
 import os
 import sys
 import traceback
-import warnings
 
 import joblib
 import numpy as np
@@ -55,7 +54,6 @@ from sklearn.pipeline import Pipeline as _Pipe
 from sklearn.impute import SimpleImputer as _Imputer
 from sklearn.model_selection import (train_test_split,
                                      cross_val_predict, StratifiedKFold)
-from sklearn.exceptions import ConvergenceWarning
 from sklearn.svm import SVC
 from xgboost import XGBClassifier
 
@@ -171,24 +169,6 @@ def load_combo(p, keys):
     return X, y
 
 
-# 수렴 경고를 센다. 파이썬 기본은 같은 자리 경고를 한 번만 보여 줘 몇 번 났는지 모른다.
-#   전부 세되 화면에는 처음 하나만 낸다. CV 는 n_jobs=1 이라 경고가 이 프로세스에서 난다.
-_conv = [0]
-_show = warnings.showwarning
-
-
-def _count_conv(message, category, *a, **k):
-    if issubclass(category, ConvergenceWarning):
-        _conv[0] += 1
-        if _conv[0] > 1:
-            return
-    _show(message, category, *a, **k)
-
-
-warnings.simplefilter('always', ConvergenceWarning)
-warnings.showwarning = _count_conv
-
-
 def main():
     """피처 조합마다 모델 넷을 학습·교차검증하고 y_prob 를 남긴다.
 
@@ -216,6 +196,7 @@ def main():
           f'train 점수 저장={C.SAVE_TRAIN_SCORES}\n')
 
     all_scores, failures = [], []
+    _conv = C.count_convergence()
     _cvcount = {}   # 비율별 cv 행수
 
     for p in C.MUT_READ_COUNTS:
@@ -440,9 +421,7 @@ def main():
             failures.append('cv 행 %d / 기대 %d (비율 %d) - 조용히 적게 나왔다' % (_n, _expect, _p))
     if len(set(_cvcount.values())) > 1:
         failures.append('비율마다 cv 행수가 다르다: %s' % dict(sorted(_cvcount.items())))
-    print(f'\n수렴 경고 {_conv[0]}건 (CONVERGENCE_GATE={C.CONVERGENCE_GATE})')
-    if _conv[0] and C.CONVERGENCE_GATE == 'on':
-        failures.append('수렴 경고 %d건 — CONVERGENCE_GATE=on' % _conv[0])
+    C.convergence_check(_conv, failures, '08')
     if failures:
         print(f'\n실패 {len(failures)}건:')
         for f in failures:

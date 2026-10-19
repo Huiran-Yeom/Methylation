@@ -43,7 +43,7 @@ DMR_SOURCE_VERSION = None
 SHARE_FROM = None          # 이 판이 2_train/steps/01 을 직접 돌린다
 SEED = _cfg.SEED
 FIXED_MODEL = getattr(_cfg, 'FIXED_MODEL', '')   # 비면 모델 넷을 겨룬다
-CONVERGENCE_GATE = getattr(_cfg, 'CONVERGENCE_GATE', 'off')   # on 이면 수렴 경고가 있을 때 08 이 실패로 끝난다
+count_convergence, convergence_check = _cfg.count_convergence, _cfg.convergence_check   # 08 · 09 의 수렴 경고 세기
 
 BLOCK_SIZE = _cfg.BLOCK_SIZE
 CPG_THRESHOLD = 4             # step02 전용 — j 는 step02 를 여기서 안 돌린다

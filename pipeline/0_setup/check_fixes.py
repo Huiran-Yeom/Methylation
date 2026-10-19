@@ -283,6 +283,11 @@ try:
         M.unify_score_unit(_bad); ok(False, 'consistent: 맞출 묶음에 빈 y_df 가 있으면 멈춘다')
     except SystemExit:
         ok(True, 'consistent: 맞출 묶음에 빈 y_df 가 있으면 멈춘다')
+    _bad = _D.copy(); _bad.loc[3, 'y_df'] = np.nan
+    try:
+        M.unify_score_unit(_bad); ok(False, 'consistent: 전환 없는 묶음에서 y_df 가 일부만 비어도 멈춘다')
+    except SystemExit:
+        ok(True, 'consistent: 전환 없는 묶음에서 y_df 가 일부만 비어도 멈춘다')
 finally:
     M.SCORE_UNIT = _old
 

@@ -305,7 +305,11 @@ def unify_score_unit(D, keys=('feature_set',)):
     if D.loc[sw.groupby(K).transform('any'), 'y_df'].isna().any():
         raise SystemExit('전환된 행이 있는 묶음에 y_df 가 빈 행이 있습니다 — '
                          'consistent 로 다시 채점되지 않은 검체 파일이 섞였습니다')
-    g = D['y_df'].notna().groupby(K).transform('all')           # decision_function 이 있는 모형의 묶음
+    have = D['y_df'].notna().groupby(K)
+    g = have.transform('all')                                     # decision_function 이 있는 모형의 묶음
+    if (have.transform('any') & ~g).any():                        # 일부만 빔 — 옛 설정 파일이 섞였다
+        raise SystemExit('한 묶음 안에서 y_df 가 일부 행만 비었습니다 — consistent 로 다시 채점되지 않은 '
+                         '검체 파일이 섞였습니다')
     conv = g & st.str.startswith('predict_proba')               # 단위가 실제로 바뀌는 행 (SVM 은 이미 df)
     D = D.copy()
     D.loc[g, 'y_score'] = D.loc[g, 'y_df']

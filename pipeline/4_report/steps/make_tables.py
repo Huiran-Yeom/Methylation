@@ -217,7 +217,8 @@ def baseline_lines(D, depth, ratios):
     if not parts:
         print('%-16s %-5s   (기준선: mean 특징 표를 못 찾았다)' % ('', ''))
         return
-    tr = [f for f in glob.glob('%s/results/panels/%s/%s/step04_ML_classifier/*_mean_%s.csv' % (_M, PAN, v, v))
+    trd = '%s/results/panels/%s/%s/step04_ML_classifier' % (_M, PAN, v)
+    tr = [f for f in glob.glob('%s/*_mean_%s.csv' % (trd, v))
           if not os.path.basename(f).startswith('0_')]
     if not tr:
         print('%-16s %-5s   (기준선: 학습 mean 표가 없어 방향을 못 정한다)' % ('', ''))
@@ -240,6 +241,8 @@ def baseline_lines(D, depth, ratios):
     print('%-16s %-5s %s   사람' % ('', '', ''.join('%9.3f' % v for v in rp)))
     print('%-16s %-5s   ↑ 대조 · 판정 아님: 같은 뽑기의 패널 블록 평균 메틸화 하나(전역 아님) · 방향 %s (학습 표로 정함)%s'
           % ('', '', '높을수록 암' if up else '낮을수록 암', (' · 값이 없어 뺀 행 %d' % nan) if nan else ''))
+    # 채점 파일에는 모델을 낸 트리가 남지 않는다. 다른 트리의 모델로 채점했다면 이 경로가 그 트리인지 본다.
+    print('%-16s %-5s   방향을 정한 학습 표: %s (%d개)' % ('', '', trd, len(tr)))
 
 
 for depth in DEPTHS:

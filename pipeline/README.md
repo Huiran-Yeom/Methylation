@@ -326,8 +326,10 @@ as part of any reproduction.
 and the values actually used are written to `config_snapshot.txt`. Step scripts
 run directly with `python` are not pinned. `../results/main/` was produced with
 one thread. To regenerate the `e8d5fe5d` tables in `../results/`, check out tag
-`results-e8d5fe5d` and run with the three variables unset (on `main`, the same
-is `BLAS_THREADS=none`).
+`results-e8d5fe5d` and set all three variables to 32 (on `main`, `BLAS_THREADS=32`).
+The stored tables were trained with the variables unset on a 32-core server with
+OpenBLAS; re-running one cell (lung jsd200 5k) with 32 set explicitly matched all
+1,116 rows. Other cells were not re-run.
 
 `../results/main/` holds the same tables re-run on `main`; the primary metric
 moves by at most 0.002 and every cell stays below 0.70.

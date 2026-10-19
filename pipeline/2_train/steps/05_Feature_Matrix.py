@@ -52,6 +52,7 @@ import config as C
 INPUT_FORMAT = getattr(C, 'INPUT_FORMAT', 'bedgraph')
 FILE_ORDER = getattr(C, 'FILE_ORDER', 'numeric')
 MIN_SAMPLE_COVERAGE = getattr(C, 'MIN_SAMPLE_COVERAGE', 1.0)
+COLSET_FROM = getattr(C, 'COLSET_FROM', 'all')     # all | normal — 블록을 어느 행의 커버율로 고르나
 
 # 엔트로피 방식과 출력 이름을 명령줄로 바꾼다.
 # value_counts 는 값 종류 수 = 커버리지 대리지표라 0.1% 에서 AUC 0.50 이었다.
@@ -184,16 +185,23 @@ def to_frame(rows_normal, rows_gbm, label):
         #   빈칸이 양성·음성을 섞은 값으로 채워진다. 빈칸은 비운 채 넘기면
         #   score_one_sample 이 학습 평균(train_mean)으로 채운다.
         pass
-    elif MIN_SAMPLE_COVERAGE >= 1.0:
-        df = df.dropna(axis=1, how='any')          # 최종 코드와 동일
     else:
-        need = int(np.ceil(MIN_SAMPLE_COVERAGE * n_total))
-        keep = df.notna().sum(axis=0) >= need
+        # 커버율을 재는 행. all 은 정상 + 암 섞인 행 전부라 암 행의 커버리지가 칸 선택에
+        #   끼어든다(사전등록 71-2). normal 은 학습 정상 행만 본다. 정상 행은 비율마다 같은
+        #   0% 행렬이라 비율마다 같은 블록이 남는다.
+        ref = df[df.index.astype(str).str.startswith('Normal')] if COLSET_FROM == 'normal' else df
+        if MIN_SAMPLE_COVERAGE >= 1.0:
+            keep = ref.notna().all(axis=0)              # 최종 코드의 dropna(how='any') 와 같다
+        else:
+            keep = ref.notna().sum(axis=0) >= int(np.ceil(MIN_SAMPLE_COVERAGE * len(ref)))
         df = df.loc[:, keep]
-        # 남은 결측은 여기서 채우지 않는다 (추기 44-6). 정상·암을 합친 묶음 평균으로
-        #   채우면 라벨이 섞인다. 08 · 09 의 Imputer 가 학습 접기 평균으로만 채운다.
-        #   블록 고르기(위 keep)는 라벨을 안 보므로 그대로 둔다.
-    print(f'    {label}: 블록 {before} -> {df.shape[1]} (커버율 기준 {MIN_SAMPLE_COVERAGE})')
+        # 남은 결측은 여기서 채우지 않는다 (추기 44-6). 08 · 09 의 Imputer 가 학습 접기 평균으로만 채운다.
+        if COLSET_FROM == 'normal':
+            # 정상에서는 덮이지만 암 행에서 많이 비는 블록 — 빈칸 자체가 신호가 될 수 있어 센다.
+            tum = df[~df.index.astype(str).str.startswith('Normal')]
+            thin = int((tum.notna().mean(axis=0) < MIN_SAMPLE_COVERAGE).sum()) if len(tum) else 0
+            print(f'    {label}: 암 행 커버율 {MIN_SAMPLE_COVERAGE} 미만인 남은 블록 {thin}개')
+    print(f'    {label}: 블록 {before} -> {df.shape[1]} (커버율 기준 {MIN_SAMPLE_COVERAGE} · {COLSET_FROM} 행)')
     df['Type'] = [0 if s.startswith('Normal') else 1 for s in df.index]
     return df
 

@@ -400,7 +400,9 @@ def main():
                 _blk = [x for x, y in zip(cols, colblk) if y is not None]
                 _oth = [x for x, y in zip(cols, colblk) if y is None]
                 if keep_cols is None:
-                    _na = F[_blk].isna().mean()
+                    # 결측률을 재는 행: all 은 첫 비율 행렬의 전 행, normal 은 학습 정상 행만(사전등록 71-2).
+                    _rows = F.index.astype(str).str.startswith('Normal') if getattr(C, 'COLSET_FROM', 'all') == 'normal'                         else [True] * len(F)
+                    _na = F.loc[_rows, _blk].isna().mean()
                     keep_cols = [x for x in _blk if _na[x] < MAXNA]
                     print('    칸 거르기: 결측 %.0f%% 미만 %d / %d 칸만 남깁니다'
                           % (100 * MAXNA, len(keep_cols), len(_blk)))

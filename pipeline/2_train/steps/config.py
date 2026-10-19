@@ -62,6 +62,7 @@ SITE_ENTROPY_METHOD = 'histogram'   # value_counts 는 커버리지 대리지표
 INPUT_FORMAT = 'bedgraph'
 FILE_ORDER = 'numeric'
 MIN_SAMPLE_COVERAGE = _cfg.MIN_SAMPLE_COVERAGE
+COLSET_FROM = _cfg.COLSET_FROM
 TEST_SIZE = _cfg.TEST_SIZE
 STRATIFY = True
 SVM_PROBABILITY = False

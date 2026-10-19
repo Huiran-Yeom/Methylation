@@ -42,6 +42,7 @@ _DEFAULTS = {
     'MIN_READS_PER_WINDOW': '6',
     'BLOCK_SIZE': '100',
     'MIN_SAMPLE_COVERAGE': '0.8',
+    'COLSET_FROM': 'all',
     'SEED': '42',
     'TEST_SIZE': '0.2',
     'N_JOBS': '1',
@@ -156,6 +157,9 @@ BLOCK_SIZE = int(get('BLOCK_SIZE'))
 SEED = int(get('SEED'))
 N_JOBS = int(get('N_JOBS'))
 MIN_SAMPLE_COVERAGE = float(get('MIN_SAMPLE_COVERAGE'))
+COLSET_FROM = get('COLSET_FROM').strip().lower()
+if COLSET_FROM not in ('all', 'normal'):
+    raise SystemExit('COLSET_FROM 은 all 또는 normal 이어야 합니다: %r' % COLSET_FROM)
 TEST_SIZE = float(get('TEST_SIZE'))
 MUT_RATIOS = [float(x) for x in get('MUT_RATIOS').replace(' ', '').split(',') if x]
 
@@ -222,6 +226,6 @@ if __name__ == '__main__':
     for k in ('METH_ROOT', 'DATASET_ROOT', 'WORK_ROOT', 'TMP_ROOT',
               'TRAIN_SRC', 'ANALYSIS_DIR', 'GEN', 'VAL_COHORTS', 'PANELS', 'NULL_PANELS', 'VERSION', 'PANEL',
               'TARGET_DEPTH_READS', 'DEPTH_MODE', 'MUT_RATIOS', 'PATTERN_K',
-              'MIN_READS_PER_WINDOW', 'BLOCK_SIZE', 'MIN_SAMPLE_COVERAGE',
+              'MIN_READS_PER_WINDOW', 'BLOCK_SIZE', 'MIN_SAMPLE_COVERAGE', 'COLSET_FROM',
               'SEED', 'TEST_SIZE', 'N_JOBS', 'FIXED_MODEL', 'LLR_HELDOUT'):
         print('%-22s %-44s (%s)' % (k, globals()[k], SOURCE.get(k, '-')))

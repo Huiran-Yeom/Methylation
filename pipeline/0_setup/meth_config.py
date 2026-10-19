@@ -165,11 +165,11 @@ BLAS_THREADS = get('BLAS_THREADS').strip().lower()
 if BLAS_THREADS != 'none' and not (BLAS_THREADS.isdigit() and int(BLAS_THREADS) >= 1):
     raise SystemExit('BLAS_THREADS 는 none 또는 1 이상의 정수여야 합니다: %r' % BLAS_THREADS)
 SCORE_UNIT = get('SCORE_UNIT').strip().lower()
+if SCORE_UNIT not in ('as_is', 'consistent'):
+    raise SystemExit('SCORE_UNIT 은 as_is 또는 consistent 이어야 합니다: %r' % SCORE_UNIT)
 REPORT_BASELINE = get('REPORT_BASELINE').strip().lower()
 if REPORT_BASELINE not in ('on', 'off'):
     raise SystemExit('REPORT_BASELINE 은 on 또는 off 이어야 합니다: %r' % REPORT_BASELINE)
-if SCORE_UNIT not in ('as_is', 'consistent'):
-    raise SystemExit('SCORE_UNIT 은 as_is 또는 consistent 이어야 합니다: %r' % SCORE_UNIT)
 if COLSET_FROM not in ('all', 'normal'):
     raise SystemExit('COLSET_FROM 은 all 또는 normal 이어야 합니다: %r' % COLSET_FROM)
 TEST_SIZE = float(get('TEST_SIZE'))

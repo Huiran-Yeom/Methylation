@@ -339,7 +339,15 @@ the default `as_is` one table cell can mix probabilities and decision values (th
 lung 50k cells flagged in `../results/README.md`). With `consistent`, scoring
 also writes the decision value (`y_df`) and the reports put every
 panel-depth-combination on one unit; this needs re-scoring. The one-off scripts
-in `5_analysis/` read raw scores and do not apply it. Each output folder gets a `config_snapshot.txt` recording where every
+in `5_analysis/` read raw scores and do not apply it.
+
+`REPORT_BASELINE=on` adds a control line under each panel-depth table: the AUC of
+one number per row, the unweighted mean of the panel blocks' mean methylation in
+the same draw the panel was scored on. It is not genome-wide methylation (the
+sampled reads' coverage files are not kept), and because the blocks were chosen
+for cancer-normal differences it already carries signal; its direction is fixed
+once per table. If the panel line does not beat it, the model adds nothing beyond
+that one average. It is a reading aid, not part of any decision rule. Each output folder gets a `config_snapshot.txt` recording where every
 value came from (env / conf / default).
 
 File names are coupled to the config. Validation copies the training scripts

@@ -91,7 +91,7 @@
 
 | 스크립트 | 입력 | 출력 |
 |---|---|---|
-| `make_tables.py <판>` | `y_prob_all_*_all_combos.csv` 전부 | 표 텍스트(표준출력) — 조합별 AUC, 검체 단위와 사람 단위 |
+| `make_tables.py <판>` | `y_prob_all_*_all_combos.csv` 전부 · `REPORT_BASELINE=on` 이면 검체마다 `<비율>_mean_<판>.csv` 도 | 표 텍스트(표준출력) — 조합별 AUC, 검체 단위와 사람 단위 · on 이면 기준선 줄 |
 | `primary_metric.py` | 같음 | 1차 지표 AUC + 짝지은 부트스트랩 구간 + 특이도 |
 
 `make_tables.py` 는 `COHORT` 환경변수로 코호트를 고릅니다.

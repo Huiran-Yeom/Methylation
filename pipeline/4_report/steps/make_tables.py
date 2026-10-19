@@ -187,12 +187,18 @@ RAT_LABEL = ['0.1%', '0.5%', '1%', '2%', '2.5%', '3%', '5%']
 
 
 def baseline_lines(D, depth, ratios):
-    """REPORT_BASELINE=on 일 때 붙는 기준선 줄.
+    """REPORT_BASELINE=on 일 때 패널 표 밑에 붙는 대조 줄. 판정에 쓰지 않는다.
 
-    값: 행(검체 · 비율 · 반복)마다 같은 5k 뽑기로 만든 mean 특징 표(<비율>_mean_<판>.csv)의
-        블록 평균 메틸화를 다시 평균한 숫자 하나. 리드나 CpG 로 가중하지 않는다.
+    값: 행(검체 · 비율 · 반복)마다, 패널 점수와 같은 깊이의 같은 뽑기로 만든 mean 특징 표
+        (<비율>_mean_<판>.csv)의 블록 평균 메틸화를 다시 평균한 숫자 하나. 리드나 CpG 로 가중하지 않고,
+        빈 블록은 행마다 빠진다.
+    주의: 이것은 «전역» 평균 메틸화가 아니다. DMR 로 고른 패널 블록만의 평균이라 암 신호가 이미 들어 있다.
+        사전등록 74-1 이 요구한 «같은 뽑기의 전역 평균» 은 뽑은 리드의 cov 가 남지 않아 낼 수 없어 이것으로
+        대신했다. 그래서 플랫폼 · 전역 메틸화 교란을 재는 대조가 아니라, «패널 점수가 블록 평균 하나보다
+        나은가» 를 보는 대조다.
     행: 1차 조합(COMBOS 의 마지막)의 행과 같다 — 교집합 거르기를 이미 거친 D 를 쓴다.
-    AUC: 방향을 미리 정하지 않으므로 max(A, 1 - A) 다. 패널 쪽 AUC 는 한쪽이라 이 줄이 유리하다.
+    방향: 이 깊이 표의 모든 행에서 한 번만 정한다(양성 평균 ≥ 음성 평균이면 높을수록 암). 칸마다 고르지 않아
+        패널(한쪽 AUC)과 같은 조건이다.
     """
     v = '%s_%s_uni' % (PAN, depth)
     base = D[D.feature_set == COMBOS[-1]]
@@ -214,19 +220,20 @@ def baseline_lines(D, depth, ratios):
     B = pd.concat(parts, ignore_index=True)
     nan = int(B['_b'].isna().sum()) + lack
     B = B.dropna(subset=['_b'])
+    up = B.loc[B.y_true == 1, '_b'].mean() >= B.loc[B.y_true == 0, '_b'].mean()
+    B['_b'] = B['_b'] if up else -B['_b']
     rs, rp = [], []
     for r in ratios:
         x = B[B.fraction_pct == r]
-        a = auc(x.y_true.values, x._b.values)
-        rs.append(max(a, 1 - a) if a == a else a)
+        rs.append(auc(x.y_true.values, x._b.values))
         gp = x[x.y_true == 1].groupby('person')['_b'].mean()
         gn = x[x.y_true == 0].groupby('sample')['_b'].mean()
-        a = auc(np.r_[np.ones(len(gp)), np.zeros(len(gn))], np.r_[gp.values, gn.values])
-        rp.append(max(a, 1 - a) if a == a else a)
-    print('%-16s %-5s %s   검체' % ('기준선 평균메틸', '-', ''.join('%9.3f' % v for v in rs)))
+        rp.append(auc(np.r_[np.ones(len(gp)), np.zeros(len(gn))], np.r_[gp.values, gn.values]))
+    print('%-16s %-5s %s   검체' % ('기준선 블록평균', '-', ''.join('%9.3f' % v for v in rs)))
     print('%-16s %-5s %s   사람' % ('', '', ''.join('%9.3f' % v for v in rp)))
-    print('%-16s %-5s   ↑ 같은 5k 뽑기의 패널 블록 평균 메틸화 하나 · 양쪽 AUC%s'
-          % ('', '', (' · 값이 없어 뺀 행 %d' % nan) if nan else ''))
+    print('%-16s %-5s   ↑ 대조 · 판정 아님: 같은 뽑기의 패널 블록 평균 메틸화 하나(전역 아님) · 방향 %s 한 번 정함%s'
+          % ('', '', '높을수록 암' if up else '낮을수록 암', (' · 값이 없어 뺀 행 %d' % nan) if nan else ''))
+
 
 for depth in DEPTHS:
     # 태그 없는 단일모델 파일과 섞이지 않게 all_combos만 읽는다

@@ -289,7 +289,9 @@ def unify_score_unit(D, keys=('feature_set',)):
     채점(score_one_sample.py)은 검체마다 점수 폭이 1e-6 미만으로 뭉치면 그 검체만
     decision_function 으로 바꾼다. 그러면 한 칸 안에 확률과 decision_function 이 섞여
     AUC 를 해석할 수 없다. consistent 에서는 채점이 y_df 열을 늘 같이 적고, 여기서
-    묶음 안에 전환된 행이 하나라도 있으면 그 묶음 전체를 y_df 로 바꾼다.
+    decision_function 이 있는 모형(묶음 안 y_df 가 다 찬 묶음)은 묶음 전체를 y_df 로 바꾼다.
+    전환이 없어도 바꾼다 — 폭은 넓지만 일부 행이 1.0 에 붙은 «부분 포화» 동률도 없앤다(사전등록 75).
+    LR 은 시그모이드라 순서는 같고 동률만 풀린다. RF · XGB 처럼 decision_function 이 없으면 확률 그대로다.
     as_is 면 D 를 그대로 돌려준다(지금까지의 표를 낸 동작).
     돌려주는 값: (D, 단위를 바꾼 묶음 수)
     """
@@ -297,17 +299,19 @@ def unify_score_unit(D, keys=('feature_set',)):
         return D, 0
     if 'y_df' not in D.columns:
         raise SystemExit('SCORE_UNIT=consistent 인데 채점 파일에 y_df 열이 없습니다 — 같은 설정으로 다시 채점하십시오')
-    sw = D['score_type'].astype(str).str.contains('df')
-    g = sw.groupby([D[k] for k in keys]).transform('any')
-    if D.loc[g, 'y_df'].isna().any():
-        raise SystemExit('단위를 맞출 묶음에 y_df 가 빈 행이 있습니다 — decision_function 이 없는 모형이거나, '
+    K = [D[k] for k in keys]
+    st = D['score_type'].astype(str)
+    sw = st.str.contains('df')                                  # 포화로 전환된 행
+    if D.loc[sw.groupby(K).transform('any'), 'y_df'].isna().any():
+        raise SystemExit('전환된 행이 있는 묶음에 y_df 가 빈 행이 있습니다 — '
                          'consistent 로 다시 채점되지 않은 검체 파일이 섞였습니다')
+    g = D['y_df'].notna().groupby(K).transform('all')           # decision_function 이 있는 모형의 묶음
+    conv = g & st.str.startswith('predict_proba')               # 단위가 실제로 바뀌는 행 (SVM 은 이미 df)
     D = D.copy()
     D.loc[g, 'y_score'] = D.loc[g, 'y_df']
     # 확률 단위였던 행의 문턱(thr_spec95)은 이제 y_score 와 단위가 달라 비운다. y_pred 는 원래 단위로
     #   이미 판정된 값이라 그대로 둔다. 포화로 이미 decision_function 이던 행은 문턱도 z 공간이라 둔다.
     if 'thr_spec95' in D.columns:
-        _was_p = g & ~D['score_type'].astype(str).str.contains('df')
-        D.loc[_was_p, 'thr_spec95'] = float('nan')
-    D.loc[g, 'score_type'] = 'decision_function(통일)'
-    return D, int(D.loc[g, list(keys)].drop_duplicates().shape[0])
+        D.loc[conv & ~sw, 'thr_spec95'] = float('nan')
+    D.loc[conv, 'score_type'] = 'decision_function(통일)'
+    return D, int(D.loc[conv, list(keys)].drop_duplicates().shape[0])

@@ -197,8 +197,8 @@ def baseline_lines(D, depth, ratios):
         대신했다. 그래서 플랫폼 · 전역 메틸화 교란을 재는 대조가 아니라, «패널 점수가 블록 평균 하나보다
         나은가» 를 보는 대조다.
     행: 1차 조합(COMBOS 의 마지막)의 행과 같다 — 교집합 거르기를 이미 거친 D 를 쓴다.
-    방향: 이 깊이 표의 모든 행에서 한 번만 정한다(양성 평균 ≥ 음성 평균이면 높을수록 암). 칸마다 고르지 않아
-        패널(한쪽 AUC)과 같은 조건이다.
+    방향: 같은 판 학습 mean 표(비율 0 을 뺀 전부)에서 한 번 정한다 — 암 행 평균 ≥ 정상 행 평균이면 높을수록 암.
+        패널 점수의 방향도 학습 모델이 정하므로 같은 조건이다. 검증 라벨로 고르면 기준선이 유리해진다(사전등록 87-4).
     """
     v = '%s_%s_uni' % (PAN, depth)
     base = D[D.feature_set == COMBOS[-1]]
@@ -217,10 +217,17 @@ def baseline_lines(D, depth, ratios):
     if not parts:
         print('%-16s %-5s   (기준선: mean 특징 표를 못 찾았다)' % ('', ''))
         return
+    tr = [f for f in glob.glob('%s/results/panels/%s/%s/step04_ML_classifier/*_mean_%s.csv' % (_M, PAN, v, v))
+          if not os.path.basename(f).startswith('0_')]
+    if not tr:
+        print('%-16s %-5s   (기준선: 학습 mean 표가 없어 방향을 못 정한다)' % ('', ''))
+        return
+    T = pd.concat([pd.read_csv(f, index_col=0) for f in tr])
+    tb = T.drop(columns=['Type']).mean(axis=1)
+    up = tb[T['Type'] == 1].mean() >= tb[T['Type'] == 0].mean()
     B = pd.concat(parts, ignore_index=True)
     nan = int(B['_b'].isna().sum()) + lack
     B = B.dropna(subset=['_b'])
-    up = B.loc[B.y_true == 1, '_b'].mean() >= B.loc[B.y_true == 0, '_b'].mean()
     B['_b'] = B['_b'] if up else -B['_b']
     rs, rp = [], []
     for r in ratios:
@@ -231,7 +238,7 @@ def baseline_lines(D, depth, ratios):
         rp.append(auc(np.r_[np.ones(len(gp)), np.zeros(len(gn))], np.r_[gp.values, gn.values]))
     print('%-16s %-5s %s   검체' % ('기준선 블록평균', '-', ''.join('%9.3f' % v for v in rs)))
     print('%-16s %-5s %s   사람' % ('', '', ''.join('%9.3f' % v for v in rp)))
-    print('%-16s %-5s   ↑ 대조 · 판정 아님: 같은 뽑기의 패널 블록 평균 메틸화 하나(전역 아님) · 방향 %s 한 번 정함%s'
+    print('%-16s %-5s   ↑ 대조 · 판정 아님: 같은 뽑기의 패널 블록 평균 메틸화 하나(전역 아님) · 방향 %s (학습 표로 정함)%s'
           % ('', '', '높을수록 암' if up else '낮을수록 암', (' · 값이 없어 뺀 행 %d' % nan) if nan else ''))
 
 

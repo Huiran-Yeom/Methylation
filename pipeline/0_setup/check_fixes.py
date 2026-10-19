@@ -251,11 +251,11 @@ ok(lr8.get_params()['max_iter'] == lr9.get_params()['max_iter'], '08 · 09 Logis
 print()
 # ── 5. 점수 단위 맞추기 (SCORE_UNIT · meth_config.unify_score_unit) ──
 print('5. 점수 단위 맞추기')
-_D = pd.DataFrame({'feature_set': ['a', 'a', 'a', 'b', 'b', 'c'],
+_D = pd.DataFrame({'feature_set': ['a', 'a', 'a', 'b', 'b', 'c', 'd', 'd'],
                    'score_type': ['predict_proba', 'predict_proba+df(포화)', 'predict_proba', 'predict_proba', 'predict_proba',
-                                  'decision_function'],
-                   'y_score': [0.9, 7.0, 0.8, 0.3, 0.4, -1.2], 'y_df': [2.0, 7.0, 1.5, -0.8, -0.4, -1.2],
-                   'thr_spec95': [0.7, 0.85, 0.7, 0.6, 0.6, 0.1]})
+                                  'decision_function', 'predict_proba', 'predict_proba'],
+                   'y_score': [0.9, 7.0, 0.8, 1.0, 1.0, -1.2, 0.6, 0.7], 'y_df': [2.0, 7.0, 1.5, 40.0, 41.0, -1.2, np.nan, np.nan],
+                   'thr_spec95': [0.7, 0.85, 0.7, 0.6, 0.6, 0.1, 0.5, 0.5]})
 _keep = _D.copy()
 _old = M.SCORE_UNIT
 try:
@@ -265,10 +265,14 @@ try:
     M.SCORE_UNIT = 'consistent'
     _o, _n = M.unify_score_unit(_D)
     ok(_D.equals(_keep), 'consistent: 들어온 표를 제자리에서 바꾸지 않는다')
-    ok(_n == 1 and _o.y_score.tolist() == [2.0, 7.0, 1.5, 0.3, 0.4, -1.2], 'consistent: 섞인 조합(a)만 y_df 로, b · c 는 그대로')
-    ok(_o.score_type.tolist()[:3] == ['decision_function(통일)'] * 3 and _o.score_type.tolist()[5] == 'decision_function',
+    ok(_n == 2 and _o.y_score.tolist()[:6] == [2.0, 7.0, 1.5, 40.0, 41.0, -1.2],
+       'consistent: 전환 있는 조합(a)과 부분 포화 동률 조합(b)을 y_df 로 · 동률이 풀린다')
+    ok(_o.y_score.tolist()[6:] == [0.6, 0.7] and _o.score_type.tolist()[6:] == ['predict_proba'] * 2,
+       'consistent: decision_function 이 없는 모형(d)은 확률 그대로')
+    ok(_o.score_type.tolist()[:5] == ['decision_function(통일)'] * 5 and _o.score_type.tolist()[5] == 'decision_function',
        'consistent: 바꾼 행만 표기가 바뀐다 · SVM 의 decision_function 은 전환으로 보지 않는다')
-    ok(bool(np.isnan(_o.thr_spec95[0])) and _o.thr_spec95[1] == 0.85 and _o.thr_spec95[3] == 0.6,
+    ok(bool(np.isnan(_o.thr_spec95[0])) and _o.thr_spec95[1] == 0.85 and bool(np.isnan(_o.thr_spec95[3]))
+       and _o.thr_spec95[5] == 0.1 and _o.thr_spec95[6] == 0.5,
        'consistent: 확률 단위였던 행의 문턱만 비운다')
     try:
         M.unify_score_unit(_D.drop(columns=['y_df'])); ok(False, 'consistent: y_df 열이 없으면 멈춘다')

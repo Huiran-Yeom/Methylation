@@ -45,6 +45,7 @@ _DEFAULTS = {
     'COLSET_FROM': 'all',
     'BLAS_THREADS': '1',
     'SCORE_UNIT': 'as_is',
+    'REPORT_BASELINE': 'off',
     'SEED': '42',
     'TEST_SIZE': '0.2',
     'N_JOBS': '1',
@@ -164,6 +165,9 @@ BLAS_THREADS = get('BLAS_THREADS').strip().lower()
 if BLAS_THREADS != 'none' and not (BLAS_THREADS.isdigit() and int(BLAS_THREADS) >= 1):
     raise SystemExit('BLAS_THREADS 는 none 또는 1 이상의 정수여야 합니다: %r' % BLAS_THREADS)
 SCORE_UNIT = get('SCORE_UNIT').strip().lower()
+REPORT_BASELINE = get('REPORT_BASELINE').strip().lower()
+if REPORT_BASELINE not in ('on', 'off'):
+    raise SystemExit('REPORT_BASELINE 은 on 또는 off 이어야 합니다: %r' % REPORT_BASELINE)
 if SCORE_UNIT not in ('as_is', 'consistent'):
     raise SystemExit('SCORE_UNIT 은 as_is 또는 consistent 이어야 합니다: %r' % SCORE_UNIT)
 if COLSET_FROM not in ('all', 'normal'):
@@ -237,7 +241,7 @@ if __name__ == '__main__':
     for k in ('METH_ROOT', 'DATASET_ROOT', 'WORK_ROOT', 'TMP_ROOT',
               'TRAIN_SRC', 'ANALYSIS_DIR', 'GEN', 'VAL_COHORTS', 'PANELS', 'NULL_PANELS', 'VERSION', 'PANEL',
               'TARGET_DEPTH_READS', 'DEPTH_MODE', 'MUT_RATIOS', 'PATTERN_K',
-              'MIN_READS_PER_WINDOW', 'BLOCK_SIZE', 'MIN_SAMPLE_COVERAGE', 'COLSET_FROM', 'BLAS_THREADS', 'SCORE_UNIT',
+              'MIN_READS_PER_WINDOW', 'BLOCK_SIZE', 'MIN_SAMPLE_COVERAGE', 'COLSET_FROM', 'BLAS_THREADS', 'SCORE_UNIT', 'REPORT_BASELINE',
               'SEED', 'TEST_SIZE', 'N_JOBS', 'FIXED_MODEL', 'LLR_HELDOUT'):
         print('%-22s %-44s (%s)' % (k, globals()[k], SOURCE.get(k, '-')))
     # 실제로 수치 연산이 본 스레드 값(진입점이 내보낸 값 · 없으면 라이브러리 기본)

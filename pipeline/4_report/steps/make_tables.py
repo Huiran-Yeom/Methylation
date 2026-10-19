@@ -185,6 +185,49 @@ def tie_width(y, s):
 
 RAT_LABEL = ['0.1%', '0.5%', '1%', '2%', '2.5%', '3%', '5%']
 
+
+def baseline_lines(D, depth, ratios):
+    """REPORT_BASELINE=on 일 때 붙는 기준선 줄.
+
+    값: 행(검체 · 비율 · 반복)마다 같은 5k 뽑기로 만든 mean 특징 표(<비율>_mean_<판>.csv)의
+        블록 평균 메틸화를 다시 평균한 숫자 하나. 리드나 CpG 로 가중하지 않는다.
+    행: 1차 조합(COMBOS 의 마지막)의 행과 같다 — 교집합 거르기를 이미 거친 D 를 쓴다.
+    AUC: 방향을 미리 정하지 않으므로 max(A, 1 - A) 다. 패널 쪽 AUC 는 한쪽이라 이 줄이 유리하다.
+    """
+    v = '%s_%s_uni' % (PAN, depth)
+    base = D[D.feature_set == COMBOS[-1]]
+    if base.empty:
+        print('%-16s %-5s   (기준선: 1차 조합 행이 없어 내지 않는다)' % ('', ''))
+        return
+    parts, lack = [], 0
+    for (s, p), g in base.groupby(['sample', 'mut_reads']):
+        f = '%s/%s/results/%s/step04_ML_classifier/%d_mean_%s.csv' % (V, s, v, int(p), v)
+        if not os.path.exists(f):
+            lack += len(g)
+            continue
+        m = pd.read_csv(f, index_col=0)
+        bm = m.drop(columns=['Type'], errors='ignore').mean(axis=1)
+        parts.append(g.assign(_b=g['rep'].map(bm)))
+    if not parts:
+        print('%-16s %-5s   (기준선: mean 특징 표를 못 찾았다)' % ('', ''))
+        return
+    B = pd.concat(parts, ignore_index=True)
+    nan = int(B['_b'].isna().sum()) + lack
+    B = B.dropna(subset=['_b'])
+    rs, rp = [], []
+    for r in ratios:
+        x = B[B.fraction_pct == r]
+        a = auc(x.y_true.values, x._b.values)
+        rs.append(max(a, 1 - a) if a == a else a)
+        gp = x[x.y_true == 1].groupby('person')['_b'].mean()
+        gn = x[x.y_true == 0].groupby('sample')['_b'].mean()
+        a = auc(np.r_[np.ones(len(gp)), np.zeros(len(gn))], np.r_[gp.values, gn.values])
+        rp.append(max(a, 1 - a) if a == a else a)
+    print('%-16s %-5s %s   검체' % ('기준선 평균메틸', '-', ''.join('%9.3f' % v for v in rs)))
+    print('%-16s %-5s %s   사람' % ('', '', ''.join('%9.3f' % v for v in rp)))
+    print('%-16s %-5s   ↑ 같은 5k 뽑기의 패널 블록 평균 메틸화 하나 · 양쪽 AUC%s'
+          % ('', '', (' · 값이 없어 뺀 행 %d' % nan) if nan else ''))
+
 for depth in DEPTHS:
     # 태그 없는 단일모델 파일과 섞이지 않게 all_combos만 읽는다
     fs = _allcombo('%s/*/results/%s_%s_uni/step04_ML_classifier/y_prob_all_%s_%s_uni'
@@ -278,5 +321,8 @@ for depth in DEPTHS:
             _mu = min(u for _, _, u in tw if u)
             print('%-16s %-5s   고유값 최소 %d개: 이 줄은 동점이 많아 순위를 주장할 수 없다'
                   % ('', '', _mu))
+
+    if getattr(_cfg, 'REPORT_BASELINE', 'off') == 'on':
+        baseline_lines(D, depth, ratios)
 
 gen_warn()

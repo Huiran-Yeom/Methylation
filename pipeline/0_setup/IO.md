@@ -58,6 +58,7 @@
 | `07_llrfeat.py` | 섞은 BAM + `llrref_K<K>_minr<MINR>.parquet` | `<n>_llr_<판>.csv` |
 | `08_ML_classifier.py` | 피처 5종 | `cv_<n>_<판>.csv` (조합 31 × 모델 4) |
 | `09_save_best_j.py` | `cv_*.csv` + 피처 | `RS/step04_ML_classifier/models/<조합>/pooled/BEST.joblib` |
+| `split_ab.py` (선택 · 교차 채점 준비) | `j_candidates<GEN>/samples.csv` · 사용 목록 | `<out>/use_normal_A.txt` 등 넷(정상·암 × A·B) |
 
 `<n>` 은 비율의 종양 리드 수입니다(예 `25` = 0.5%).
 `BEST.joblib` 에는 모델과 문턱 `thr_spec95` 가 같이 들어갑니다.
@@ -92,6 +93,7 @@
 | 스크립트 | 입력 | 출력 |
 |---|---|---|
 | `make_tables.py <판>` | `y_prob_all_*_all_combos.csv` 전부 · `REPORT_BASELINE=on` 이면 검체마다 `<비율>_mean_<판>.csv` 도 | 표 텍스트(표준출력) — 조합별 AUC, 검체 단위와 사람 단위 · on 이면 기준선 줄 |
+| `cross_score.py` (선택) | 두 트리의 `models/<조합>/pooled/BEST.joblib` · `<mut>_<피처>_<판>.csv` · `cv_<mut>_<판>.csv` | 표 텍스트 — A→B · B→A AUC 와 학습 CV(W) |
 | `primary_metric.py` | 같음 | 1차 지표 AUC + 짝지은 부트스트랩 구간 + 특이도 |
 
 `make_tables.py` 는 `COHORT` 환경변수로 코호트를 고릅니다.

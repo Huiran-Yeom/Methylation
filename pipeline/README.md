@@ -233,6 +233,18 @@ Stages 2 and 4 take the normal/cancer split from the `type` column of
 `samples.csv`. Inside `2_train`, sample ids are built as `Normal1…` / `GBM1…`
 whatever `CANCER_LABEL` is, and the classifier keys on that prefix.
 
+Cross-split check (optional). Training CV puts reads of the same cell line and
+the same normal donor on both sides of a fold, so it cannot show whether the model
+generalises to unseen cell lines or donors. `2_train/steps/split_ab.py` splits the
+mixing group into halves A and B by person (normals) and cell line (cancer), with
+the same byte-order alternation as the LLR reference split; `--layout-tsv` balances
+SE and PE normals between the halves. Build two output roots that link stage 1
+except the pools, build each root's pools with
+`11_pool.py --use use_<normal|cancer>_<A|B>.txt`, run stage 2 in both, then
+`4_report/steps/cross_score.py --a <root A> --b <root B>` scores each half's
+training features with the other half's models and prints the cross AUC (G) next
+to the within-half CV (W).
+
 Pooled BAMs. A pooled BAM holds only reads inside its own panel regions, so step
 11 builds three sets (`_cellline`, `_rand`, `_randb`) and `2_train/steps/config.py`
 picks the one matching `PANEL`.
@@ -386,10 +398,10 @@ README.md  requirements.txt  .gitignore  .gitattributes
                                   run_pool.sh moderated_t
 2_train/      run_train.sh steps/ 01-03_Preprocessing…Mixing 04_coverage_check
                                   05_Feature_Matrix 06_jsdfeat 07_llrfeat
-                                  08_ML_classifier 09_save_best_j config
+                                  08_ML_classifier 09_save_best_j split_ab config
 3_validate/   run_validate.sh steps/ run_one_sample make_val_config score_one_sample
                                   paths val_single
                                   cohorts/ sample_cohort.conf.example patient_plasma.conf.example
-4_report/     make_report.sh steps/ make_tables primary_metric plasma_metric plasma_baseline
+4_report/     make_report.sh steps/ make_tables primary_metric plasma_metric plasma_baseline cross_score
 5_analysis/   one-off analyses behind the pre-registration addenda (see its README)
 ```

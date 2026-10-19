@@ -319,8 +319,11 @@ when comparing.
 Config lives in one place. Edit `0_setup/config.conf`; environment variables win
 over it. `COLSET_FROM` chooses which rows decide the feature columns in stage 2
 (`all`, the default and the behaviour behind `../results/`, or `normal`, training
-normals only, so that column filtering never sees cancer rows); `normal` moved the
-primary-combination CV by at most 0.013 on the six 5k cells we tried. Each output folder gets a `config_snapshot.txt` recording where every
+normals only, so that column filtering never sees cancer rows). On the six 5k
+cells we tried, with BLAS threads pinned to 1 and identical inputs, `normal`
+changed the cross-validated AUC of the primary combination's BEST model by
+-0.009 to +0.013. The output folders do not depend on this key, so give each
+setting its own `METH_ROOT` when comparing them. Each output folder gets a `config_snapshot.txt` recording where every
 value came from (env / conf / default).
 
 File names are coupled to the config. Validation copies the training scripts

@@ -190,11 +190,14 @@ def to_frame(rows_normal, rows_gbm, label):
         #   끼어든다(사전등록 71-2). normal 은 학습 정상 행만 본다. 정상 행은 비율마다 같은
         #   0% 행렬이라 비율마다 같은 블록이 남는다.
         ref = df[df.index.astype(str).str.startswith('Normal')] if COLSET_FROM == 'normal' else df
+        if len(ref) == 0:
+            raise SystemExit(f'COLSET_FROM={COLSET_FROM} 인데 정상 행이 0개입니다 ({label}) — 행 이름이 Normal 로 시작해야 합니다')
         if MIN_SAMPLE_COVERAGE >= 1.0:
             keep = ref.notna().all(axis=0)              # 최종 코드의 dropna(how='any') 와 같다
         else:
             keep = ref.notna().sum(axis=0) >= int(np.ceil(MIN_SAMPLE_COVERAGE * len(ref)))
-        df = df.loc[:, keep]
+        df = df.loc[:, keep].copy()                    # 아래 df['Type'] = 가 원본 조각에 쓰지 않게
+        del ref
         # 남은 결측은 여기서 채우지 않는다 (추기 44-6). 08 · 09 의 Imputer 가 학습 접기 평균으로만 채운다.
         if COLSET_FROM == 'normal':
             # 정상에서는 덮이지만 암 행에서 많이 비는 블록 — 빈칸 자체가 신호가 될 수 있어 센다.

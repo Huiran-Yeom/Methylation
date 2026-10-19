@@ -401,9 +401,17 @@ def main():
                 _oth = [x for x, y in zip(cols, colblk) if y is None]
                 if keep_cols is None:
                     # 결측률을 재는 행: all 은 첫 비율 행렬의 전 행, normal 은 학습 정상 행만(사전등록 71-2).
-                    _rows = F.index.astype(str).str.startswith('Normal') if getattr(C, 'COLSET_FROM', 'all') == 'normal'                         else [True] * len(F)
-                    _na = F.loc[_rows, _blk].isna().mean()
+                    _normal = getattr(C, 'COLSET_FROM', 'all') == 'normal'
+                    _isn = F.index.astype(str).str.startswith('Normal')
+                    if _normal and not _isn.any():
+                        sys.exit('COLSET_FROM=normal 인데 정상 행이 0개입니다 — 행 이름이 Normal 로 시작해야 합니다')
+                    _na = F.loc[_isn if _normal else [True] * len(F), _blk].isna().mean()
                     keep_cols = [x for x in _blk if _na[x] < MAXNA]
+                    if _normal:
+                        # 정상에서는 덮이지만 암 행에서 많이 비는 창 — 빈칸 자체가 신호가 될 수 있어 센다(05 와 같은 기록).
+                        _tna = F.loc[~_isn, keep_cols].isna().mean() if (~_isn).any() else None
+                        print('    칸 거르기(normal): 암 행 결측 %.0f%% 이상인 남은 칸 %d개'
+                              % (100 * MAXNA, 0 if _tna is None else int((_tna >= MAXNA).sum())))
                     print('    칸 거르기: 결측 %.0f%% 미만 %d / %d 칸만 남깁니다'
                           % (100 * MAXNA, len(keep_cols), len(_blk)))
                     if not COLS_FILE:

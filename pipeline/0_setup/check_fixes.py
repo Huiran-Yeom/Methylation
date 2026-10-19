@@ -141,7 +141,7 @@ rows_n = {'Normal%d' % i: {'1_10': 0.1 * i, '1_20': np.nan if i == 1 else 0.5, '
 rows_g = {'GBM%d' % i: {'1_10': 0.9, '1_20': 0.6, '1_30': np.nan if i > 1 else 0.7}
           for i in range(1, 6)}
 for val in (False, True):
-    ns = {'pd': pd, 'np': np, 'MIN_SAMPLE_COVERAGE': 0.8, '_VAL': val}
+    ns = {'pd': pd, 'np': np, 'MIN_SAMPLE_COVERAGE': 0.8, '_VAL': val, 'COLSET_FROM': 'all'}
     exec(ft, ns)
     df = ns['to_frame'](rows_n, rows_g, 'test')
     X = df.drop(columns=['Type'])
@@ -152,6 +152,22 @@ for val in (False, True):
         ok(list(X.columns) == ['1_10', '1_20'], '학습: 커버율 80% 미만 블록(1_30)은 버린다')
         ok(bool(np.isnan(X.loc['Normal1', '1_20'])), '학습: 빈칸을 묶음 평균으로 채우지 않는다')
     ok(df['Type'].tolist() == [0] * 5 + [1] * 5, '라벨 열은 그대로')
+
+# 3-2 칸을 정상 행만으로 고른다 (COLSET_FROM=normal · 사전등록 71-2 · 86)
+#   블록 1_40 은 정상 다섯 행에서는 다 덮이고 암 다섯 행에서는 다 빈다.
+rn = {k: {**v, '1_40': 0.3} for k, v in rows_n.items()}
+rg = {k: {**v, '1_40': np.nan} for k, v in rows_g.items()}
+for mode, want in (('all', ['1_10', '1_20']), ('normal', ['1_10', '1_20', '1_40'])):
+    ns = {'pd': pd, 'np': np, 'MIN_SAMPLE_COVERAGE': 0.8, '_VAL': False, 'COLSET_FROM': mode}
+    exec(ft, ns)
+    X = ns['to_frame'](rn, rg, 'test').drop(columns=['Type'])
+    ok(list(X.columns) == want, '%s: 남는 블록 %s' % (mode, want))
+ns = {'pd': pd, 'np': np, 'MIN_SAMPLE_COVERAGE': 0.8, '_VAL': False, 'COLSET_FROM': 'normal'}
+exec(ft, ns)
+try:
+    ns['to_frame']({}, rg, 'test'); ok(False, 'normal: 정상 행 0개면 멈춘다')
+except SystemExit:
+    ok(True, 'normal: 정상 행 0개면 멈춘다')
 
 # ── 4. 다음 판 준비 (사전등록 65) ──
 print('4. 다음 판 준비')

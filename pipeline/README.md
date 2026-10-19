@@ -234,16 +234,34 @@ Stages 2 and 4 take the normal/cancer split from the `type` column of
 whatever `CANCER_LABEL` is, and the classifier keys on that prefix.
 
 Cross-split check (optional). Training CV puts reads of the same cell line and
-the same normal donor on both sides of a fold, so it cannot show whether the model
-generalises to unseen cell lines or donors. `2_train/steps/split_ab.py` splits the
-mixing group into halves A and B by person (normals) and cell line (cancer), with
-the same byte-order alternation as the LLR reference split; `--layout-tsv` balances
-SE and PE normals between the halves. Build two output roots that link stage 1
-except the pools, build each root's pools with
-`11_pool.py --use use_<normal|cancer>_<A|B>.txt`, run stage 2 in both, then
-`4_report/steps/cross_score.py --a <root A> --b <root B>` scores each half's
-training features with the other half's models and prints the cross AUC (G) next
-to the within-half CV (W).
+the same normal donor on both sides of a fold. The cross-split check trains on one
+half of the mixing group and scores the other half, so the classifier meets cell
+lines and donors it has not seen. It is not a fully unseen test: panel selection
+(stage 1) and the normal reference distribution behind `jsd` and `pdr` were built
+from both halves. It needs `LLR_HELDOUT=1`.
+
+```bash
+# 1) split the mixing group by person (normals) and cell line (cancer);
+#    pass the lists the original pools were built from; --layout-tsv balances SE/PE
+python 2_train/steps/split_ab.py --out lists     --use-normal <normal list> --use-cancer <cancer list> [--layout-tsv layout.tsv]
+
+# 2) for each half X in A, B: a new output root that links stage-1 outputs one by
+#    one, except the pool folders, which the next command writes
+R=<root_X>; mkdir -p $R/results/dmr $R/sample_data
+for d in $METH_ROOT/results/dmr/*; do
+  case $(basename $d) in j_pool*) ;; *) ln -s "$(readlink -f $d)" $R/results/dmr/;; esac
+done
+METH_ROOT=$R USE_NORMAL=lists/use_normal_X.txt USE_GBM=lists/use_cancer_X.txt   bash 1_dmr/steps/run_pool.sh cellline
+METH_ROOT=$R VERSION=j15jsd200_5k_uni PANEL=jsd200 TARGET_DEPTH_READS=5000   bash 2_train/run_train.sh            # once per panel
+
+# 3) score each half with the other half's models
+python 4_report/steps/cross_score.py --a <root_A> --b <root_B>
+```
+
+`cross_score.py` prints the cross AUC (G, mean of A→B and B→A) next to the
+within-half CV of the BEST model's type (W) and of the best of four models (W4).
+G is the pooled BEST model's score while W is a single-ratio CV, so G − W also
+contains that difference.
 
 Pooled BAMs. A pooled BAM holds only reads inside its own panel regions, so step
 11 builds three sets (`_cellline`, `_rand`, `_randb`) and `2_train/steps/config.py`

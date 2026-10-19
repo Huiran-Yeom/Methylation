@@ -1,6 +1,6 @@
-# 폐 Patient · 환자 혈장을 섞지 않고 채점 · main 코드 모델 (탐색 · 사전등록 추기 85-3)
+# 폐 Patient · 환자 혈장을 섞지 않고 채점 · main 코드 모델 (탐색)
 # 모델: main(계산은 커밋 79979d24 와 같음)의 5k 학습 모델(세 판 · pooled BEST). 환자 48명 · 같은 플랫폼 정상 7명 · 사람 단위 · 반복 10.
-# 판정: pipeline/4_report/steps/plasma_metric.py (판정 규칙은 추기 80 · 채점 전에 정함). 1차 지표가 아니다.
+# 판정: pipeline/4_report/steps/plasma_metric.py (판정 규칙은 채점 전에 정함). 1차 지표가 아니다.
 # 기준선: 총 리드 수 = GSE301266 처리 로그의 정렬 전 원 리드 수 · 전역 평균 메틸화 = bismark cov (결함 수정판 판정과 같은 입력).
 # 결함 수정판(e8d5fe5d) 모델 결과는 ../../../lung/validation/patient48_undiluted.txt 에 있다(차이 ±0.003).
 #

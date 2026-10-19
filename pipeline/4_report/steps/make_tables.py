@@ -297,7 +297,7 @@ for depth in DEPTHS:
     print('\n== %s 리드 · %s · %s · 채점 %d/%d · 비율당 양성/음성 각 %d'
           % (depth, PAN, COHORT, len(fs), NTOT, n1))
     if _cutinfo:
-        print('   [교집합] 비율마다 세 판 공통만 씀 (공통/합집합) : %s — 사전등록 2-2'
+        print('   [교집합] 비율마다 세 판 공통만 씀 (공통/합집합) : %s'
               % ' · '.join(_cutinfo))
     print('%-16s %-5s %s' % ('피처', '모델', ''.join('%9s' % ('%g%%' % r) for r in ratios)))
     for c in COMBOS:

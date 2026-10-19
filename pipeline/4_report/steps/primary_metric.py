@@ -228,7 +228,7 @@ def a1(pos, neg):
     return float(roc_auc_score(y, s))
 
 
-GATE = 0.70   # 되돌림 ㉠: 셋 다 이것을 못 넘으면 순위를 매기지 않는다
+GATE = 0.70   # 되돌림 기준: 셋 다 이것을 못 넘으면 순위를 매기지 않는다
 
 
 def run(combo, mixed):
@@ -268,7 +268,7 @@ def run(combo, mixed):
             return 1
         D[p] = d
     common = set.intersection(*[set(d['sample']) for d in D.values()])
-    print('  교집합 검체 %d개 · 사람 %d명 (사전등록 2-2)'
+    print('  교집합 검체 %d개 · 사람 %d명'
           % (len(common), len({person(s) for s in common})))
 
     out = {}
@@ -281,13 +281,13 @@ def run(combo, mixed):
         print('  %-8s AUC %.4f  (양성 %d행 · 음성 %d행)'
               % (p, out[p][2], len(pos), len(neg)))
 
-    # ── 되돌림 ㉠ 을 여기서 판정한다 ──
+    # ── 되돌림 기준(0.70)을 여기서 판정한다 ──
     aucs = [out[p][2] for p in PANELS]
     if all(v == v for v in aucs) and max(aucs) < GATE:
         print('')
-        print('  되돌림 ㉠ 발동: 셋 중 어느 것도 %.2f 을 못 넘었다 (최고 %.4f).'
+        print('  되돌림 발동: 셋 중 어느 것도 %.2f 을 못 넘었다 (최고 %.4f).'
               % (GATE, max(aucs)))
-        print('    사전등록은 이 조건에서 순위를 매기지 않는다 고 결과 전에 정했다.')
+        print('    이 조건에서는 순위를 매기지 않는다(결과 전에 정함).')
         print('    아래 구간은 순위를 내려는 것이 아니라 구간을 보고하려고 낸다.')
 
     # ── 음성 재추출 축이 있는가 ──
@@ -296,7 +296,6 @@ def run(combo, mixed):
         print('  [혼합판] 음성 한 검체에 정상 10명이 리드 수준에서 다 들어간다.')
         print('           음성 행의 rep(Normal1..10)은 반복본 번호이지 공여자가 아니다.')
         print('           -> 음성 공여자 층화를 하지 않는다. 양성만 사람 단위로 재표본한다.')
-        print('           (사전등록 3절 09-16 21:10 결정 · Z절 09-22 고정)')
         dn, eg, gs = [], [], []
     else:
         dn = sorted({int(x) for x in pd.concat([out[p][1]['donor'] for p in PANELS]) if x})

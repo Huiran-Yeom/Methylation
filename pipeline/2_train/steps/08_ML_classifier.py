@@ -42,6 +42,7 @@ import itertools
 import os
 import sys
 import traceback
+import warnings
 
 import joblib
 import numpy as np
@@ -54,6 +55,7 @@ from sklearn.pipeline import Pipeline as _Pipe
 from sklearn.impute import SimpleImputer as _Imputer
 from sklearn.model_selection import (train_test_split,
                                      cross_val_predict, StratifiedKFold)
+from sklearn.exceptions import ConvergenceWarning
 from sklearn.svm import SVC
 from xgboost import XGBClassifier
 
@@ -167,6 +169,24 @@ def load_combo(p, keys):
         X = X.join(extra, how='inner')
     y = y0.loc[X.index]
     return X, y
+
+
+# 수렴 경고를 센다. 파이썬 기본은 같은 자리 경고를 한 번만 보여 줘 몇 번 났는지 모른다.
+#   전부 세되 화면에는 처음 하나만 낸다. CV 는 n_jobs=1 이라 경고가 이 프로세스에서 난다.
+_conv = [0]
+_show = warnings.showwarning
+
+
+def _count_conv(message, category, *a, **k):
+    if issubclass(category, ConvergenceWarning):
+        _conv[0] += 1
+        if _conv[0] > 1:
+            return
+    _show(message, category, *a, **k)
+
+
+warnings.simplefilter('always', ConvergenceWarning)
+warnings.showwarning = _count_conv
 
 
 def main():
@@ -420,6 +440,9 @@ def main():
             failures.append('cv 행 %d / 기대 %d (비율 %d) - 조용히 적게 나왔다' % (_n, _expect, _p))
     if len(set(_cvcount.values())) > 1:
         failures.append('비율마다 cv 행수가 다르다: %s' % dict(sorted(_cvcount.items())))
+    print(f'\n수렴 경고 {_conv[0]}건 (CONVERGENCE_GATE={C.CONVERGENCE_GATE})')
+    if _conv[0] and C.CONVERGENCE_GATE == 'on':
+        failures.append('수렴 경고 %d건 — CONVERGENCE_GATE=on' % _conv[0])
     if failures:
         print(f'\n실패 {len(failures)}건:')
         for f in failures:

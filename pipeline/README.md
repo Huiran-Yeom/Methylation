@@ -328,6 +328,9 @@ one thread. To regenerate the `e8d5fe5d` tables in `../results/`, check out tag
 `results-e8d5fe5d` and run with the three variables unset (on `main`, the same
 is `BLAS_THREADS=none`).
 
+Step 08 prints the number of convergence warnings at the end. With
+`CONVERGENCE_GATE=on` (default `off`) any warning makes the step fail.
+
 `../results/main/` holds the same tables re-run on `main`; the primary metric
 moves by at most 0.002 and every cell stays below 0.70.
 

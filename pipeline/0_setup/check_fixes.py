@@ -282,5 +282,23 @@ try:
 finally:
     M.SCORE_UNIT = _old
 
+print()
+# ── 6. 08 의 수렴 경고 세기 (CONVERGENCE_GATE) ──
+print('6. 수렴 경고 세기')
+import contextlib, warnings  # noqa: E401,E402
+from sklearn.exceptions import ConvergenceWarning  # noqa: E402
+from sklearn.linear_model import LogisticRegression  # noqa: E402
+_seg = block_src(os.path.join(TREE, '2_train/steps/08_ML_classifier.py'), '# 수렴 경고를 센다', 'def main():')
+_err = io.StringIO()
+with warnings.catch_warnings(), contextlib.redirect_stderr(_err):
+    nsw = {'warnings': warnings, 'ConvergenceWarning': ConvergenceWarning}
+    exec(_seg, nsw)
+    _rx = np.random.RandomState(0).randn(60, 5); _ry = (_rx[:, 0] > 0).astype(int)
+    for _ in range(3):
+        LogisticRegression(max_iter=1).fit(_rx, _ry)
+ok(nsw['_conv'][0] == 3, '08: 같은 자리 수렴 경고도 다 센다 (%d)' % nsw['_conv'][0])
+ok(_err.getvalue().count('ConvergenceWarning') == 1, '08: 화면에는 처음 하나만 낸다')
+ok("failures.append('수렴 경고" in src08 and "C.CONVERGENCE_GATE == 'on'" in src08, '08: CONVERGENCE_GATE=on 이면 실패로 넣는다')
+
 print('결과: %s' % ('전부 통과' if not bad else '실패 %d개' % len(bad)))
 sys.exit(1 if bad else 0)

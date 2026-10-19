@@ -46,6 +46,7 @@ _DEFAULTS = {
     'BLAS_THREADS': '1',
     'SCORE_UNIT': 'as_is',
     'REPORT_BASELINE': 'off',
+    'CONVERGENCE_GATE': 'off',
     'SEED': '42',
     'TEST_SIZE': '0.2',
     'N_JOBS': '1',
@@ -170,6 +171,9 @@ if SCORE_UNIT not in ('as_is', 'consistent'):
 REPORT_BASELINE = get('REPORT_BASELINE').strip().lower()
 if REPORT_BASELINE not in ('on', 'off'):
     raise SystemExit('REPORT_BASELINE 은 on 또는 off 이어야 합니다: %r' % REPORT_BASELINE)
+CONVERGENCE_GATE = get('CONVERGENCE_GATE').strip().lower()
+if CONVERGENCE_GATE not in ('on', 'off'):
+    raise SystemExit('CONVERGENCE_GATE 는 on 또는 off 이어야 합니다: %r' % CONVERGENCE_GATE)
 if COLSET_FROM not in ('all', 'normal'):
     raise SystemExit('COLSET_FROM 은 all 또는 normal 이어야 합니다: %r' % COLSET_FROM)
 TEST_SIZE = float(get('TEST_SIZE'))
@@ -241,7 +245,7 @@ if __name__ == '__main__':
     for k in ('METH_ROOT', 'DATASET_ROOT', 'WORK_ROOT', 'TMP_ROOT',
               'TRAIN_SRC', 'ANALYSIS_DIR', 'GEN', 'VAL_COHORTS', 'PANELS', 'NULL_PANELS', 'VERSION', 'PANEL',
               'TARGET_DEPTH_READS', 'DEPTH_MODE', 'MUT_RATIOS', 'PATTERN_K',
-              'MIN_READS_PER_WINDOW', 'BLOCK_SIZE', 'MIN_SAMPLE_COVERAGE', 'COLSET_FROM', 'BLAS_THREADS', 'SCORE_UNIT', 'REPORT_BASELINE',
+              'MIN_READS_PER_WINDOW', 'BLOCK_SIZE', 'MIN_SAMPLE_COVERAGE', 'COLSET_FROM', 'BLAS_THREADS', 'SCORE_UNIT', 'REPORT_BASELINE', 'CONVERGENCE_GATE',
               'SEED', 'TEST_SIZE', 'N_JOBS', 'FIXED_MODEL', 'LLR_HELDOUT'):
         print('%-22s %-44s (%s)' % (k, globals()[k], SOURCE.get(k, '-')))
     # 실제로 수치 연산이 본 스레드 값(진입점이 내보낸 값 · 없으면 라이브러리 기본)

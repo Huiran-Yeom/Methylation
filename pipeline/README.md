@@ -317,7 +317,10 @@ when comparing.
 ## Things to know when reading the code
 
 Config lives in one place. Edit `0_setup/config.conf`; environment variables win
-over it. Each output folder gets a `config_snapshot.txt` recording where every
+over it. `COLSET_FROM` chooses which rows decide the feature columns in stage 2
+(`all`, the default and the behaviour behind `../results/`, or `normal`, training
+normals only, so that column filtering never sees cancer rows); `normal` moved the
+primary-combination CV by at most 0.013 on the six 5k cells we tried. Each output folder gets a `config_snapshot.txt` recording where every
 value came from (env / conf / default).
 
 File names are coupled to the config. Validation copies the training scripts

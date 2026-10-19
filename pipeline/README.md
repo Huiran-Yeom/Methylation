@@ -4,7 +4,7 @@ Code for building a methylation-pattern classifier for glioblastoma (GBM) from
 cfDNA and validating it on an external cohort. The same code, with different
 inputs, was run on small-cell lung cancer (SCLC) cell lines as a supporting study.
 
-The tables in `../results/` were produced by commit `e8d5fe5d` (tag
+The tables in `results/` were produced by commit `e8d5fe5d` (tag
 `results-e8d5fe5d`). Later commits change four computations (see
 [Reproducibility](#reproducibility)), so check out that tag to regenerate them.
 
@@ -294,8 +294,8 @@ Which commit made which numbers:
 
 | Numbers | Commit |
 |---|---|
-| `../results/` (GBM and lung, training CV and validation) | `e8d5fe5d`, tag `results-e8d5fe5d` |
-| this branch | `e8d5fe5d` plus four changes from `79979d24`: the held-out split in `05_llrref` uses the whole `samples.csv`; validation llr blocks come from the training mean table (`LLR_KEEP_FROM`); validation mode is also signalled by `METH_VALIDATE=1`; in stage 2 the threshold predictions are imputed inside each fold and Logistic Regression uses `max_iter=2000`. These change `cv_all.csv` and the thresholds, so this branch does not regenerate `../results/`. |
+| `results/` (GBM and lung, training CV and validation) | `e8d5fe5d`, tag `results-e8d5fe5d` |
+| this branch | `e8d5fe5d` plus four changes from `79979d24`: the held-out split in `05_llrref` uses the whole `samples.csv`; validation llr blocks come from the training mean table (`LLR_KEEP_FROM`); validation mode is also signalled by `METH_VALIDATE=1`; in stage 2 the threshold predictions are imputed inside each fold and Logistic Regression uses `max_iter=2000`. These change `cv_all.csv` and the thresholds, so this branch does not regenerate `results/`. |
 
 A from-scratch re-run of `e8d5fe5d` (all of stage 1 on empty output roots, then
 stages 2–3, BLAS threads pinned to 1) was compared with the stored outputs at a
@@ -323,14 +323,14 @@ as part of any reproduction.
 `OPENBLAS_NUM_THREADS` and `MKL_NUM_THREADS` in the stage entry points
 (`run_*.sh`, `make_report.sh`); a value already present in the environment wins,
 and the values actually used are written to `config_snapshot.txt`. Step scripts
-run directly with `python` are not pinned. `../results/main/` was produced with
-one thread. To regenerate the `e8d5fe5d` tables in `../results/`, check out tag
+run directly with `python` are not pinned. `results/main/` was produced with
+one thread. To regenerate the `e8d5fe5d` tables in `results/`, check out tag
 `results-e8d5fe5d` and set all three variables to 32 (on `main`, `BLAS_THREADS=32`).
 The stored tables were trained with the variables unset on a 32-core server with
 OpenBLAS; re-running one cell (lung jsd200 5k) with 32 set explicitly matched all
 1,116 rows. Other cells were not re-run.
 
-`../results/main/` holds the same tables re-run on `main`; the primary metric
+`results/main/` holds the same tables re-run on `main`; the primary metric
 moves by at most 0.002 and every cell stays below 0.70.
 
 Steps 08 and 09 print the number of convergence warnings at the end. With
@@ -363,7 +363,7 @@ when comparing.
 
 Config lives in one place. Edit `0_setup/config.conf`; environment variables win
 over it. `COLSET_FROM` chooses which rows decide the feature columns in stage 2
-(`all`, the default and the behaviour behind `../results/`, or `normal`, training
+(`all`, the default and the behaviour behind `results/`, or `normal`, training
 normals only, so that column filtering never sees cancer rows). On the six 5k
 cells we tried, with BLAS threads pinned to 1 and identical inputs, `normal`
 changed the cross-validated AUC of the primary combination's BEST model by
@@ -373,7 +373,7 @@ setting its own `METH_ROOT` when comparing them.
 `SCORE_UNIT` controls the unit of validation scores. Scoring switches a sample to
 `decision_function` when its predicted probabilities collapse onto 1.0, so with
 the default `as_is` one table cell can mix probabilities and decision values (the
-lung 50k cells flagged in `../results/README.md`). With `consistent`, scoring
+lung 50k cells flagged in `results/README.md`). With `consistent`, scoring
 also writes the decision value (`y_df`), and the reports use it for every
 panel-depth-combination whose model has one (Logistic Regression, SVM), switched
 or not. This also breaks ties among rows that sit at exactly 1.0 without the

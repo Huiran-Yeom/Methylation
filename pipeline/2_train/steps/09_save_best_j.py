@@ -175,7 +175,7 @@ def fit_save(X, y, md, tag):
     thr = float(np.percentile(o[yv == 0], 95))
     # [진단] 문턱이 어디에 서 있는지 남긴다.
     #   문턱은 OOF 음성의 95분위인데, 음성이 100개뿐이라 알갱이가 1% 다.
-    #   게다가 실측 문턱이 5k 0.9871 · 15k 0.8610 으로 [0,1] 의 맨 끝이고
+    #   게다가 옛 판 실측 문턱이 5k 0.9871 · 15k 0.8610 으로 [0,1] 의 맨 끝이고
     #   깊이마다 0.126 이나 다르다. 분포가 없으면 나중에 해석할 수 없다.
     _neg = np.asarray(o[yv == 0], dtype=float)
     _pos = np.asarray(o[yv == 1], dtype=float)

@@ -161,6 +161,8 @@ N_JOBS = int(get('N_JOBS'))
 MIN_SAMPLE_COVERAGE = float(get('MIN_SAMPLE_COVERAGE'))
 COLSET_FROM = get('COLSET_FROM').strip().lower()
 BLAS_THREADS = get('BLAS_THREADS').strip().lower()
+if BLAS_THREADS != 'none' and not (BLAS_THREADS.isdigit() and int(BLAS_THREADS) >= 1):
+    raise SystemExit('BLAS_THREADS 는 none 또는 1 이상의 정수여야 합니다: %r' % BLAS_THREADS)
 SCORE_UNIT = get('SCORE_UNIT').strip().lower()
 if SCORE_UNIT not in ('as_is', 'consistent'):
     raise SystemExit('SCORE_UNIT 은 as_is 또는 consistent 이어야 합니다: %r' % SCORE_UNIT)
@@ -225,6 +227,9 @@ def snapshot(folder):
                 % (datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), who))
         for k in sorted(SOURCE):
             f.write('%-22s %-46s (%s)\n' % (k, globals().get(k, ''), SOURCE[k]))
+        # 수치 연산이 실제로 본 스레드 값. 환경변수로 미리 준 값이 BLAS_THREADS 보다 이기므로 따로 적는다.
+        for k in ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS'):
+            f.write('%-22s %-46s (%s)\n' % (k, os.environ.get(k, '없음(라이브러리 기본)'), 'env'))
     return p
 
 
@@ -257,8 +262,14 @@ def unify_score_unit(D, keys=('feature_set',)):
     sw = D['score_type'].astype(str).str.contains('df')
     g = sw.groupby([D[k] for k in keys]).transform('any')
     if D.loc[g, 'y_df'].isna().any():
-        raise SystemExit('단위를 맞출 묶음에 y_df 가 빈 행이 있습니다 (decision_function 이 없는 모형)')
+        raise SystemExit('단위를 맞출 묶음에 y_df 가 빈 행이 있습니다 — decision_function 이 없는 모형이거나, '
+                         'consistent 로 다시 채점되지 않은 검체 파일이 섞였습니다')
     D = D.copy()
     D.loc[g, 'y_score'] = D.loc[g, 'y_df']
+    # 확률 단위였던 행의 문턱(thr_spec95)은 이제 y_score 와 단위가 달라 비운다. y_pred 는 원래 단위로
+    #   이미 판정된 값이라 그대로 둔다. 포화로 이미 decision_function 이던 행은 문턱도 z 공간이라 둔다.
+    if 'thr_spec95' in D.columns:
+        _was_p = g & ~D['score_type'].astype(str).str.contains('df')
+        D.loc[_was_p, 'thr_spec95'] = float('nan')
     D.loc[g, 'score_type'] = 'decision_function(통일)'
     return D, int(D.loc[g, list(keys)].drop_duplicates().shape[0])

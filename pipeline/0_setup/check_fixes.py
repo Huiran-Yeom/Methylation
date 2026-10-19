@@ -251,21 +251,34 @@ ok(lr8.get_params()['max_iter'] == lr9.get_params()['max_iter'], '08 · 09 Logis
 print()
 # ── 5. 점수 단위 맞추기 (SCORE_UNIT · meth_config.unify_score_unit) ──
 print('5. 점수 단위 맞추기')
-_D = pd.DataFrame({'feature_set': ['a', 'a', 'a', 'b', 'b'],
-                   'score_type': ['predict_proba', 'predict_proba+df(포화)', 'predict_proba', 'predict_proba', 'predict_proba'],
-                   'y_score': [0.9, 7.0, 0.8, 0.3, 0.4], 'y_df': [2.0, 7.0, 1.5, -0.8, -0.4]})
+_D = pd.DataFrame({'feature_set': ['a', 'a', 'a', 'b', 'b', 'c'],
+                   'score_type': ['predict_proba', 'predict_proba+df(포화)', 'predict_proba', 'predict_proba', 'predict_proba',
+                                  'decision_function'],
+                   'y_score': [0.9, 7.0, 0.8, 0.3, 0.4, -1.2], 'y_df': [2.0, 7.0, 1.5, -0.8, -0.4, -1.2],
+                   'thr_spec95': [0.7, 0.85, 0.7, 0.6, 0.6, 0.1]})
+_keep = _D.copy()
 _old = M.SCORE_UNIT
 try:
     M.SCORE_UNIT = 'as_is'
     _o, _n = M.unify_score_unit(_D)
-    ok(_o.equals(_D) and _n == 0, 'as_is: 아무것도 바꾸지 않는다')
+    ok(_o.equals(_keep) and _n == 0, 'as_is: 아무것도 바꾸지 않는다')
     M.SCORE_UNIT = 'consistent'
     _o, _n = M.unify_score_unit(_D)
-    ok(_n == 1 and _o.y_score.tolist() == [2.0, 7.0, 1.5, 0.3, 0.4], 'consistent: 섞인 조합(a)만 y_df 로 맞추고 b 는 그대로')
+    ok(_D.equals(_keep), 'consistent: 들어온 표를 제자리에서 바꾸지 않는다')
+    ok(_n == 1 and _o.y_score.tolist() == [2.0, 7.0, 1.5, 0.3, 0.4, -1.2], 'consistent: 섞인 조합(a)만 y_df 로, b · c 는 그대로')
+    ok(_o.score_type.tolist()[:3] == ['decision_function(통일)'] * 3 and _o.score_type.tolist()[5] == 'decision_function',
+       'consistent: 바꾼 행만 표기가 바뀐다 · SVM 의 decision_function 은 전환으로 보지 않는다')
+    ok(bool(np.isnan(_o.thr_spec95[0])) and _o.thr_spec95[1] == 0.85 and _o.thr_spec95[3] == 0.6,
+       'consistent: 확률 단위였던 행의 문턱만 비운다')
     try:
-        M.unify_score_unit(_D.drop(columns=['y_df'])); ok(False, 'consistent: y_df 가 없으면 멈춘다')
+        M.unify_score_unit(_D.drop(columns=['y_df'])); ok(False, 'consistent: y_df 열이 없으면 멈춘다')
     except SystemExit:
-        ok(True, 'consistent: y_df 가 없으면 멈춘다')
+        ok(True, 'consistent: y_df 열이 없으면 멈춘다')
+    _bad = _D.copy(); _bad.loc[0, 'y_df'] = np.nan
+    try:
+        M.unify_score_unit(_bad); ok(False, 'consistent: 맞출 묶음에 빈 y_df 가 있으면 멈춘다')
+    except SystemExit:
+        ok(True, 'consistent: 맞출 묶음에 빈 y_df 가 있으면 멈춘다')
 finally:
     M.SCORE_UNIT = _old
 

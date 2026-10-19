@@ -115,10 +115,15 @@ def scores(v, combo, rows):
     fs = glob.glob('%s/*/results/%s/step04_ML_classifier/y_prob_all_%s_all_combos.csv' % (R, v, v))
     if not fs:
         return {}
-    D = pd.concat([pd.read_csv(f).assign(_s=f.split('/')[len(R.split('/'))]) for f in fs], ignore_index=True)
-    D, _ = _cfg.unify_score_unit(D)
+    names = [f.split('/')[len(R.split('/'))] for f in fs]
+    D = pd.concat([pd.read_csv(f).assign(_s=n) for f, n in zip(fs, names)], ignore_index=True)
+    D, nu = _cfg.unify_score_unit(D)
+    if nu and rows == 'GBM':
+        print('  [점수 단위] %s · 확률과 decision_function 이 섞인 조합 %d개를 decision_function 으로 맞췄다'
+              ' (아래 «df 전환 검체» 는 맞춘 뒤라 0 이고, ≥.999 줄은 이 단위에서 뜻이 없다)' % (v, nu))
     out = {}
-    for s, d in D.groupby('_s', sort=False):
+    for s in names:                       # 파일마다 한 칸 — 머리줄만 있는 파일도 빈 칸으로 남겨 반복 수 관문에 걸리게 한다
+        d = D[D._s == s]
         d = d[(d.feature_set == combo) & (d.ratio.astype(float) == 1.0) & d.rep.astype(str).str.startswith(rows)]
         out[s] = (d.y_score.mean(), len(d), d.score_type.astype(str).str.contains('df').any())
     return out

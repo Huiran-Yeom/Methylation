@@ -287,8 +287,16 @@ matched the re-run, and with threads unpinned it matched the stored tables in al
 threads (checked cell by cell for this one cell only). Logistic
 Regression on `main` (`max_iter=2000`, no convergence warnings) still differs
 between the two thread settings (at most 0.0005), so record the thread setting
-as part of any reproduction. To regenerate `../results/`, leave
-`OMP_NUM_THREADS`, `OPENBLAS_NUM_THREADS` and `MKL_NUM_THREADS` unset.
+as part of any reproduction.
+
+`BLAS_THREADS` in `0_setup/config.conf` (default 1) sets `OMP_NUM_THREADS`,
+`OPENBLAS_NUM_THREADS` and `MKL_NUM_THREADS` in the stage entry points
+(`run_*.sh`, `make_report.sh`); a value already present in the environment wins,
+and the values actually used are written to `config_snapshot.txt`. Step scripts
+run directly with `python` are not pinned. `../results/main/` was produced with
+one thread. To regenerate the `e8d5fe5d` tables in `../results/`, check out tag
+`results-e8d5fe5d` and run with the three variables unset (on `main`, the same
+is `BLAS_THREADS=none`).
 
 `../results/main/` holds the same tables re-run on `main`; the primary metric
 moves by at most 0.002 and every cell stays below 0.70.
@@ -323,7 +331,15 @@ normals only, so that column filtering never sees cancer rows). On the six 5k
 cells we tried, with BLAS threads pinned to 1 and identical inputs, `normal`
 changed the cross-validated AUC of the primary combination's BEST model by
 -0.009 to +0.013. The output folders do not depend on this key, so give each
-setting its own `METH_ROOT` when comparing them. Each output folder gets a `config_snapshot.txt` recording where every
+setting its own `METH_ROOT` when comparing them.
+
+`SCORE_UNIT` controls the unit of validation scores. Scoring switches a sample to
+`decision_function` when its predicted probabilities collapse onto 1.0, so with
+the default `as_is` one table cell can mix probabilities and decision values (the
+lung 50k cells flagged in `../results/README.md`). With `consistent`, scoring
+also writes the decision value (`y_df`) and the reports put every
+panel-depth-combination on one unit; this needs re-scoring. The one-off scripts
+in `5_analysis/` read raw scores and do not apply it. Each output folder gets a `config_snapshot.txt` recording where every
 value came from (env / conf / default).
 
 File names are coupled to the config. Validation copies the training scripts

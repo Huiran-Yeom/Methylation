@@ -187,7 +187,9 @@ def run_model(name, B, keys, rows):
         _sat = ''
         _thr_z = None      # 포화로 df 를 쓸 때의 문턱 (z 공간)
         # consistent: 전환 여부와 상관없이 decision_function 을 같이 적는다(표에서 단위를 맞춘다).
-        _ydf = (m.decision_function(X) if hasattr(m, 'decision_function') else np.full(len(X), np.nan))             if _cfg.SCORE_UNIT == 'consistent' else None
+        _ydf = None
+        if _cfg.SCORE_UNIT == 'consistent':
+            _ydf = m.decision_function(X) if hasattr(m, 'decision_function') else np.full(len(X), np.nan)
         if st == 'predict_proba' and hasattr(m, 'predict_proba'):
             sc = m.predict_proba(X)[:, 1]
             # 「고유값 2개 미만」 만으로는 부족하다.

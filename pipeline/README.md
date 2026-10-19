@@ -269,18 +269,26 @@ Which commit made which numbers:
 | this branch | `e8d5fe5d` plus four changes from `79979d24`: the held-out split in `05_llrref` uses the whole `samples.csv`; validation llr blocks come from the training mean table (`LLR_KEEP_FROM`); validation mode is also signalled by `METH_VALIDATE=1`; in stage 2 the threshold predictions are imputed inside each fold and Logistic Regression uses `max_iter=2000`. These change `cv_all.csv` and the thresholds, so this branch does not regenerate `../results/`. |
 
 A from-scratch re-run of `e8d5fe5d` (all of stage 1 on empty output roots, then
-stages 2–3) was compared with the stored outputs at a tolerance fixed before the
-run (1e-9 on CV tables and per-row scores). It did not pass that tolerance:
+stages 2–3, BLAS threads pinned to 1) was compared with the stored outputs at a
+tolerance fixed before the run (1e-9 on CV tables and per-row scores). It did
+not pass that tolerance:
 
-- stage 1 (nine panels, LLR reference, pooled BAMs) matched byte for byte;
-- in stage 2, Random Forest, SVM and XGBoost CV values matched exactly, but 4–10%
-  of the Logistic Regression rows differed (at most 0.0135). At this commit the
-  Logistic Regression runs with the default `max_iter` and stops before
-  converging, which makes it sensitive to floating-point order; `main` raises
-  `max_iter` to 2000. Two of 403 lung BEST models switched between Logistic
-  Regression and XGBoost;
-- the primary metric matched to four decimals in all nine cells, because the
-  primary feature combination's BEST models are Random Forest and XGBoost.
+- stage 1 matched: nine panels and the LLR reference byte for byte, pooled BAMs
+  by read count;
+- in stage 2, Random Forest, SVM and XGBoost CV values matched exactly; 4–10% of
+  the Logistic Regression rows differed (at most 0.0135), and two of 403 lung
+  BEST models switched between Logistic Regression and XGBoost;
+- the primary metric matched to four decimals in all nine cells.
+
+The cause is the BLAS thread count. On one cell, re-running step 08 on the same
+feature CSVs gave bit-identical results run to run; with threads pinned to 1 it
+matched the re-run, and with threads unpinned it matched the stored tables in all
+1,116 rows. The early run scripts that trained the stored tables did not pin
+threads (checked cell by cell for this one cell only). Logistic
+Regression on `main` (`max_iter=2000`, no convergence warnings) still differs
+between the two thread settings (at most 0.0005), so record the thread setting
+as part of any reproduction. To regenerate `../results/`, leave
+`OMP_NUM_THREADS`, `OPENBLAS_NUM_THREADS` and `MKL_NUM_THREADS` unset.
 
 `../results/main/` holds the same tables re-run on `main`; the primary metric
 moves by at most 0.002 and every cell stays below 0.70.

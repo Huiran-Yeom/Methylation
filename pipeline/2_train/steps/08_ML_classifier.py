@@ -24,7 +24,7 @@
 
 바뀌지 않은 것
   - train_test_split(test_size=0.2, random_state=SEED), 모델 4종과 하이퍼파라미터
-    (LogisticRegression 만 max_iter=2000 — 09 와 같게, 사전등록 65),
+    (LogisticRegression 만 max_iter=2000 — 09 와 같게),
   - stratify 는 기본 꺼짐(원본과 동일). config.STRATIFY=True 로 켤 수 있다.
 
 SVM 점수
@@ -113,7 +113,7 @@ def make_models():
     학습 결과에 영향이 없고(xgboost 1.x 에서 경고만 없애는 역할), 2.x 에서는 에러다.
     """
     ms = {
-        # 09 와 같은 설정 — 08 의 CV 로 고른 모델을 09 가 다른 설정으로 다시 적합하지 않게 (사전등록 65)
+        # 09 와 같은 설정 — 08 의 CV 로 고른 모델을 09 가 다른 설정으로 다시 적합하지 않게
         'Logistic Regression': LogisticRegression(random_state=C.SEED, max_iter=2000),
         'Random Forest': RandomForestClassifier(random_state=C.SEED, n_jobs=C.N_JOBS),
         'XGBoost': XGBClassifier(
@@ -122,7 +122,7 @@ def make_models():
         'SVM': SVC(random_state=C.SEED, probability=C.SVM_PROBABILITY),
     }
     # 모델을 미리 하나로 고정한다(config.conf FIXED_MODEL).
-    #   넷 중 최고를 고르면 고르는 것만으로 값이 오른다(사전등록 41-2).
+    #   넷 중 최고를 고르면 고르는 것만으로 값이 오른다.
     fixed = (getattr(C, 'FIXED_MODEL', '') or '').strip()
     if fixed:
         if fixed not in ms:
@@ -255,7 +255,7 @@ def main():
                     try:
                         cvm = 'predict_proba' if hasattr(model, 'predict_proba') else 'decision_function'
                         # 미리 채운 Xtr 는 「학습셋 전체 · 정상·암 합친」 평균으로 채워져 접기 밖 값이 섞인다.
-                        #   아래 cv_auc 와 같게 접기마다 학습 접기 평균으로 채운다 (사전등록 65 가).
+                        #   아래 cv_auc 와 같게 접기마다 학습 접기 평균으로 채운다.
                         oof = cross_val_predict(
                             _Pipe([('imp', _Imputer(strategy='mean', keep_empty_features=True)), ('m', clone(model))]),
                             Xtr_raw, ytr, method=cvm, n_jobs=1,

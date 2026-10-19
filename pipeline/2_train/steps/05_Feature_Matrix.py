@@ -169,7 +169,7 @@ def collect(folder, prefix, dmr):
 
 # 검증은 이 파일을 검체 폴더에 val04_1.py 로 복사해 돌린다.
 # 파일 이름만으로 가르면 STEP_MAP 이름을 바꿀 때 조용히 학습 동작이 되므로,
-#   검증 실행기(run_one_sample.sh)가 내보내는 METH_VALIDATE=1 도 본다 (사전등록 65 라).
+#   검증 실행기(run_one_sample.sh)가 내보내는 METH_VALIDATE=1 도 본다.
 _VAL = os.path.basename(__file__).startswith('val') or os.environ.get('METH_VALIDATE') == '1'
 
 
@@ -179,7 +179,7 @@ def to_frame(rows_normal, rows_gbm, label):
     n_total = len(df)
     before = df.shape[1]
     if _VAL:
-        # 검증에서는 블록을 버리지도 채우지도 않는다 (추기 44-6).
+        # 검증에서는 블록을 버리지도 채우지도 않는다.
         #   검증의 「묶음」은 한 검체 · 한 비율의 양성 N + 음성 N 이다. 그 커버율로 블록을
         #   버리면 반복 수에 따라 남는 블록이 달라지고, 묶음 평균으로 채우면 양성의
         #   빈칸이 양성·음성을 섞은 값으로 채워진다. 빈칸은 비운 채 넘기면
@@ -187,7 +187,7 @@ def to_frame(rows_normal, rows_gbm, label):
         pass
     else:
         # 커버율을 재는 행. all 은 정상 + 암 섞인 행 전부라 암 행의 커버리지가 칸 선택에
-        #   끼어든다(사전등록 71-2). normal 은 학습 정상 행만 본다. 정상 행은 비율마다 같은
+        #   끼어든다. normal 은 학습 정상 행만 본다. 정상 행은 비율마다 같은
         #   0% 행렬이라 비율마다 같은 블록이 남는다.
         ref = df[df.index.astype(str).str.startswith('Normal')] if COLSET_FROM == 'normal' else df
         if len(ref) == 0:
@@ -198,7 +198,7 @@ def to_frame(rows_normal, rows_gbm, label):
             keep = ref.notna().sum(axis=0) >= int(np.ceil(MIN_SAMPLE_COVERAGE * len(ref)))
         df = df.loc[:, keep].copy()                    # 아래 df['Type'] = 가 원본 조각에 쓰지 않게
         del ref
-        # 남은 결측은 여기서 채우지 않는다 (추기 44-6). 08 · 09 의 Imputer 가 학습 접기 평균으로만 채운다.
+        # 남은 결측은 여기서 채우지 않는다. 08 · 09 의 Imputer 가 학습 접기 평균으로만 채운다.
         if COLSET_FROM == 'normal':
             # 정상에서는 덮이지만 암 행에서 많이 비는 블록 — 빈칸 자체가 신호가 될 수 있어 센다.
             tum = df[~df.index.astype(str).str.startswith('Normal')]

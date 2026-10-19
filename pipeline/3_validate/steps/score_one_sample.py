@@ -108,7 +108,7 @@ def have(key, p):
 def pick():
     """검체에 있는 행렬만으로 쓸 수 있는 모델을 고른다."""
     # j 판은 조합마다 폴더가 따로다. jsd 가 든 것을 먼저 본다.
-    # 기본 후보에 사전등록 1차 조합(mean|entropy|jsd|llr|pdr)을 넣고 긴 것부터 본다.
+    # 기본 후보에 1차 조합(mean|entropy|jsd|llr|pdr)을 넣고 긴 것부터 본다.
     #   빠지면 --model 을 안 줄 때 1차 지표가 통째로 안 나온다.
     cands = [WANT] if WANT else ['mean|entropy|jsd|llr|pdr',
                                  'mean|entropy|jsd|llr',
@@ -201,7 +201,7 @@ def run_model(name, B, keys, rows):
                 sc = m.decision_function(X)
                 _sat = '+df(포화)'
                 # [문턱도 옮긴다] proba 문턱을 그냥 버리면 y_pred 가 공백이 되고,
-                #   사전등록이 요구하는 특이도·위양성(⑪·②)을 그 칸에서 못 낸다.
+                #   특이도·위양성을 그 칸에서 못 낸다.
                 #   로지스틱은 predict_proba = sigmoid(decision_function) 이므로
                 #   logit(thr) 이 정확히 같은 지점이다. 재학습도 재보정도 필요 없다.
                 #   (모델이 바뀌면 이 등식이 안 맞을 수 있어 아래에서 런타임에

@@ -27,7 +27,7 @@ unset _v
 # 못 찾으면 멈춘다. 넘어가면 VERSION·PANEL·SEED 가 안 잡히고,
 #   환경에 남아 있던 METH_CONF_DIR 로 다른 트리의 설정을 읽는다.
 : "${METH_CONF_DIR:?config.conf 를 못 찾았다 — 트리 밖에서 돌리려면 METH_CONF_DIR 를 직접 주라}"
-# 수치 연산(BLAS) 스레드. 로지스틱 회귀 값이 스레드 수에 따라 달라진다(사전등록 84-7 · 84-8).
+# 수치 연산(BLAS) 스레드. 로지스틱 회귀 값이 스레드 수에 따라 달라진다.
 #   OMP_NUM_THREADS 등이 환경변수로 이미 있으면 그 값을 따른다. BLAS_THREADS=none 이면 고정하지 않는다.
 #   이 고정은 진입점(run_*.sh · make_report.sh)에만 있다. steps/ 의 파이썬을 직접 부르면 걸리지 않는다.
 _bt=${BLAS_THREADS:-1}
@@ -227,10 +227,10 @@ export LLR_CAND=${LLR_CAND:-$METH_ROOT/results/dmr/j_candidates${GEN}}
 export JSD_CAND=${JSD_CAND:-$METH_ROOT/results/dmr/j_candidates${GEN}}
 export JSD_JCOUNT=${JSD_JCOUNT:-$METH_ROOT/results/dmr/j_jsdcount${GEN}}
 [ -f "$LLR_REF" ] || { echo "!! 참조표 없음 $LLR_REF" >> "$L"; exit 1; }
-# llr 의 블록 집합은 학습 mean 표에서 가져온다(JSD_COLS 와 같은 원칙 · 사전등록 54-2 · 65).
+# llr 의 블록 집합은 학습 mean 표에서 가져온다(JSD_COLS 와 같은 원칙).
 #   검증 검체의 mean 표는 블록을 안 버려 학습과 블록이 다르다. 07_llrfeat.py 가 이 자리를 본다.
 export LLR_KEEP_FROM=$METH_ROOT/results/panels/${v%%_*}/$v/step04_ML_classifier
-# 검증임을 파일 이름(val…)만이 아니라 환경변수로도 알린다 (사전등록 65 라).
+# 검증임을 파일 이름(val…)만이 아니라 환경변수로도 알린다.
 #   STEP_MAP 에서 이름을 바꾸면 05_Feature_Matrix 가 조용히 학습 동작(블록 버리기)으로 돌아간다.
 export METH_VALIDATE=1
 # 파일 이름을 박지 않는다. 설정의 K·MINR 을 바꾸면 학습과 여기가

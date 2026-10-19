@@ -400,7 +400,7 @@ def main():
                 _blk = [x for x, y in zip(cols, colblk) if y is not None]
                 _oth = [x for x, y in zip(cols, colblk) if y is None]
                 if keep_cols is None:
-                    # 결측률을 재는 행: all 은 첫 비율 행렬의 전 행, normal 은 학습 정상 행만(사전등록 71-2).
+                    # 결측률을 재는 행: all 은 첫 비율 행렬의 전 행, normal 은 학습 정상 행만.
                     _normal = getattr(C, 'COLSET_FROM', 'all') == 'normal'
                     _isn = F.index.astype(str).str.startswith('Normal')
                     if _normal and not _isn.any():

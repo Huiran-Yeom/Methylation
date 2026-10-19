@@ -40,7 +40,7 @@ for _k in $_PREKEYS; do
 done
 unset _v
 : "${METH_CONF_DIR:?0_setup/config.conf 를 못 찾았다}"
-# 수치 연산(BLAS) 스레드. 로지스틱 회귀 값이 스레드 수에 따라 달라진다(사전등록 84-7 · 84-8).
+# 수치 연산(BLAS) 스레드. 로지스틱 회귀 값이 스레드 수에 따라 달라진다.
 #   OMP_NUM_THREADS 등이 환경변수로 이미 있으면 그 값을 따른다. BLAS_THREADS=none 이면 고정하지 않는다.
 #   이 고정은 진입점(run_*.sh · make_report.sh)에만 있다. steps/ 의 파이썬을 직접 부르면 걸리지 않는다.
 _bt=${BLAS_THREADS:-1}
@@ -92,7 +92,7 @@ step 07 "llr 행렬 (theta 별 · LLR_max)" 07_llrfeat.py
 step 08 "조합별 모델 넷 교차검증"    08_ML_classifier.py
 # 인자 없이 부르면 09 는 조합 「둘」(mean|entropy, +jsd)만 굳히고,
 #   판 목록을 results/panels/* 에서 「모든 세대에 걸쳐」 훑어 덮어쓴다.
-#   그러면 사전등록 1차 조합 mean|entropy|jsd|llr|pdr 이 아예 안 만들어져
+#   그러면 1차 조합 mean|entropy|jsd|llr|pdr 이 아예 안 만들어져
 #   4단계가 「조합이 없음」 으로 죽는다. 실제 실행은 --allcombos --pooled 였다
 #   (서버 산출물에 조합 31개·pooled 만 있는 것으로 확인).
 step 09 "조합마다 BEST 굳히기"       09_save_best_j.py --allcombos --pooled "$VERSION"

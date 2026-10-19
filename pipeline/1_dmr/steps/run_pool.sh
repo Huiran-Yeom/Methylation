@@ -14,7 +14,7 @@
 #   실측: 같은 블록인데 rand1200 과 rand2200 의 mean 이 최대 0.569
 #   다르다. 판마다 01 이 그 판의 DMR 영역만 추출해 모집단이 달라지기 때문이다.
 #   그래서 「판이 다른 풀의 특징을 열 방향으로 이어 붙이면 안 된다」 — 한 검체 행이
-#   독립인 여러 혼합을 뒤섞은 것이 된다. 사전등록 추기 18항.
+#   독립인 여러 혼합을 뒤섞은 것이 된다.
 #
 #   사용
 #     bash run_pool.sh cellline     # 실제 패널 (panel_union3_cellline.csv -> j_pool<GEN>_cellline)
@@ -47,7 +47,7 @@ for _k in $_PREKEYS; do
 done
 unset _v
 : "${METH_CONF_DIR:?config.conf 를 못 찾았다 — 트리 밖에서 돌리려면 METH_CONF_DIR 를 직접 주라}"
-# 수치 연산(BLAS) 스레드. 로지스틱 회귀 값이 스레드 수에 따라 달라진다(사전등록 84-7 · 84-8).
+# 수치 연산(BLAS) 스레드. 로지스틱 회귀 값이 스레드 수에 따라 달라진다.
 #   OMP_NUM_THREADS 등이 환경변수로 이미 있으면 그 값을 따른다. BLAS_THREADS=none 이면 고정하지 않는다.
 #   이 고정은 진입점(run_*.sh · make_report.sh)에만 있다. steps/ 의 파이썬을 직접 부르면 걸리지 않는다.
 _bt=${BLAS_THREADS:-1}

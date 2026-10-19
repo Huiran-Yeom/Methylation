@@ -4,7 +4,7 @@
 #   검증 채점 결과를 읽어 논문에 실을 표를 만든다. 읽기만 한다. 아무것도 안 쓴다.
 #
 #   make_tables.py    판마다 「피처 조합 × 비율」 AUC 표. 검체 단위와 사람 단위를 같이 낸다.
-#   primary_metric.py   사전등록 1차 지표: 짝지은 부트스트랩으로 판 사이 차이의 구간.
+#   primary_metric.py   1차 지표: 짝지은 부트스트랩으로 판 사이 차이의 구간.
 #                음성을 고정하므로 구간에 「음성 축 불확실성이 0 으로」 들어간다.
 #                각주로 표에 같이 박는다.
 #
@@ -37,7 +37,7 @@ for _k in $_PREKEYS; do
 done
 unset _v
 : "${METH_CONF_DIR:?0_setup/config.conf 를 못 찾았다}"
-# 수치 연산(BLAS) 스레드. 로지스틱 회귀 값이 스레드 수에 따라 달라진다(사전등록 84-7 · 84-8).
+# 수치 연산(BLAS) 스레드. 로지스틱 회귀 값이 스레드 수에 따라 달라진다.
 #   OMP_NUM_THREADS 등이 환경변수로 이미 있으면 그 값을 따른다. BLAS_THREADS=none 이면 고정하지 않는다.
 #   이 고정은 진입점(run_*.sh · make_report.sh)에만 있다. steps/ 의 파이썬을 직접 부르면 걸리지 않는다.
 _bt=${BLAS_THREADS:-1}

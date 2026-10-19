@@ -102,7 +102,7 @@ def models():
             'Random Forest': RandomForestClassifier(random_state=SEED, n_jobs=1),
             'XGBoost': XGBClassifier(random_state=SEED, eval_metric='logloss', n_jobs=1),
             'SVM': SVC(random_state=SEED)}
-    # 모델을 미리 하나로 고정한다(config.conf FIXED_MODEL · 사전등록 41-2).
+    # 모델을 미리 하나로 고정한다(config.conf FIXED_MODEL).
     if FIXED:
         if FIXED not in ms:
             raise SystemExit('FIXED_MODEL=%r 은 모델 이름이 아니다: %s' % (FIXED, ' · '.join(ms)))

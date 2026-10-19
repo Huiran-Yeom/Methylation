@@ -1,5 +1,5 @@
 # 실제로 쓴 버전입니다 (서버에서 측정).
-# 자세한 목록과 「왜 그 버전이 중요한가」 는 0_setup/ENVIRONMENT.md 에 있습니다.
+# 외부 프로그램: bismark v0.24.1 · bowtie2 2.5.1 · samtools 1.5
 #
 # python 3.9  (conda env)
 #   conda create -n meth python=3.9 && conda activate meth && pip install -r requirements.txt

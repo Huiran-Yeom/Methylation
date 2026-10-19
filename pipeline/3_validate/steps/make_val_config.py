@@ -47,7 +47,7 @@ _STEPS_DEFAULT = {'01_Preprocessing_for_ML_RawData_Mixing.py': 'val03_1.py',
          #   파일은 판 폴더가 아니라 한 단계 위에 있다.
          '06_jsdfeat.py': 'val04_1c.py',
          # LLR 피처. 이 목록에 없으면 검증이 llr 을 안 만들어
-         #   사전등록 1차 조합 mean|entropy|jsd|llr|pdr 을 계산할 수 없다.
+         #   1차 조합 mean|entropy|jsd|llr|pdr 을 계산할 수 없다.
          '07_llrfeat.py': 'val04_1d.py'}
 
 try:

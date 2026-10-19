@@ -40,7 +40,7 @@ for _k in $_PREKEYS; do
 done
 unset _v
 : "${METH_CONF_DIR:?0_setup/config.conf 를 못 찾았다}"
-# 수치 연산(BLAS) 스레드. 로지스틱 회귀 값이 스레드 수에 따라 달라진다(사전등록 84-7 · 84-8).
+# 수치 연산(BLAS) 스레드. 로지스틱 회귀 값이 스레드 수에 따라 달라진다.
 #   OMP_NUM_THREADS 등이 환경변수로 이미 있으면 그 값을 따른다. BLAS_THREADS=none 이면 고정하지 않는다.
 #   이 고정은 진입점(run_*.sh · make_report.sh)에만 있다. steps/ 의 파이썬을 직접 부르면 걸리지 않는다.
 _bt=${BLAS_THREADS:-1}

@@ -180,14 +180,14 @@ TEST_SIZE = float(get('TEST_SIZE'))
 MUT_RATIOS = [float(x) for x in get('MUT_RATIOS').replace(' ', '').split(',') if x]
 
 # 모델을 미리 하나로 고정한다. 이름은 08·09 의 모델 키와 같아야 한다.
-#   결과를 보고 고르면 그 자체가 선택이라 귀무 바닥이 0.03~0.04 오른다(사전등록 41-2).
+#   결과를 보고 고르면 그 자체가 선택이라 귀무 바닥이 0.03~0.04 오른다.
 FIXED_MODEL = get('FIXED_MODEL').strip()
-# LLR 참조표 공여자와 섞기 공여자를 가른다(사전등록 26-2). 1 이면 켠다.
+# LLR 참조표 공여자와 섞기 공여자를 가른다. 1 이면 켠다.
 LLR_HELDOUT = int(get('LLR_HELDOUT') or 0)
 
 
 def split_ref_mix(units):
-    """(참조군, 혼합군). 단위 이름을 바이트 순으로 줄 세워 번갈아 가른다 — 사전등록 26-2.
+    """(참조군, 혼합군). 단위 이름을 바이트 순으로 줄 세워 번갈아 가른다.
 
     바이트 순 = `LC_ALL=C sort`. 기본 로케일 정렬은 대소문자를 무시해 다른 명단을 낸다.
     1·3·5…번째가 참조군, 2·4·6…번째가 혼합군. 시드를 쓰지 않는다 — 고르는 행위가 선택이 된다.
@@ -290,7 +290,7 @@ def unify_score_unit(D, keys=('feature_set',)):
     decision_function 으로 바꾼다. 그러면 한 칸 안에 확률과 decision_function 이 섞여
     AUC 를 해석할 수 없다. consistent 에서는 채점이 y_df 열을 늘 같이 적고, 여기서
     decision_function 이 있는 모형(묶음 안 y_df 가 다 찬 묶음)은 묶음 전체를 y_df 로 바꾼다.
-    전환이 없어도 바꾼다 — 폭은 넓지만 일부 행이 1.0 에 붙은 «부분 포화» 동률도 없앤다(사전등록 75).
+    전환이 없어도 바꾼다 — 폭은 넓지만 일부 행이 1.0 에 붙은 «부분 포화» 동률도 없앤다.
     LR 은 시그모이드라 순서는 같고 동률만 풀린다. RF · XGB 처럼 decision_function 이 없으면 확률 그대로다.
     as_is 면 D 를 그대로 돌려준다(지금까지의 표를 낸 동작).
     돌려주는 값: (D, 단위를 바꾼 묶음 수)

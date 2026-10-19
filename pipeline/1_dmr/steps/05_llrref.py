@@ -105,9 +105,9 @@ if int(len(gbm)) == 0:
              ' 어긋났습니다 (현재 CANCER_LABEL=%s).' % (_CANCER, _CANCER))
 lines = {}
 for s in gbm: lines.setdefault(grp[s], []).append(s)
-# 참조표는 「참조군」 만으로 만든다(사전등록 26-2). 학습 풀(11_pool)은
+# 참조표는 「참조군」 만으로 만든다. 학습 풀(11_pool)은
 #   「혼합군」 만 쓴다. 같은 사람이 양쪽에 들어가면 학습 양성·음성이 자기 자신으로 만든
-#   참조로 채점돼 학습 CV 가 부풀려진다(추기 25~43). 가르는 규칙은 meth_config.split_ref_mix.
+#   참조로 채점돼 학습 CV 가 부풀려진다. 가르는 규칙은 meth_config.split_ref_mix.
 if int(getattr(_cfg, 'LLR_HELDOUT', 0)):
     _ta = dict(zip(M_ALL['sample'], M_ALL['type'])); _ga = dict(zip(M_ALL['sample'], M_ALL['group']))
     _rn, _mn = _cfg.split_ref_mix([x for x in _ta if _ta[x] == 'Normal'])

@@ -35,7 +35,7 @@ COHORT=<your_cohort> bash 4_report/make_report.sh   # same COHORT as stage 3
 | 4 | Reporting | `4_report/make_report.sh` | discrimination tables, paired bootstrap intervals |
 
 Each stage folder has one entry point; its step code sits in `steps/`, numbered
-in dependency order. `0_setup/IO.md` lists every step with its inputs and outputs.
+in dependency order.
 
 ### Running every panel and depth
 
@@ -276,15 +276,14 @@ variables: `MEMGATE_FREE=<GB>`, `MEMGATE_N=<n>`.
 
 ## Environment
 
-Versions used are pinned in `requirements.txt`; `0_setup/ENVIRONMENT.md` explains
-why each matters. Linux only: the pipeline uses `flock`, `/proc`, `bismark`,
-`bowtie2` and `samtools`.
+Versions used are pinned in `requirements.txt`. Linux only: the pipeline uses
+`flock`, `/proc`, `bismark` (v0.24.1), `bowtie2` (2.5.1) and `samtools` (1.5).
 
 ```bash
 conda create -n meth python=3.9
 conda activate meth
 pip install -r requirements.txt
-# bismark, bowtie2, samtools are installed separately: see ENVIRONMENT.md
+# bismark, bowtie2, samtools are installed separately
 ```
 
 ---
@@ -379,8 +378,7 @@ also writes the decision value (`y_df`), and the reports use it for every
 panel-depth-combination whose model has one (Logistic Regression, SVM), switched
 or not. This also breaks ties among rows that sit at exactly 1.0 without the
 whole sample collapsing. Random Forest and XGBoost stay on probabilities. It
-needs re-scoring. The one-off scripts
-in `5_analysis/` read raw scores and do not apply it.
+needs re-scoring.
 
 `REPORT_BASELINE=on` adds a control line under each panel-depth table: the AUC of
 one number per row, the unweighted mean of the panel blocks' mean methylation in
@@ -409,8 +407,7 @@ the folder name: `OVERWRITE=<folder>`. Stages 2–4 have no such guard.
 
 Locks and logs live under `TMP_ROOT` (default `~/tmp`).
 
-Output names are ASCII. `0_setup/RENAMES.txt` maps the script names used in the
-paper's methods to the names here. Code comments are in Korean.
+Output names are ASCII. Code comments are in Korean.
 
 ---
 
@@ -418,8 +415,7 @@ paper's methods to the names here. Code comments are in Korean.
 
 ```
 README.md  requirements.txt  .gitignore  .gitattributes
-0_setup/      config.conf (the file you edit)  meth_config.py  check_fixes.py
-              IO.md  ENVIRONMENT.md  RENAMES.txt
+0_setup/      config.conf (the file you edit)  meth_config.py
 1_dmr/        run_dmr.sh   steps/ 01_candidates 02_blockcpg 03_jsdcount 04_jsd
                                   04b_jsdnull 04c_jsdboot 05_llrref 06_select
                                   06b_select_supplement 07_panel 08_export_panels
@@ -432,5 +428,4 @@ README.md  requirements.txt  .gitignore  .gitattributes
                                   paths val_single
                                   cohorts/ sample_cohort.conf.example patient_plasma.conf.example
 4_report/     make_report.sh steps/ make_tables primary_metric plasma_metric plasma_baseline cross_score
-5_analysis/   one-off analyses behind the pre-registration addenda (see its README)
 ```

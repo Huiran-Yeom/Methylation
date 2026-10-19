@@ -60,7 +60,7 @@ OUT   = a[a.index('--out')+1]
 USE   = [x for x in open(a[a.index('--use')+1]).read().split() if x]
 PAD   = int(a[a.index('--pad')+1]) if '--pad' in a else 200
 
-# 학습 풀은 「혼합군」 만으로 만든다 (사전등록 26-2). 참조표(05_llrref)는
+# 학습 풀은 「혼합군」 만으로 만든다. 참조표(05_llrref)는
 #   「참조군」 만 쓴다. 가르는 단위와 모집단은 05 와 같아야 하므로 둘 다 후보 단계의
 #   samples.csv 에서 정한다 — 정상은 사람, 암은 group(세포주).
 if int(getattr(_cfg, 'LLR_HELDOUT', 0)):

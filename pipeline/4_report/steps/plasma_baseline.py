@@ -2,8 +2,7 @@
 """plasma_metric.py 의 기준선 두 개를 사람마다 잰다 (패널 없이 원자료에서)
 
   reads  사람별 총 리드 수. 기본은 BAM 의 1차 정렬 리드 수(보조·2차 정렬 제외).
-         --reads-tsv 를 주면 그 값(sample, reads)을 쓴다. 사전등록 추기 80·81 은
-         GSE301266 처리 로그의 「reads read」(정렬 전 원 리드 수)를 썼다.
+         --reads-tsv 를 주면 그 값(sample, reads)을 쓴다. 예: 처리 로그의 「reads read」(정렬 전 원 리드 수).
   gmeth  전역 평균 메틸화 = bismark cov 의 Σmeth / Σ(meth + unmeth).
 
   기준선이 패널만큼 환자와 정상을 가르면, 패널 점수는 「암 신호」와 「플랫폼 · 깊이 ·

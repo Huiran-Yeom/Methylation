@@ -5,11 +5,11 @@
          --reads-tsv 를 주면 그 값(sample, reads)을 쓴다. 예: 처리 로그의 「reads read」(정렬 전 원 리드 수).
   gmeth  전역 평균 메틸화 = bismark cov 의 Σmeth / Σ(meth + unmeth).
 
-  기준선이 패널만큼 환자와 정상을 가르면, 패널 점수는 「암 신호」와 「플랫폼 · 깊이 ·
+  기준선이 패널만큼 환자와 비악성 대조를 가르면, 패널 점수는 「암 신호」와 「플랫폼 · 깊이 ·
   전역 메틸화 차이」를 가르지 못한다. 그래서 plasma_metric.py 는 이 둘을 같은 순열로 잰다.
   입력은 검증의 CANCER 슬롯과 같은 사람의 자료여야 한다.
 
-사용:  COHORT=<혈장코호트> python plasma_baseline.py --cov '/환자/{sample}.bismark.cov.gz' '/정상/{sample}.bismark.cov.gz' \\
+사용:  COHORT=<혈장코호트> python plasma_baseline.py --cov '/환자/{sample}.bismark.cov.gz' '/대조/{sample}.bismark.cov.gz' \\
             [--bam '/path/{sample}.bam' | --reads-tsv reads.tsv] [--conf x.conf] -o baseline.csv
 """
 if __name__ != '__main__':

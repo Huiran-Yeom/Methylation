@@ -3,7 +3,7 @@
 
   혈장은 이미 몸 안에서 희석된 검체라, 다시 정상 배경에 0.1~5% 로 섞으면 종양 리드가
   검출 한계 아래로 내려간다. 그래서 혈장 코호트는 RATIOS=0.0, 1.0 으로 돌려 사람마다
-  자기 리드만으로 채점하고, 같은 플랫폼 정상 공여자도 같은 방식으로 채점해 음성으로 쓴다.
+  자기 리드만으로 채점하고, 같은 플랫폼의 비암 대조도 같은 방식으로 채점해 음성으로 쓴다.
   In silico(조직·세포주) 코호트는 지금처럼 섞는다. 설정은
   3_validate/steps/cohorts/patient_plasma.conf.example 을 보십시오.
 
@@ -141,7 +141,7 @@ for pan in a.panels:
     y = np.array([0 if s in NEG else 1 for s in S])
     x = np.array([sc[s][0] for s in S]); xs = np.array([sh[s][0] for s in S])
     nrep = [sc[s][1] for s in S]; ndf = sum(sc[s][2] for s in S)
-    print('== %s · 사람 %d (환자 %d · 정상 %d) · 반복 %d~%d · df 전환 검체 %d'
+    print('== %s · 사람 %d (환자 %d · 음성 %d) · 반복 %d~%d · df 전환 검체 %d'
           % (pan[3:] if pan[:1] == 'j' else pan, len(S), y.sum(), (1 - y).sum(), min(nrep), max(nrep), ndf))
     bad = [s for s in S if sc[s][1] != NREP]
     if bad:
@@ -160,7 +160,7 @@ for pan in a.panels:
     blo, bhi = bounds(x, y)
     print('  위장 대조 AUC %.3f · 귀무 [%.3f, %.3f] → %s' % (o_s, lo, hi, '성립 안 함(동률)' if tied else ('통과' if sham else '실패')))
     print('  AUC %.4f · 순열 p %.4f · 귀무 [%.3f, %.3f] · 동률 [하한 %.3f, 상한 %.3f]' % (o, pv, *np.percentile(nul, [2.5, 97.5]), blo, bhi))
-    print('  사람 점수 환자 [%.4f, %.4f] · 정상 [%.4f, %.4f] · ≥.999 환자 %d · 정상 %d · 서로 다른 값 %d/%d'
+    print('  사람 점수 환자 [%.4f, %.4f] · 음성 [%.4f, %.4f] · ≥.999 환자 %d · 음성 %d · 서로 다른 값 %d/%d'
           % (x[y == 1].min(), x[y == 1].max(), x[y == 0].min(), x[y == 0].max(), (x[y == 1] >= .999).sum(), (x[y == 0] >= .999).sum(),
              np.unique(np.round(x, 9)).size, len(x)))
     c4 = True; conf_ = False

@@ -228,7 +228,7 @@ def a1(pos, neg):
     return float(roc_auc_score(y, s))
 
 
-GATE = 0.70   # 되돌림 기준: 셋 다 이것을 못 넘으면 순위를 매기지 않는다
+GATE = 0.70   # 판정 문턱: 셋 다 이것을 못 넘으면 순위를 매기지 않는다
 
 
 def run(combo, mixed):
@@ -281,13 +281,13 @@ def run(combo, mixed):
         print('  %-8s AUC %.4f  (양성 %d행 · 음성 %d행)'
               % (p, out[p][2], len(pos), len(neg)))
 
-    # ── 되돌림 기준(0.70)을 여기서 판정한다 ──
+    # ── 판정 문턱(0.70)을 여기서 본다 ──
     aucs = [out[p][2] for p in PANELS]
     if all(v == v for v in aucs) and max(aucs) < GATE:
         print('')
-        print('  되돌림 발동: 셋 중 어느 것도 %.2f 을 못 넘었다 (최고 %.4f).'
+        print('  순위 매기지 않음: 셋 중 어느 것도 %.2f 을 못 넘었다 (최고 %.4f).'
               % (GATE, max(aucs)))
-        print('    이 조건에서는 순위를 매기지 않는다(결과 전에 정함).')
+        print('    이 기준은 결과를 보기 전에 정했다.')
         print('    아래 구간은 순위를 내려는 것이 아니라 구간을 보고하려고 낸다.')
 
     # ── 음성 재추출 축이 있는가 ──

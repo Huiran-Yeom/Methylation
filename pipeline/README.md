@@ -78,8 +78,8 @@ Stage 3 mixes each validation sample into a normal background at the training
 ratios. That is right for tissue or cell-line DNA, which is close to 100% tumour.
 Patient plasma is already diluted in the body, and mixing it again at 0.1–5%
 pushes the tumour reads below the detection limit. For plasma cohorts, score each
-person on their own reads and score same-platform healthy donors the same way as
-negatives:
+person on their own reads and score same-platform non-malignant controls the same way
+as negatives:
 
 ```bash
 cp 3_validate/steps/cohorts/patient_plasma.conf.example ~/cohorts/<plasma>.conf   # RATIOS=0.0, 1.0 · NEG_SAMPLES

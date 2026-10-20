@@ -64,7 +64,7 @@ if [ -n "${VAL_COHORTS:-}" ]; then
   esac
 fi
 export COHORT
-# 혈장 코호트(NEG_SAMPLES 가 있는 설정)는 정상 공여자가 검체 자리에 있어 아래 표가 뜻이 없다.
+# 혈장 코호트(NEG_SAMPLES 가 있는 설정)는 비악성 대조가 검체 자리에 있어 아래 표가 뜻이 없다.
 #   그 코호트는 steps/plasma_metric.py 로만 판정한다.
 for _c in "${COHORT_CONF:-}" "$HOME/cohorts/$COHORT.conf" "$_HERE/../3_validate/steps/cohorts/$COHORT.conf"; do
   [ -n "$_c" ] && [ -f "$_c" ] || continue

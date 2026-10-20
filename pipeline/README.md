@@ -233,36 +233,6 @@ Stages 2 and 4 take the normal/cancer split from the `type` column of
 `samples.csv`. Inside `2_train`, sample ids are built as `Normal1…` / `GBM1…`
 whatever `CANCER_LABEL` is, and the classifier keys on that prefix.
 
-Cross-split check (optional). Training CV puts reads of the same cell line and
-the same normal donor on both sides of a fold. The cross-split check trains on one
-half of the mixing group and scores the other half, so the classifier meets cell
-lines and donors it has not seen. It is not a fully unseen test: panel selection
-(stage 1) and the normal reference distribution behind `jsd` and `pdr` were built
-from both halves. It needs `LLR_HELDOUT=1`.
-
-```bash
-# 1) split the mixing group by person (normals) and cell line (cancer);
-#    pass the lists the original pools were built from; --layout-tsv balances SE/PE
-python 2_train/steps/split_ab.py --out lists     --use-normal <normal list> --use-cancer <cancer list> [--layout-tsv layout.tsv]
-
-# 2) for each half X in A, B: a new output root that links stage-1 outputs one by
-#    one, except the pool folders, which the next command writes
-R=<root_X>; mkdir -p $R/results/dmr $R/sample_data
-for d in $METH_ROOT/results/dmr/*; do
-  case $(basename $d) in j_pool*) ;; *) ln -s "$(readlink -f $d)" $R/results/dmr/;; esac
-done
-METH_ROOT=$R USE_NORMAL=lists/use_normal_X.txt USE_GBM=lists/use_cancer_X.txt   bash 1_dmr/steps/run_pool.sh cellline
-METH_ROOT=$R VERSION=j15jsd200_5k_uni PANEL=jsd200 TARGET_DEPTH_READS=5000   bash 2_train/run_train.sh            # once per panel
-
-# 3) score each half with the other half's models
-python 4_report/steps/cross_score.py --a <root_A> --b <root_B>
-```
-
-`cross_score.py` prints the cross AUC (G, mean of A→B and B→A) next to the
-within-half CV of the BEST model's type (W) and of the best of four models (W4).
-G is the pooled BEST model's score while W is a single-ratio CV, so G − W also
-contains that difference.
-
 Pooled BAMs. A pooled BAM holds only reads inside its own panel regions, so step
 11 builds three sets (`_cellline`, `_rand`, `_randb`) and `2_train/steps/config.py`
 picks the one matching `PANEL`.
@@ -323,15 +293,11 @@ as part of any reproduction.
 `OPENBLAS_NUM_THREADS` and `MKL_NUM_THREADS` in the stage entry points
 (`run_*.sh`, `make_report.sh`); a value already present in the environment wins,
 and the values actually used are written to `config_snapshot.txt`. Step scripts
-run directly with `python` are not pinned. `results/main/` was produced with
-one thread. To regenerate the `e8d5fe5d` tables in `results/`, check out tag
+run directly with `python` are not pinned. To regenerate the `e8d5fe5d` tables in `results/`, check out tag
 `results-e8d5fe5d` and set all three variables to 32 (on `main`, `BLAS_THREADS=32`).
 The stored tables were trained with the variables unset on a 32-core server with
 OpenBLAS; re-running one cell (lung jsd200 5k) with 32 set explicitly matched all
 1,116 rows. Other cells were not re-run.
-
-`results/main/` holds the same tables re-run on `main`; the primary metric
-moves by at most 0.002 and every cell stays below 0.70.
 
 Steps 08 and 09 print the number of convergence warnings at the end. With
 `CONVERGENCE_GATE=on` (default `off`) any warning makes the step fail. Only
@@ -423,9 +389,9 @@ README.md  requirements.txt  .gitignore  .gitattributes
                                   run_pool.sh moderated_t
 2_train/      run_train.sh steps/ 01-03_Preprocessing…Mixing 04_coverage_check
                                   05_Feature_Matrix 06_jsdfeat 07_llrfeat
-                                  08_ML_classifier 09_save_best_j split_ab config
+                                  08_ML_classifier 09_save_best_j config
 3_validate/   run_validate.sh steps/ run_one_sample make_val_config score_one_sample
                                   paths val_single
                                   cohorts/ sample_cohort.conf.example patient_plasma.conf.example
-4_report/     make_report.sh steps/ make_tables primary_metric plasma_metric plasma_baseline cross_score
+4_report/     make_report.sh steps/ make_tables primary_metric plasma_metric plasma_baseline
 ```

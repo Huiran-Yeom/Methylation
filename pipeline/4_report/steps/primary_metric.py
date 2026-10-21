@@ -9,6 +9,7 @@
            + 병기 mean|entropy|jsd|pdr  (llr 뺀 것 — 플랫폼 조항 (1))
     교집합 세 패널이 모두 값을 낸 검증 검체만
     판정   짝지은 부트스트랩 2,000회 · 쌍이 셋이라 Bonferroni a=0.05/3 -> 98.33% 구간
+           복원추출로 두 번 이상 뽑힌 사람은 뽑힌 횟수만큼 무게를 준다(집합으로 받으면 구간이 좁아진다)
 
    최고 조합을 고르지 않는다.  전수 표는 부차이고 여기서는 박은 조합만 본다.
 
@@ -64,6 +65,7 @@ except ImportError:
 import os, sys, re, glob, io, itertools
 import numpy as np, pandas as pd
 from sklearn.metrics import roc_auc_score
+from collections import Counter
 
 a = sys.argv
 DEPTH = a[a.index('--depth') + 1] if '--depth' in a else '5k'
@@ -220,6 +222,16 @@ def load(panel, combo):
     return d, None
 
 
+def a1w(pos, neg, wp, wn):
+    """a1 에 뽑힌 횟수를 무게로 준 것(복원추출 부트스트랩)."""
+    mp, mn = wp > 0, wn > 0
+    if not mp.any() or not mn.any():
+        return float('nan')
+    y = np.r_[np.zeros(mn.sum()), np.ones(mp.sum())]
+    sc = np.r_[neg['y_score'].values[mn], pos['y_score'].values[mp]]
+    return float(roc_auc_score(y, sc, sample_weight=np.r_[wn[mn], wp[mp]]))
+
+
 def a1(pos, neg):
     """a1: 검체·복제본 전체."""
     if not len(pos) or not len(neg):
@@ -314,21 +326,22 @@ def run(combo, mixed):
     for x, y in itertools.combinations(PANELS, 2):
         diffs = []
         for _ in range(NBOOT):
-            keep = set(rs.choice(people, len(people), replace=True))
-            kd = set()
+            keep = Counter(rs.choice(people, len(people), replace=True))
+            kd = Counter()
             if not mixed:
                 if eg and gs:
-                    kd = set(rs.choice(eg, len(eg), replace=True)) | \
-                         set(rs.choice(gs, len(gs), replace=True))
+                    kd = Counter(rs.choice(eg, len(eg), replace=True)) + \
+                         Counter(rs.choice(gs, len(gs), replace=True))
                 elif dn:
-                    kd = set(rs.choice(dn, len(dn), replace=True))
+                    kd = Counter(rs.choice(dn, len(dn), replace=True))
             dd = []
             for p in (x, y):
                 pos, neg, _ = out[p]
-                nn = neg if mixed else neg[neg['person'].isin(keep)]
+                wp = pos['person'].map(keep).fillna(0).values
+                wn = np.ones(len(neg)) if mixed else neg['person'].map(keep).fillna(0).values
                 if kd:
-                    nn = nn[nn['donor'].isin(kd)]
-                dd.append(a1(pos[pos['person'].isin(keep)], nn))
+                    wn = wn * neg['donor'].map(kd).fillna(0).values
+                dd.append(a1w(pos, neg, wp, wn))
             if all(v == v for v in dd):
                 diffs.append(dd[0] - dd[1])
         if not diffs:

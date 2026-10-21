@@ -253,6 +253,24 @@ if __name__ == '__main__':
         print('%-22s %-44s (%s)' % (k, os.environ.get(k, '없음(라이브러리 기본)'), 'env'))
 
 
+def check_same_refs(paths, what=''):
+    """BAM 들의 참조 서열 목록(이름 · 길이 · 순서)이 같은지 본다. 다르면 멈춘다.
+
+    리드를 다른 BAM 헤더로 옮겨 쓰면 reference_id 가 그대로 옮겨져, 순서가 다른 BAM 의 리드가
+    엉뚱한 염색체에 붙는다. 그래서 섞기 · 풀 만들기 전에 먼저 맞춰 본다.
+    """
+    import pysam
+    sig = None
+    for p in paths:
+        with pysam.AlignmentFile(p, 'rb', check_sq=False) as b:
+            s = tuple(zip(b.references, b.lengths))
+        if sig is None:
+            sig, first = s, p
+        elif s != sig:
+            raise SystemExit('참조 서열 목록이 다르다%s: %s 와 %s — 같은 기준 유전체 · 같은 헤더로 정렬된 BAM 이어야 한다'
+                             % (' (' + what + ')' if what else '', os.path.basename(first), os.path.basename(p)))
+
+
 def fragments(reads):
     """BAM 리드를 조각 단위로 묶어 내준다. 정렬 순서(좌표 · 이름)와 상관없이 PE 두 짝을 한 조각으로 합친다.
 

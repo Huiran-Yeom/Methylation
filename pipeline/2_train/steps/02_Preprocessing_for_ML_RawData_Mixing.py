@@ -296,6 +296,10 @@ def main():
     if problems and not C.ALLOW_REPLACEMENT:
         raise SystemExit('풀 부족으로 중단했습니다.')
 
+    # 암 헤더로 정상 · 배경 리드를 그대로 옮겨 쓰므로, 참조 서열 목록이 같아야 한다.
+    C._cfg.check_same_refs([C.MUT_SORTED, C.WT_SORTED]
+                         + [f for f in (C.WT_SORTED.replace('.bam', '_bg%02d.bam' % k) for k in range(1, 100))
+                            if os.path.exists(f)], '섞기 입력')
     # ── 5) 출력 헤더 ──
     with pysam.AlignmentFile(C.MUT_SORTED, 'rb') as b:
         hdr = b.header.to_dict()

@@ -119,6 +119,7 @@ for s in USE:
         sys.exit('BAM 을 못 찾음: %s (%d개)' % (s, len(hit)))
     bams.append((s, hit[0]))
 
+_cfg.check_same_refs([b for _, b in bams], '풀 입력')
 os.makedirs(os.path.dirname(OUT) or '.', exist_ok=True)
 tmp = OUT + '.unsorted.bam'
 hdr = pysam.AlignmentFile(bams[0][1], 'rb', check_sq=False).header

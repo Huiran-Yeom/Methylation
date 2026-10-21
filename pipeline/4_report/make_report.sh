@@ -66,7 +66,8 @@ fi
 export COHORT
 # 혈장 코호트(NEG_SAMPLES 가 있는 설정)는 비악성 대조가 검체 자리에 있어 아래 표가 뜻이 없다.
 #   그 코호트는 steps/plasma_metric.py 로만 판정한다.
-for _c in "${COHORT_CONF:-}" "$HOME/cohorts/$COHORT.conf" "$_HERE/../3_validate/steps/cohorts/$COHORT.conf"; do
+# 찾는 순서는 3단계(run_validate.sh)와 같다: COHORT_CONF → COHORT_DIR(기본 ~/cohorts) → 저장소 예시.
+for _c in "${COHORT_CONF:-}" "${COHORT_DIR:-$HOME/cohorts}/$COHORT.conf" "$_HERE/../3_validate/steps/cohorts/$COHORT.conf"; do
   [ -n "$_c" ] && [ -f "$_c" ] || continue
   if grep -qE '^[[:space:]]*NEG_SAMPLES=[[:space:]]*[^[:space:]]' "$_c"; then
     echo "멈춤: $_c 에 NEG_SAMPLES 가 있습니다 — 혈장 코호트는 steps/plasma_metric.py 로 판정합니다" >&2

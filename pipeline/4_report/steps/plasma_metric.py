@@ -73,7 +73,9 @@ R = '%s/%s_val' % (_cfg.METH_ROOT, COHORT)
 
 
 def load_conf():
-    cands = [a.conf] if a.conf else [os.path.expanduser('~/cohorts/%s.conf' % COHORT),
+    # 찾는 순서는 3단계와 같다: --conf → COHORT_CONF → COHORT_DIR(기본 ~/cohorts) → 저장소 예시.
+    _env = os.environ.get('COHORT_CONF')
+    cands = [a.conf] if a.conf else ([_env] if _env else []) + [os.path.join(os.environ.get('COHORT_DIR') or os.path.expanduser('~/cohorts'), '%s.conf' % COHORT),
                                      os.path.join(_h, '3_validate', 'steps', 'cohorts', '%s.conf' % COHORT)]
     p = next((c for c in cands if c and os.path.exists(c)), None) or sys.exit('코호트 정의 없음: ' + ' 또는 '.join(cands))
     print('코호트 정의  %s' % os.path.abspath(p))

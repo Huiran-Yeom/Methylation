@@ -220,7 +220,8 @@ def build_pn(nwin):
     have = N > 0
     P = np.zeros_like(S)
     P[have] = S[have] / N[have, None]
-    print('  P_N : 정상 %d명 · 쓸 수 있는 창 %s개' % (len(fs), format(int(have.sum()), ',')))
+    print('  P_N : 정상 %d명 · 쓸 수 있는 창 %s개 · 빈 창 %s개(정상 누구도 %d 읽기 이상 없음)'
+          % (len(fs), format(int(have.sum()), ','), format(int(nwin - have.sum()), ','), MINR))
     return P, have
 
 

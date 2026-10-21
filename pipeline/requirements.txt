@@ -1,5 +1,6 @@
 # 실제로 쓴 버전입니다 (서버에서 측정).
 # 외부 프로그램: bismark v0.24.1 · bowtie2 2.5.1 · samtools 1.5
+# BLAS: OpenBLAS 0.3.17 (conda 의 numpy 1.22.3). 로지스틱 회귀 값은 BLAS 종류와 스레드 수에 따라 달라진다.
 #
 # python 3.9  (conda env)
 #   conda create -n meth python=3.9 && conda activate meth && pip install -r requirements.txt

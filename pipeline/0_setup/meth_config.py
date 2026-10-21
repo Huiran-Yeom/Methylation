@@ -257,7 +257,7 @@ def count_convergence():
     """수렴 경고(ConvergenceWarning)를 세는 칸 [n] 을 돌려준다. 2단계 08 · 09 가 부른다.
 
     경고마다 세되 화면에는 처음 하나만 낸다. 다른 경고는 그대로 지나간다.
-    'always' 는 판에 따라 같은 자리 경고를 한 번만 내는 것을 막는다(sklearn 1.6 은 적합마다 다시 낸다).
+    'always' 는 같은 자리 경고를 한 번만 보여 주는 설정에서도 다 세게 한다.
     이 프로세스에서 난 것만 센다 — joblib 일꾼(n_jobs > 1)에서 난 경고는 못 센다.
     """
     import warnings

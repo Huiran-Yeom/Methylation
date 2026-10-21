@@ -5,7 +5,7 @@
 
 원본 : 초기 공개본 scripts/step04_ML_classifier.py (저장소에서 삭제됨 · git 기록에 있음) 의 `3) 모델링`
 
-회의록 250219 의 feature 조합 계획을 그대로 구현한다.
+특징 조합 계획:
    1) Mean 으로만                    (step04_1  {p}_mean_v3.csv)
    2) Entropy 로만 (site 수준)       (step04_1  {p}_entropy_v3.csv)
    3) Site별 엔트로피 → read 합치기  (2_train/steps/08  {p}_ent_site_read_v3.csv)
@@ -25,7 +25,7 @@
 바뀌지 않은 것
   - train_test_split(test_size=0.2, random_state=SEED), 모델 4종과 하이퍼파라미터
     (LogisticRegression 만 max_iter=2000 — 09 와 같게),
-  - stratify 는 기본 꺼짐(원본과 동일). config.STRATIFY=True 로 켤 수 있다.
+  - train_test_split 의 stratify 는 config.STRATIFY 를 따른다(지금 기본 True).
 
 SVM 점수
   원본 SVC 는 probability=False 라 predict_proba 가 없다. 기본값에서는
@@ -217,7 +217,7 @@ def main():
                 # 결측은 학습셋 평균으로만 채운다. 검증셋 값을 섞으면 누출이다.
                 # 행렬이 이미 채워져 온 경우에는 아무 일도 일어나지 않는다.
                 trmean = Xtr.mean()
-                Xtr_raw = Xtr        # 채우기 전 — 문턱용 접기 예측은 접기 안에서 채운다(아래 · 65 가)
+                Xtr_raw = Xtr        # 채우기 전 — 문턱용 접기 예측은 아래에서 접기 안에서 채운다
                 if Xtr.isna().any().any() or Xva.isna().any().any():
                     Xtr = Xtr.fillna(trmean).fillna(0.0)
                     Xva = Xva.fillna(trmean).fillna(0.0)

@@ -85,7 +85,7 @@ while '--feat' in _a:
 #   2_train/steps/08 의 조합 목록과 같은 규칙이다. 손으로 적지 않는다.
 #   --pooled 면 비율별 적합을 건너뛴다. 검증은 pooled 모델만 쓴다
 #   (score_one_sample.py:46  models/<조합>/pooled/BEST.joblib).
-#   127조합 x 10비율 x 4모델 = 5,080 적합이 127 x 4 = 508 로 줄어든다.
+#   특징 5종이면 31조합 x 10비율 x 4모델 = 1,240 적합이 31 x 4 = 124 로 줄어든다.
 ALLC = '--allcombos' in _a
 POOLED_ONLY = '--pooled' in _a
 _a = [x for x in _a if x not in ('--allcombos', '--pooled')]

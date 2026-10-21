@@ -413,7 +413,7 @@ def main():
     if not means:
         sys.exit('mean CSV 가 없습니다. step04_1 을 먼저 돌리세요: ' + out_dir)
     # 검증에서는 블록 집합을 「학습」 의 mean 표에서 가져온다.
-    #   검증 검체의 mean 표는 블록을 안 버려(50) 학습 mean 표와 블록이 다르다. 그대로 쓰면 llr 이
+    #   검증 검체의 mean 표는 블록을 안 버려(05 의 검증 분기) 학습 mean 표와 블록이 다르다. 그대로 쓰면 llr 이
     #   학습과 다른 창들을 합산한다(실측 창 1,272 → 1,273). 검증 실행기(run_one_sample.sh)가
     #   LLR_KEEP_FROM 에 학습 step04_ML_classifier 자리를 준다. 학습은 이 값을 안 주므로 그대로다.
     _kf = os.environ.get('LLR_KEEP_FROM')

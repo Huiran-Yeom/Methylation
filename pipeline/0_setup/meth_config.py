@@ -209,6 +209,12 @@ if int(_depth_match.group(1)) * 1000 != TARGET_DEPTH_READS:
         'VERSION(%s)의 깊이와 TARGET_DEPTH_READS(%d)가 어긋난다.\n'
         '  둘을 같이 고친다. 한쪽만 고치면 폴더 이름과 내용이 달라진다.'
         % (VERSION, TARGET_DEPTH_READS))
+# VERSION 의 세대 · 판도 GEN · PANEL 과 맞아야 한다. 어긋나면 다른 판 자료로 만든 모델이 이 판 경로에 저장된다.
+#   VERSION · PANEL 을 환경변수로 준 실행(2 · 3단계 드라이버)만 본다. 1단계는 VERSION 을 쓰지 않아 conf 기본값이 남는다.
+if '환경변수' in (SOURCE.get('VERSION'), SOURCE.get('PANEL')) and VERSION.startswith('j') and not VERSION.startswith('j%s%s_' % (GEN, PANEL)):
+    raise SystemExit(
+        'VERSION(%s) 이 GEN(%s) · PANEL(%s) 과 어긋난다 — j<GEN><PANEL>_<깊이>k_<방식> 꼴이어야 한다.'
+        % (VERSION, GEN, PANEL))
 
 
 def snapshot(folder):

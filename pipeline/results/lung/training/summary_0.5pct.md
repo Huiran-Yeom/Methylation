@@ -5,9 +5,9 @@
 
 | 패널 | 깊이 | 1차 조합 mean\|entropy\|jsd\|llr\|pdr | llr 뺀 mean\|entropy\|jsd\|pdr | 31조합 중 최고 |
 |---|---|---|---|---|
-| bl200 | 5k | 0.761 | 0.774 | 0.786 (entropy\|jsd\|llr\|pdr) |
+| bl200 | 5k | 0.762 | 0.774 | 0.786 (entropy\|jsd\|llr\|pdr) |
 | bl200 | 50k | 0.998 | 1.000 | 1.000 (entropy) |
-| jsd200 | 5k | 0.881 | 0.747 | 0.916 (mean\|jsd\|llr\|pdr) |
+| jsd200 | 5k | 0.884 | 0.747 | 0.914 (mean\|jsd\|llr\|pdr) |
 | jsd200 | 50k | 1.000 | 1.000 | 1.000 (entropy\|jsd) |
 | jsdb200 | 5k | 0.815 | 0.650 | 0.831 (entropy\|jsd\|llr) |
 | jsdb200 | 50k | 1.000 | 1.000 | 1.000 (entropy\|jsd) |

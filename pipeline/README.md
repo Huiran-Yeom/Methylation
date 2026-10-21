@@ -4,9 +4,10 @@ Code for building a methylation-pattern classifier for glioblastoma (GBM) from
 cfDNA and validating it on an external cohort. The same code, with different
 inputs, was run on small-cell lung cancer (SCLC) cell lines as a supporting study.
 
-The tables in `results/` were produced by commit `e8d5fe5d` (tag
-`results-e8d5fe5d`). Later commits change four computations (see
-[Reproducibility](#reproducibility)), so check out that tag to regenerate them.
+The tables in `results/` were produced by the code in this repository with the
+default settings (`BLAS_THREADS=1`). The pre-registered verdict was computed
+earlier, with commit `e8d5fe5d` (tag `results-e8d5fe5d`); the conclusion is the
+same (see [Reproducibility](#reproducibility)).
 
 ---
 
@@ -264,8 +265,8 @@ Which commit made which numbers:
 
 | Numbers | Commit |
 |---|---|
-| `results/` (GBM and lung, training CV and validation) | `e8d5fe5d`, tag `results-e8d5fe5d` |
-| this branch | `e8d5fe5d` plus four changes from `79979d24`: the held-out split in `05_llrref` uses the whole `samples.csv`; validation llr blocks come from the training mean table (`LLR_KEEP_FROM`); validation mode is also signalled by `METH_VALIDATE=1`; in stage 2 the threshold predictions are imputed inside each fold and Logistic Regression uses `max_iter=2000`. These change `cv_all.csv` and the thresholds, so this branch does not regenerate `results/`. |
+| `results/` (GBM and lung, training CV and validation) | this repository, `BLAS_THREADS=1` |
+| pre-registered verdict | `e8d5fe5d`, tag `results-e8d5fe5d`. This repository adds four changes from `79979d24`: the held-out split in `05_llrref` uses the whole `samples.csv`; validation llr blocks come from the training mean table (`LLR_KEEP_FROM`); validation mode is also signalled by `METH_VALIDATE=1`; in stage 2 the threshold predictions are imputed inside each fold and Logistic Regression uses `max_iter=2000`. The primary metric moves by at most 0.002 and every cell stays below 0.70. |
 
 A from-scratch re-run of `e8d5fe5d` (all of stage 1 on empty output roots, then
 stages 2–3, BLAS threads pinned to 1) was compared with the stored outputs at a
@@ -293,11 +294,12 @@ as part of any reproduction.
 `OPENBLAS_NUM_THREADS` and `MKL_NUM_THREADS` in the stage entry points
 (`run_*.sh`, `make_report.sh`); a value already present in the environment wins,
 and the values actually used are written to `config_snapshot.txt`. Step scripts
-run directly with `python` are not pinned. To regenerate the `e8d5fe5d` tables in `results/`, check out tag
-`results-e8d5fe5d` and set all three variables to 32 (on `main`, `BLAS_THREADS=32`).
-The stored tables were trained with the variables unset on a 32-core server with
-OpenBLAS; re-running one cell (lung jsd200 5k) with 32 set explicitly matched all
-1,116 rows. Other cells were not re-run.
+run directly with `python` are not pinned. The tables in `results/` were made
+with the default (1). To regenerate the `e8d5fe5d` tables behind the
+pre-registered verdict, check out tag `results-e8d5fe5d` and set all three
+variables to 32. Those tables were trained with the variables unset on a
+32-core server with OpenBLAS; re-running one cell (lung jsd200 5k) with 32 set
+explicitly matched all 1,116 rows. Other cells were not re-run.
 
 Steps 08 and 09 print the number of convergence warnings at the end. With
 `CONVERGENCE_GATE=on` (default `off`) any warning makes the step fail. Only

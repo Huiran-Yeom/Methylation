@@ -291,14 +291,9 @@ def main():
                 _LAYOUT[0] = str(conf.get('LAYOUT') or
                                  detect_layout(conf.get('NORMAL', ''), _cn))
                 print('  리드 방식: %s' % _LAYOUT[0])
-            if _LAYOUT[0].startswith('single'):
-                from val_single import to_single
-                to_single(d)
-                # 표시를 남긴다. run_one_sample.sh 의 최신화 루프가 매번 원본을
-                #   덮어쓰므로, 두 번째 실행부터는 이 패치가 사라진다.
-                #   그쪽이 이 표시를 보고 다시 건다.
-                io.open(os.path.join(work, '.layout_single'), 'w',
-                        encoding='utf-8').write(_LAYOUT[0] + chr(10))
+            # 단일말단도 지금 섞기 · 추출 코드(2단계 02 · 03 의 PE · SE 혼합 경로)가 그대로 처리한다.
+            #   옛 단일말단 패치(val_single.to_single)는 지금 코드에 패치할 줄이 없어 쓰지 않는다.
+            #   감지 결과는 기록만 한다.
 
     base = io.open(os.path.join(src, 'config.py'), encoding='utf-8').read()
     _rt = str(conf.get('RATIOS', '')).strip()

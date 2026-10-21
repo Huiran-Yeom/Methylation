@@ -158,7 +158,7 @@ for i,(p,t) in enumerate(files,1):
     print('  [%2d/%d] %-16s %8d' % (i,len(files),s,len(d)))
     if d.empty: continue
     d = d[['chr','blk','start']].copy()
-    d['grp'] = grp(s); d['ty'] = t
+    d['grp'] = grp(s, t); d['ty'] = t        # 정상은 GROUP_RE 로 묶지 않는다(위 u_norm 과 같은 규칙)
     rows.append(d)
 
 A = pd.concat(rows, ignore_index=True)

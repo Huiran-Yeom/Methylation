@@ -277,28 +277,57 @@ def check_same_refs(paths, what=''):
                              % (' (' + what + ')' if what else '', os.path.basename(first), os.path.basename(p)))
 
 
-def fragments(reads):
+def fragments(reads, stats=None):
     """BAM 리드를 조각 단위로 묶어 내준다. 정렬 순서(좌표 · 이름)와 상관없이 PE 두 짝을 한 조각으로 합친다.
 
-    짝이 아직 안 나온 리드는 기다렸다가, read1 · read2 가 다 오면 그 묶음을 낸다.
-    단일말단 · 짝이 정렬 안 된 리드는 바로 낸다. 파일 끝까지 짝이 안 온 리드는 마지막에 낸다.
+    PE(짝 표시가 있고 짝이 정렬된 리드): read1 · read2 가 다 올 때까지 이름으로 기다렸다가 낸다.
+      파일 끝까지 짝이 안 온 리드는 마지막에 낸다.
+    짝 표시가 없는 리드: 이름이 같은 리드가 바로 이어 오면 한 조각으로 합친다(단일말단으로
+      정렬된 자료에서 한 조각의 두 끝이 따로 기록된 경우 · 예전 규칙과 같다).
     정렬 안 됨 · 2차 · 보조 정렬은 건너뛴다.
+    stats 를 주면 같은 이름 · 같은 짝 번호가 두 번 온 수를 stats['dup'] 에 센다(복원 추출 · 이름 충돌 신호).
     """
-    pend = {}
+    pend, se = {}, []
     for r in reads:
         if r.is_unmapped or r.is_secondary or r.is_supplementary:
             continue
         if not r.is_paired or r.mate_is_unmapped:
-            yield [r]
+            if se and se[0].query_name == r.query_name:
+                se.append(r)
+                continue
+            if se:
+                yield se
+            se = [r]
             continue
-        e = pend.setdefault(r.query_name, ([], set()))
+        if se:
+            yield se
+            se = []
+        k = 1 if r.is_read1 else 2
+        e = pend.get(r.query_name)
+        if e is None:
+            e = pend[r.query_name] = ([], set())
+        elif k in e[1] and stats is not None:
+            stats['dup'] = stats.get('dup', 0) + 1
         e[0].append(r)
-        e[1].add(1 if r.is_read1 else 2)
+        e[1].add(k)
         if len(e[1]) == 2:
             del pend[r.query_name]
             yield e[0]
+    if se:
+        yield se
     for e in pend.values():
         yield e[0]
+
+
+def dup_check(n, allow, what):
+    """fragments 가 센 「같은 이름 · 같은 짝 번호」 리드 수를 알린다. 파일 이름은 찍지 않는다
+    (정상 BAM 이름에 사람 이름이 있다). allow 가 거짓이면 0 이 아닐 때 멈춘다."""
+    if not n:
+        return
+    m = '%s: 같은 이름 · 같은 짝 번호 리드 %d 개 (복원 추출 또는 이름 충돌)' % (what, n)
+    if not allow:
+        raise SystemExit(m + ' — ALLOW_REPLACEMENT=False 인데 0 이 아니므로 멈춘다')
+    print('  경고: ' + m)
 
 
 def count_convergence():

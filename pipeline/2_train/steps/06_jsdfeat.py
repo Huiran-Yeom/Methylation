@@ -243,7 +243,8 @@ def scan(bam, blkwin, nwin):
 
     # 두 짝 묶기는 정렬 순서와 상관없게 meth_config.fragments 로 한다(03_jsdcount 와 같은 함수).
     f = pysam.AlignmentFile(bam, 'rb', check_sq=False)
-    for grp in _cfg.fragments(f):
+    st = {}
+    for grp in _cfg.fragments(f, st):
         frag = {}
         for r in grp:
             ch = r.reference_name
@@ -269,6 +270,7 @@ def scan(bam, blkwin, nwin):
         if frag:
             flush(frag)
     f.close()
+    _cfg.dup_check(st.get('dup', 0), C.ALLOW_REPLACEMENT, '06_jsdfeat')
     return Cm
 
 

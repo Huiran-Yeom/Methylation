@@ -134,7 +134,8 @@ def scan(bam):
 
     # 두 짝 묶기는 정렬 순서와 상관없게 meth_config.fragments 로 한다. 학습 BAM 은 좌표 정렬이라
     #   이름이 연달아 나올 때만 묶으면 짝이 따로 세어진다(혼합 BAM 은 이름순이라 묶였다).
-    for grp in _cfg.fragments(_limited(f)):
+    st = {}
+    for grp in _cfg.fragments(_limited(f), st):
         frag = {}
         for r in grp:
             ch, e = r.reference_name, r.reference_end
@@ -152,6 +153,7 @@ def scan(bam):
                 if k in blkwin: frag.setdefault(k, {}).setdefault(p, 1 if c == 'Z' else 0)
         if frag: flush(frag)
     f.close()
+    _cfg.dup_check(st.get('dup', 0), True, '03_jsdcount')
     return nr, nh
 
 _CANCER = getattr(_cfg, 'CANCER_LABEL', 'GBM')   # samples.csv 의 type 값

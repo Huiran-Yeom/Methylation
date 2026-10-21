@@ -89,7 +89,7 @@ ALLOW_REPLACEMENT = False
 SKIP_SHORT_RATIOS = True
 
 FULL_NORMAL_BAM = '%(normal)s'
-# 음성 배경을 공여자별로 가른다. 반복 i 가 배경 i 를 쓴다.
+# 음성 배경을 공여자별 BAM 으로 준다. 반복마다 배경 전원을 리드 수에 비례해 섞는다(한 반복 = 한 사람 아님).
 #   비어 있으면 예전처럼 병합본 하나에서 전부 뽑는다.
 NORMAL_BAMS = %(normals)s
 FULL_GBM_BAM = '%(cancer)s'

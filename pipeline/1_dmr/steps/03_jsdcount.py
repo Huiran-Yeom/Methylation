@@ -122,28 +122,35 @@ def flush(frag):
 def scan(bam):
     for K in KS: C[K][:] = 0
     f = pysam.AlignmentFile(bam, 'rb', check_sq=False)
-    last, frag, nr, nh = None, {}, 0, 0
-    for r in f:
-        if r.is_unmapped or r.is_secondary or r.is_supplementary: continue
-        nr += 1
-        if LIMIT and nr > LIMIT: break
-        if r.query_name != last:
-            if frag: flush(frag)
-            frag, last = {}, r.query_name
-        ch, e = r.reference_name, r.reference_end
-        if e is None: continue
-        if not any((ch, b) in blkwin for b in range((r.reference_start+1)//BLOCK, e//BLOCK + 1)):
-            continue
-        nh += 1
-        try: xm = r.get_tag('XM')
-        except KeyError: continue
-        for qp, rp in r.get_aligned_pairs(matches_only=True):
-            c = xm[qp]
-            if c != 'z' and c != 'Z': continue
-            p = rp + 1
-            k = (ch, p // BLOCK)
-            if k in blkwin: frag.setdefault(k, {}).setdefault(p, 1 if c == 'Z' else 0)
-    if frag: flush(frag)
+    nr, nh = 0, 0
+
+    def _limited(it):            # LIMIT 은 1차 정렬 리드 수로 센다(전과 같음)
+        nonlocal nr
+        for r in it:
+            if r.is_unmapped or r.is_secondary or r.is_supplementary: continue
+            nr += 1
+            if LIMIT and nr > LIMIT: return
+            yield r
+
+    # 두 짝 묶기는 정렬 순서와 상관없게 meth_config.fragments 로 한다. 학습 BAM 은 좌표 정렬이라
+    #   이름이 연달아 나올 때만 묶으면 짝이 따로 세어진다(혼합 BAM 은 이름순이라 묶였다).
+    for grp in _cfg.fragments(_limited(f)):
+        frag = {}
+        for r in grp:
+            ch, e = r.reference_name, r.reference_end
+            if e is None: continue
+            if not any((ch, b) in blkwin for b in range((r.reference_start+1)//BLOCK, e//BLOCK + 1)):
+                continue
+            nh += 1
+            try: xm = r.get_tag('XM')
+            except KeyError: continue
+            for qp, rp in r.get_aligned_pairs(matches_only=True):
+                c = xm[qp]
+                if c != 'z' and c != 'Z': continue
+                p = rp + 1
+                k = (ch, p // BLOCK)
+                if k in blkwin: frag.setdefault(k, {}).setdefault(p, 1 if c == 'Z' else 0)
+        if frag: flush(frag)
     f.close()
     return nr, nh
 

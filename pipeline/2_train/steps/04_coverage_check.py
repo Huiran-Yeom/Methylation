@@ -62,9 +62,9 @@ def covered_blocks(path, dmr, fmt):
     opener = gzip.open(path, 'rt')
     out = set()
     with opener as f:
-        if fmt == 'bedgraph':
-            next(f, None)  # track 헤더
         for line in f:
+            if line.startswith('track'):      # track 줄이 있을 때만 건너뛴다(03 이 다시 쓴 파일에는 없다)
+                continue
             parts = line.rstrip('\n').split('\t')
             if len(parts) < 4:
                 continue

@@ -59,6 +59,7 @@ def main():
 
     block_counts = []
     kept = 0
+    seen_mut, seen_wt = set(), set()
     with pysam.AlignmentFile(mut_combined, 'wb', header=mut_bam.header) as mo, \
          pysam.AlignmentFile(wt_combined, 'wb', header=wt_bam.header) as wo:
         for _, row in g.iterrows():
@@ -73,10 +74,18 @@ def main():
                 continue
             # 원본과 동일한 조건: 양쪽 모두 5개 이상
             if mut_n >= C.MIN_READS_PER_BLOCK and wt_n >= C.MIN_READS_PER_BLOCK:
+                # 이웃한 두 블록에 걸친 리드는 블록마다 한 번씩 걸린다. 한 번만 쓴다 —
+                #   두 번 쓰면 다음 단계가 이름당 레코드 수(1 · 2)로 조각을 거를 때 조각 전체가 빠진다.
                 for r in mut_bam.fetch(chrom, start, end):
-                    mo.write(r)
+                    key = (r.query_name, r.flag, r.reference_id, r.reference_start)
+                    if key not in seen_mut:
+                        seen_mut.add(key)
+                        mo.write(r)
                 for r in wt_bam.fetch(chrom, start, end):
-                    wo.write(r)
+                    key = (r.query_name, r.flag, r.reference_id, r.reference_start)
+                    if key not in seen_wt:
+                        seen_wt.add(key)
+                        wo.write(r)
                 block_counts.append(
                     {
                         'chr': chrom,
@@ -124,10 +133,15 @@ def main():
             _tmp = _out + '.tmp.bam'
             _b = pysam.AlignmentFile(_bp, 'rb')
             _cnt = 0
+            _seen = set()          # 두 블록에 걸친 리드는 한 번만 쓴다(위 섞기 풀과 같은 이유)
             with pysam.AlignmentFile(_tmp, 'wb', header=_b.header) as _o:
                 for _c, _s in _blocks:
                     try:
                         for _r in _b.fetch(_c, _s, _s + n):
+                            _key = (_r.query_name, _r.flag, _r.reference_id, _r.reference_start)
+                            if _key in _seen:
+                                continue
+                            _seen.add(_key)
                             _o.write(_r)
                             _cnt += 1
                     except ValueError:

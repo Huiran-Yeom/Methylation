@@ -46,7 +46,7 @@ except ImportError:
 
 무늬 규칙은 03_jsdcount.py 와 완전히 동일하게 맞춘다.
   XM 태그 'Z'=1 · 'z'=0 · 자리는 rp+1 · 첫 자리가 최상위 비트
-  query_name 이 같은 연속 리드를 한 조각으로 (PE 두 짝 병합)
+  같은 이름의 PE 두 짝을 한 조각으로 (정렬 순서와 상관없이 · meth_config.fragments)
   창의 K 자리를 다 덮은 조각만 센다
 어긋나면 같은 판인데도 JSD 가 0 이 아니게 나와 값 전체가 무의미해진다.
 
@@ -235,39 +235,33 @@ def scan(bam, blkwin, nwin):
                 if v >= 0:
                     Cm[wid, v] += 1
 
+    # 두 짝 묶기는 정렬 순서와 상관없게 meth_config.fragments 로 한다(03_jsdcount 와 같은 함수).
     f = pysam.AlignmentFile(bam, 'rb', check_sq=False)
-    last = None
-    frag = {}
-    for r in f:
-        if r.is_unmapped or r.is_secondary or r.is_supplementary:
-            continue
-        if r.query_name != last:
-            if frag:
-                flush(frag)
-            frag = {}
-            last = r.query_name
-        ch = r.reference_name
-        e = r.reference_end
-        if e is None:
-            continue
-        lo = (r.reference_start + 1) // BLOCK
-        hi = e // BLOCK + 1
-        if not any((ch, b) in blkwin for b in range(lo, hi)):
-            continue
-        try:
-            xm = r.get_tag('XM')
-        except KeyError:
-            continue
-        for qp, rp in r.get_aligned_pairs(matches_only=True):
-            c = xm[qp]
-            if c != 'z' and c != 'Z':
+    for grp in _cfg.fragments(f):
+        frag = {}
+        for r in grp:
+            ch = r.reference_name
+            e = r.reference_end
+            if e is None:
                 continue
-            p = rp + 1
-            k = (ch, p // BLOCK)
-            if k in blkwin:
-                frag.setdefault(k, {}).setdefault(p, 1 if c == 'Z' else 0)
-    if frag:
-        flush(frag)
+            lo = (r.reference_start + 1) // BLOCK
+            hi = e // BLOCK + 1
+            if not any((ch, b) in blkwin for b in range(lo, hi)):
+                continue
+            try:
+                xm = r.get_tag('XM')
+            except KeyError:
+                continue
+            for qp, rp in r.get_aligned_pairs(matches_only=True):
+                c = xm[qp]
+                if c != 'z' and c != 'Z':
+                    continue
+                p = rp + 1
+                k = (ch, p // BLOCK)
+                if k in blkwin:
+                    frag.setdefault(k, {}).setdefault(p, 1 if c == 'Z' else 0)
+        if frag:
+            flush(frag)
     f.close()
     return Cm
 

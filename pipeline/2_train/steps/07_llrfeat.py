@@ -81,7 +81,7 @@ except ImportError:
 
 무늬 규칙은 03_jsdcount.py · 2_train/steps/06 와 완전히 동일하다.
   XM 태그 'Z'=1 · 'z'=0 · 자리는 rp+1 · 첫 자리가 최상위 비트
-  query_name 이 같은 연속 리드를 한 조각으로 (PE 두 짝 병합)
+  같은 이름의 PE 두 짝을 한 조각으로 (정렬 순서와 상관없이 · meth_config.fragments)
   창의 K 자리를 다 덮은 조각만 센다
 
 창 번호(wid) 정합성을 런타임에 검사한다
@@ -285,44 +285,37 @@ def scan(bam, blkwin, nwin):
                 if v >= 0:
                     Cm[wid, v] += 1
 
+    # 두 짝 묶기는 정렬 순서와 상관없게 meth_config.fragments 로 한다(03_jsdcount · 06 과 같은 함수).
     f = pysam.AlignmentFile(bam, 'rb', check_sq=False)
-    last = None
-    frag = {}
-    span = None
-    for r in f:
-        if r.is_unmapped or r.is_secondary or r.is_supplementary:
-            continue
-        if r.query_name != last:
-            if frag or span is not None:
-                flush(frag, span)
-            frag = {}
-            span = None
-            last = r.query_name
-        ch = r.reference_name
-        e = r.reference_end
-        if e is None:
-            continue
-        lo = (r.reference_start + 1) // BLOCK
-        hi = e // BLOCK + 1
-        if not any((ch, b) in blkwin for b in range(lo, hi)):
-            continue
-        # 온타겟으로 확인된 뒤에만 조각 범위를 넓힌다 (짝 두 개를 하나로 본다)
-        span = ((ch, r.reference_start, e) if span is None
-                else (span[0], min(span[1], r.reference_start), max(span[2], e)))
-        try:
-            xm = r.get_tag('XM')
-        except KeyError:
-            continue
-        for qp, rp in r.get_aligned_pairs(matches_only=True):
-            c = xm[qp]
-            if c != 'z' and c != 'Z':
+    for grp in _cfg.fragments(f):
+        frag = {}
+        span = None
+        for r in grp:
+            ch = r.reference_name
+            e = r.reference_end
+            if e is None:
                 continue
-            p = rp + 1
-            k = (ch, p // BLOCK)
-            if k in blkwin:
-                frag.setdefault(k, {}).setdefault(p, 1 if c == 'Z' else 0)
-    if frag or span is not None:
-        flush(frag, span)
+            lo = (r.reference_start + 1) // BLOCK
+            hi = e // BLOCK + 1
+            if not any((ch, b) in blkwin for b in range(lo, hi)):
+                continue
+            # 온타겟으로 확인된 뒤에만 조각 범위를 넓힌다 (짝 두 개를 하나로 본다)
+            span = ((ch, r.reference_start, e) if span is None
+                    else (span[0], min(span[1], r.reference_start), max(span[2], e)))
+            try:
+                xm = r.get_tag('XM')
+            except KeyError:
+                continue
+            for qp, rp in r.get_aligned_pairs(matches_only=True):
+                c = xm[qp]
+                if c != 'z' and c != 'Z':
+                    continue
+                p = rp + 1
+                k = (ch, p // BLOCK)
+                if k in blkwin:
+                    frag.setdefault(k, {}).setdefault(p, 1 if c == 'Z' else 0)
+        if frag or span is not None:
+            flush(frag, span)
     f.close()
     return Cm, nfrag[0], len(seen)
 

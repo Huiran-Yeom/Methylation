@@ -41,6 +41,7 @@ step04_1: bedGraph → Mean / Entropy feature 행렬
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
+import gzip
 import os
 import sys
 
@@ -106,9 +107,12 @@ def read_beta(path):
             dtype={'chr': str, 'pos': np.int64, 'beta': np.float64},
         )
     else:
-        # 첫 줄은 `track type=bedGraph` (실측 확인). 최종 코드의 df[1:] 와 동일
+        # bismark 가 바로 쓴 bedGraph 는 첫 줄이 `track type=bedGraph` 다. 그러나 03 의 merge_cov 가
+        #   다시 쓴 파일에는 그 줄이 없다. 첫 줄이 track 일 때만 건너뛴다(아니면 첫 CpG 가 빠진다).
+        with gzip.open(path, 'rt') as _h:
+            _skip = 1 if _h.readline().startswith('track') else 0
         df = pd.read_csv(
-            path, sep='\t', header=None, skiprows=1, usecols=[0, 1, 3],
+            path, sep='\t', header=None, skiprows=_skip, usecols=[0, 1, 3],
             names=['chr', 'pos', 'beta'],
             dtype={'chr': str, 'pos': np.int64, 'beta': np.float64},
         )

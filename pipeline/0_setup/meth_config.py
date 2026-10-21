@@ -253,6 +253,30 @@ if __name__ == '__main__':
         print('%-22s %-44s (%s)' % (k, os.environ.get(k, '없음(라이브러리 기본)'), 'env'))
 
 
+def fragments(reads):
+    """BAM 리드를 조각 단위로 묶어 내준다. 정렬 순서(좌표 · 이름)와 상관없이 PE 두 짝을 한 조각으로 합친다.
+
+    짝이 아직 안 나온 리드는 기다렸다가, read1 · read2 가 다 오면 그 묶음을 낸다.
+    단일말단 · 짝이 정렬 안 된 리드는 바로 낸다. 파일 끝까지 짝이 안 온 리드는 마지막에 낸다.
+    정렬 안 됨 · 2차 · 보조 정렬은 건너뛴다.
+    """
+    pend = {}
+    for r in reads:
+        if r.is_unmapped or r.is_secondary or r.is_supplementary:
+            continue
+        if not r.is_paired or r.mate_is_unmapped:
+            yield [r]
+            continue
+        e = pend.setdefault(r.query_name, ([], set()))
+        e[0].append(r)
+        e[1].add(1 if r.is_read1 else 2)
+        if len(e[1]) == 2:
+            del pend[r.query_name]
+            yield e[0]
+    for e in pend.values():
+        yield e[0]
+
+
 def count_convergence():
     """수렴 경고(ConvergenceWarning)를 세는 칸 [n] 을 돌려준다. 2단계 08 · 09 가 부른다.
 

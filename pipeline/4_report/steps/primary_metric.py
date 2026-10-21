@@ -280,14 +280,22 @@ def run(combo, mixed):
             print('  !! %s: %s' % (p, err))
             return 1
         D[p] = d
-    common = set.intersection(*[set(d['sample']) for d in D.values()])
-    print('  교집합 검체 %d개 · 사람 %d명'
-          % (len(common), len({person(s) for s in common})))
+    # 세 판이 «같은 행» 으로 비교되게 (검체 · 비율 · 반복 · 라벨) 단위로 교집합을 낸다.
+    #   검체 단위로만 맞추면 어떤 판에서 한 비율이 빠진 검체가 남아, 목표 비율 양성이나
+    #   «음성 전 비율» 의 행 수가 판마다 달라진다.
+    _keys = ['sample', 'ratio', 'rep', 'y_true']
+    _rows = set.intersection(*[set(d[_keys].itertuples(index=False, name=None)) for d in D.values()])
+    common = {k[0] for k in _rows}
+    _drop = {p: len(d) - sum(1 for k in d[_keys].itertuples(index=False, name=None) if k in _rows)
+             for p, d in D.items()}
+    print('  교집합 검체 %d개 · 사람 %d명 · 세 판 공통 행만 씀(판마다 뺀 행 %s)'
+          % (len(common), len({person(s) for s in common}),
+             ' · '.join('%s %d' % (p, n) for p, n in _drop.items())))
 
     out = {}
     for p in PANELS:
         d = D[p]
-        d = d[d['sample'].isin(common)]
+        d = d[[k in _rows for k in d[_keys].itertuples(index=False, name=None)]]
         pos = d[(d.y_true == 1) & (np.isclose(d.ratio, RATIO))]
         neg = d[d.y_true == 0]
         out[p] = (pos, neg, a1(pos, neg))

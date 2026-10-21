@@ -192,6 +192,12 @@ def build_pn(nwin):
     _norm = set(_meta.loc[_meta['type'] == 'Normal', 'sample'].astype(str))
     if not _norm:
         sys.exit('samples.csv 에 type=Normal 인 검체가 없습니다: ' + _sc)
+    # LLR 참조표(05_llrref)와 같게, held-out 이면 정상 기준도 「참조군」 정상만으로 만든다.
+    #   전원으로 만들면 학습 혼합군 정상이 자기를 포함한 기준과 비교돼 학습 CV 가 부푼다.
+    if int(getattr(_cfg, 'LLR_HELDOUT', 0)):
+        _ref, _ = _cfg.split_ref_mix(sorted(_norm))
+        print('  P_N : held-out — 참조군 정상 %d/%d 명만 씀' % (len(_ref), len(_norm)))
+        _norm = set(_ref)
     _suf = '_K%d.parquet' % K
     _nm = lambda f: os.path.basename(f)[len('count_'):-len(_suf)]
     _drop = [f for f in fs if _nm(f) not in _norm]

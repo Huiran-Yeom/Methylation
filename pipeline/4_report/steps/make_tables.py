@@ -265,6 +265,8 @@ for depth in DEPTHS:
     #   빠짐이 커버리지와 상관하므로 무작위가 아니다 → 전수로 내면 판마다 다른 환자 집단을 비교하게 된다.
     #   그래서 비율마다 세 판 공통 검체로 거른다.
     _ISEC = {}      # 비율 -> 공통 검체 집합
+    _HAS = {}       # 비율 -> 그 비율이 하나라도 있는 판 수
+    _NPAN = 0
     _UNI = {}
     for _p in ['j' + _cfg.GEN + _x for _x in _cfg.PANELS]:
         _byr = {}
@@ -283,6 +285,14 @@ for depth in DEPTHS:
         for _r, _s in _byr.items():
             _UNI[_r] = _UNI.get(_r, set()) | _s
             _ISEC[_r] = _s if _r not in _ISEC else (_ISEC[_r] & _s)
+        if _byr:                # 채점 파일이 하나라도 있는 판만 센다(그 깊이에 안 돌린 판은 빼고 맞춘다)
+            _NPAN += 1
+        for _r in _byr:
+            _HAS[_r] = _HAS.get(_r, 0) + 1
+    # 어떤 판에 한 비율이 통째로 없으면 그 비율의 공통 검체는 없다(있는 판들만으로 교집합을 내지 않는다).
+    for _r in list(_ISEC):
+        if _HAS.get(_r, 0) < _NPAN:
+            _ISEC[_r] = set()
     _cutinfo = []
     if _ISEC:
         _keep = []

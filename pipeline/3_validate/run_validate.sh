@@ -157,8 +157,10 @@ tr '\n' '\0' < "$_LIST" | xargs -0 -P"$PAR" -I{} bash -c '
   echo "$$ score_one $v $s" >&9
   cd "$W" || { echo "[실패] cd $W" >> "$slog"; exit 1; }
   echo "=== $s $(date +%H:%M:%S)" >> "$slog"
-  python -u "$apply" --allmodels >> "$slog" 2>&1 || echo "!! $s 채점 실패" >> "$slog"
+  python -u "$apply" --allmodels >> "$slog" 2>&1 || { echo "!! $s 채점 실패" >> "$slog"; exit 1; }
 ' _ {} "$V" "$_APPLY" "$METH_ROOT" "$COHORT" "${WORK_ROOT:-$HOME}" "$_SLOG" "$_TMP"
+_rc2=$?
+[ "$_rc2" -ne 0 ] && say "!! ② 에서 실패한 검체가 있습니다 (xargs rc=$_rc2) — 채점 로그 $_SLOG"
 
 # 판정 근거는 「로그 세기」 가 아니라 「잠금 실측」 이다.
 #   로그로 세면 셋이 어긋난다. (가) 「잠겨 건너뜀」은 ② 에만 적히는데 이어달리기
@@ -183,6 +185,13 @@ while read -r s; do
   fi
 done < "$_LIST"
 say "  채점된 검체 $_d/$N"
+# 이번 실행의 ① · ② 실패는 «점수 파일이 있다» 로 덮지 않는다. 옛 점수 파일이 남아 있으면
+#   위 세기는 완료로 보지만, 이번에 다시 만든 특징 · 점수가 그 파일과 맞는지는 모른다.
+if [ "$_rc1" -ne 0 ] || [ "$_rc2" -ne 0 ]; then
+  say "!! 이번 실행에서 실패한 검체가 있습니다(① rc=$_rc1 · ② rc=$_rc2). 남은 점수 파일로 완료라 하지 않습니다."
+  say "   로그를 보고 고친 뒤 다시 부르십시오. 다음 단계로 넘어가지 마십시오."
+  exit 1
+fi
 say "검증 끝 — 검체별 채점: <뿌리>/${COHORT}_val/*/results/$V/step04_ML_classifier/"
 
 # 다 못 했으면 「0 이 아닌 값」 으로 끝낸다. 마지막 명령이 say 면 0/N 이어도

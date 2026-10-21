@@ -71,6 +71,7 @@ TRAIN = _M + '/results/panels/%s/%s/step04_ML_classifier/models' % (V.split('_')
 TRAIN = os.environ.get('MODELS_DIR') or TRAIN
 SM = os.path.basename(os.getcwd())
 RATIOS = [r for r in C.MUT_RATIOS if r > 0]
+_SKIP = []        # (조합, 비율) — 특징을 못 읽어 건너뛴 칸
 
 # ── 이미 된 일 관문 ──
 #   잎에 한 번 두어 런처마다 기억하지 않는다. 끝난 검체를 다시 채점하면 몇 시간을 버린다.
@@ -88,6 +89,17 @@ def _already_done():
         return False                      # 지문 열이 없는 옛 표 → 다시 한다
     if _cfg.SCORE_UNIT == 'consistent' and 'y_df' not in pd.read_csv(p, nrows=0).columns:
         return False                      # y_df 없이 채점된 표 → consistent 로 다시 한다
+    # 특징이 점수보다 새것이면(VALREDO 등으로 다시 만들었으면) 지문이 같아도 다시 채점한다.
+    _feat = [f for f in _glob.glob('%s/[0-9]*_*_%s.csv' % (ML, V))
+             if not os.path.basename(f).startswith('y_prob')]
+    if any(os.path.getmtime(f) > os.path.getmtime(p) for f in _feat):
+        return False
+    # 조합마다 기대한 비율이 다 있어야 완료다(한 비율을 못 읽고 넘어간 표를 완료로 보지 않는다).
+    _want = {round(x, 6) for x in RATIOS}
+    _r = pd.read_csv(p, usecols=['model_file', 'ratio'])
+    for _mf, _g in _r.groupby('model_file'):
+        if not _want <= {round(x, 6) for x in _g['ratio'].unique()}:
+            return False
     have = set(map(tuple, _t.drop_duplicates().values))
     now = set()
     for _f in _glob.glob(TRAIN + '/*/pooled/BEST.joblib'):
@@ -170,6 +182,7 @@ def run_model(name, B, keys, rows):
             y = y.loc[X0.index]
         except Exception as e:
             print('  비율 %g%% 건너뜀 (%s)' % (r * 100, type(e).__name__))
+            _SKIP.append((name, r))
             continue
 
         have_n = sum(1 for f in feats if f in X0.columns)
@@ -283,4 +296,8 @@ print('  검출률 %s' % ' · '.join('%g%%:%.2f' % (r * 100, pos[pos.ratio == r]
 print('  AUC    %s' % ' · '.join('%g%%:%.3f' % (r * 100, _auc(r))
                                  for r in sorted(pos.ratio.unique())))
 print('  정상 오탐 %.2f (문턱 %.4f)' % (neg.y_pred.mean(), thr))
+if _SKIP:
+    # 표는 남기되 실패로 끝낸다. 다음 실행은 위 관문이 빠진 비율을 보고 다시 채점한다.
+    print('!! 특징을 못 읽어 건너뛴 칸 %d개: %s' % (len(_SKIP), ' · '.join('%s %g%%' % (n, r * 100) for n, r in _SKIP[:10])))
+    sys.exit(1)
 print('  저장 %s' % out)

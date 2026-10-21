@@ -188,6 +188,21 @@ if _os.path.exists(_skip_f):
     import sys as _sys
     print('  [config] 풀 부족으로 건너뛴 비율 '
           + ', '.join(str(_x) for _x in sorted(_skipped)), file=_sys.stderr)
+
+# 검증에서 실제로 쓴 값을 설정 기록에 덧붙인다. 학습 config 의 기록(snapshot)은 이 재정의보다
+#   먼저 적혀, 코호트가 바꾼 비율 · 반복 · 배경이 거기에는 없다.
+try:
+    import datetime as _dt
+    _os.makedirs(ML_OUT, exist_ok=True)
+    with open(_os.path.join(ML_OUT, 'config_snapshot.txt'), 'a', encoding='utf-8') as _sf:
+        _sf.write('# 검증 재정의 (make_val_config) ' + str(_dt.datetime.now())[:19] + chr(10))
+        for _k, _v in (('COHORT', COHORT), ('SAMPLE', SAMPLE), ('NUM_FILES', NUM_FILES),
+                       ('MUT_RATIOS', MUT_RATIOS), ('FULL_NORMAL_BAM', FULL_NORMAL_BAM),
+                       ('NORMAL_BAMS', [_os.path.basename(_x) for _x in NORMAL_BAMS]),
+                       ('FULL_GBM_BAM', _os.path.basename(FULL_GBM_BAM))):
+            _sf.write(str(_k).ljust(22) + ' ' + str(_v) + chr(10))
+except OSError:
+    pass
 '''
 
 

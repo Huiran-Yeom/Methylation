@@ -4,10 +4,11 @@ Code for building a methylation-pattern classifier for glioblastoma (GBM) from
 cfDNA and validating it on an external cohort. The same code, with different
 inputs, was run on small-cell lung cancer (SCLC) cell lines as a supporting study.
 
-The tables in `results/` were produced by the code in this repository with the
-default settings (`BLAS_THREADS=1`). The pre-registered verdict was computed
-earlier, with commit `e8d5fe5d` (tag `results-e8d5fe5d`); the conclusion is the
-same (see [Reproducibility](#reproducibility)).
+The tables in `results/` come from a run whose computation matches the code in
+this repository (`BLAS_THREADS=1`); they were not re-run from this commit. The
+pre-registered verdict was computed earlier, before two defects were fixed, and
+commit `e8d5fe5d` (tag `results-e8d5fe5d`) holds the defect-fixed version. The
+conclusion is the same in all three (see `results/README.md`).
 
 ---
 
@@ -265,8 +266,9 @@ Which commit made which numbers:
 
 | Numbers | Commit |
 |---|---|
-| `results/` (GBM and lung, training CV and validation) | this repository, `BLAS_THREADS=1` |
-| pre-registered verdict | `e8d5fe5d`, tag `results-e8d5fe5d`. This repository adds four changes from `79979d24`: the held-out split in `05_llrref` uses the whole `samples.csv`; validation llr blocks come from the training mean table (`LLR_KEEP_FROM`); validation mode is also signalled by `METH_VALIDATE=1`; in stage 2 the threshold predictions are imputed inside each fold and Logistic Regression uses `max_iter=2000`. The primary metric moves by at most 0.002 and every cell stays below 0.70. |
+| `results/` (GBM and lung, training CV and validation) | computation of `79979d24` (same as this repository), `BLAS_THREADS=1` |
+| pre-registered verdict | code before the two defect fixes; not identified with a commit here |
+| defect-fixed version | `e8d5fe5d`, tag `results-e8d5fe5d`. This repository adds four changes from `79979d24`: the held-out split in `05_llrref` uses the whole `samples.csv`; validation llr blocks come from the training mean table (`LLR_KEEP_FROM`); validation mode is also signalled by `METH_VALIDATE=1`; in stage 2 the threshold predictions are imputed inside each fold and Logistic Regression uses `max_iter=2000`. The primary metric moves by at most 0.002 and every cell stays below 0.70. |
 
 A from-scratch re-run of `e8d5fe5d` (all of stage 1 on empty output roots, then
 stages 2–3, BLAS threads pinned to 1) was compared with the stored outputs at a
@@ -295,8 +297,9 @@ as part of any reproduction.
 (`run_*.sh`, `make_report.sh`); a value already present in the environment wins,
 and the values actually used are written to `config_snapshot.txt`. Step scripts
 run directly with `python` are not pinned. The tables in `results/` were made
-with the default (1). To regenerate the `e8d5fe5d` tables behind the
-pre-registered verdict, check out tag `results-e8d5fe5d` and set all three
+with the default (1); Logistic Regression values also depend on the BLAS
+library and CPU (OpenBLAS picks kernels per CPU), so match those as well. To
+regenerate the defect-fixed `e8d5fe5d` tables, check out tag `results-e8d5fe5d` and set all three
 variables to 32. Those tables were trained with the variables unset on a
 32-core server with OpenBLAS; re-running one cell (lung jsd200 5k) with 32 set
 explicitly matched all 1,116 rows. Other cells were not re-run.

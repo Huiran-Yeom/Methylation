@@ -183,7 +183,6 @@ def tie_width(y, s):
         return U / (P * N)
     return w(0.0), w(1.0), len(set(ss.tolist()))
 
-RAT_LABEL = ['0.1%', '0.5%', '1%', '2%', '2.5%', '3%', '5%']
 
 
 def baseline_lines(D, depth, ratios):
@@ -335,7 +334,7 @@ for depth in DEPTHS:
         if _const:
             print('%-16s %-5s   !! 상수 예측: 비율 %s 에서 점수 고유값이 1개다.'
                   '  이 줄의 AUC 는 성능이 아니라 구별 실패다.'
-                  % ('', '', ','.join(RAT_LABEL[i] for i in _const)))
+                  % ('', '', ','.join('%g%%' % ratios[i] for i in _const)))
 
         # 동점 폭이 0.02 를 넘는 칸이 있으면 그 줄 밑에 구간을 적는다.
         #   0.02 는 「세 판 사이 격차의 최소 단위」 정도. 이보다 크면 순위 주장이 흔들린다.

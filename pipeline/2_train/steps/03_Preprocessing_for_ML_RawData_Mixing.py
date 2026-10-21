@@ -16,7 +16,7 @@ j 판은 학습 정상 15명 중 2명이 단일말단이라 그 방법을 못 �
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
-import gzip, os, subprocess, time
+import gzip, os, subprocess, sys, time
 import config as C
 
 BATCH_SIZE = int(os.environ.get('BATCH_SIZE', 40))
@@ -101,9 +101,11 @@ def split_pe_se(bam, tmp):
         buf.append(cols)
     flush(buf)
     p.stdout.close()
-    p.wait()
+    rc = p.wait()
     fp.close()
     fs.close()
+    if rc != 0:     # 읽다 끊긴 BAM 을 «짝 나눔 끝» 으로 넘기지 않는다
+        raise subprocess.CalledProcessError(rc, 'samtools view ' + ns)
 
     sh(['samtools', 'view', '-b', '-o', pe, pe_sam])
     sh(['samtools', 'view', '-b', '-o', se, se_sam])
@@ -112,7 +114,7 @@ def split_pe_se(bam, tmp):
             os.remove(f)
         except OSError:
             pass
-    return pe, se
+    return pe, se, n_pe, n_se
 
 
 def build_cmd(bams, out_dir, paired, use_multicore, use_genome):
@@ -147,12 +149,16 @@ def merge_cov(pe_cov, se_cov, out_cov, out_bg):
         if a is None: d[k] = list(v)
         else:         a[0] += v[0]; a[1] += v[1]
     keys = sorted(d, key=lambda k: (k[0], int(k[1])))
-    with gzip.open(out_cov, 'wt') as fc, gzip.open(out_bg, 'wt') as fb:
+    # 다 쓴 뒤 이름을 바꾼다. 쓰다 멈춘 파일이 «크기 > 0» 으로 다음 실행에서 건너뛰어지지 않게.
+    tc, tb = out_cov + '.tmp', out_bg + '.tmp'
+    with gzip.open(tc, 'wt') as fc, gzip.open(tb, 'wt') as fb:
         for k in keys:
             m, u = d[k]
             pct = 100.0 * m / (m + u) if (m + u) else 0.0
             fc.write('%s\t%s\t%s\t%.6f\t%d\t%d\n' % (k[0], k[1], k[2], pct, m, u))
             fb.write('%s\t%d\t%s\t%.6f\n' % (k[0], int(k[1]) - 1, k[2], pct))
+    os.replace(tb, out_bg)
+    os.replace(tc, out_cov)
     return len(keys)
 
 
@@ -163,6 +169,7 @@ def main():
     use_genome = os.path.isdir(C.GENOME_FOLDER)
     use_multicore = BISMARK_MULTICORE > 1
     t0, done, skip = time.time(), 0, 0
+    bad = []          # 추출이 실패했거나 산출이 빠진 검체
 
     for p in C.MUT_READ_COUNTS:
         in_dir  = '%s/mut_%d_reads' % (C.MIX_OUT, p)
@@ -186,8 +193,9 @@ def main():
         parts = {}
         for i, bam in todo:
             parts[i] = split_pe_se(bam, tmp)
-        pes = [v[0] for v in parts.values() if v[0]]
-        ses = [v[1] for v in parts.values() if v[1]]
+        pes = [v[0] for v in parts.values() if v[2]]      # 리드가 있는 쪽만 bismark 에 넘긴다
+        ses = [v[1] for v in parts.values() if v[3]]
+        failed = set()
         print('  나눔: 페어드엔드 %d개 · 단일말단 %d개' % (len(pes), len(ses)))
 
         for lst, paired in ((pes, True), (ses, False)):
@@ -199,10 +207,17 @@ def main():
                     msg = (e.stderr or b'').decode('utf-8', 'replace').strip().splitlines()
                     print('  ! %s 배치 %d 실패: %s'
                           % ('PE' if paired else 'SE', s, msg[-1] if msg else e))
+                    failed.update(b)
 
         for i, _ in todo:
-            pe, se = parts[i]
+            pe, se, npe, nse = parts[i]
             cov = lambda f: (f[:-4] + '.bismark.cov.gz') if f else None
+            # 리드가 있던 쪽의 추출이 실패했거나 산출이 없으면 이 검체를 만들지 않는다(한쪽만 합치지 않는다).
+            _miss = [k for k, f, n in (('PE', pe, npe), ('SE', se, nse))
+                     if n and (f in failed or not os.path.exists('%s/%s' % (tmp, os.path.basename(cov(f)))))]
+            if _miss:
+                bad.append('mut_%d #%d (%s)' % (p, i, ' · '.join(_miss)))
+                continue
             n = merge_cov(cov(pe) and '%s/%s' % (tmp, os.path.basename(cov(pe))),
                           cov(se) and '%s/%s' % (tmp, os.path.basename(cov(se))),
                           '%s/sampled_reads_%d.bismark.cov.gz' % (out_dir, i),
@@ -212,6 +227,9 @@ def main():
         print('  합침 %d개 · 누적 %d개 · %.1f분' % (len(todo), done, el / 60))
 
     print('\n처리 %d개 · 건너뜀 %d개 · %.1f분' % (done, skip, (time.time() - t0) / 60))
+    if bad:
+        print('실패 %d개 — 산출을 만들지 않았다: %s' % (len(bad), ' · '.join(bad[:20])))
+        sys.exit(1)
     print('2_train/steps/03 완료.')
 
 

@@ -75,7 +75,10 @@ if '--out' in a:
 _js = '%s/jsd200/DMR_confirmed_jsd200.csv' % OUT
 if os.path.isfile(_js):
     NPICK = len(pd.read_csv(_js))
-print('뽑을 칸 수 %d (jsd200 패널 %s)' % (NPICK, '있음' if os.path.isfile(_js) else '없음 — 기본 200'))
+# NULL_A_N 을 주면 그 칸 수로 뽑는다(오너가 무작위 크기를 따로 정한 실행 · 예: 다음 판 2안-b 는 200).
+if _os.environ.get('NULL_A_N'):
+    NPICK = int(_os.environ['NULL_A_N'])
+print('뽑을 칸 수 %d (jsd200 패널 %s%s)' % (NPICK, '있음' if os.path.isfile(_js) else '없음 — 기본 200', ' · NULL_A_N 지정' if _os.environ.get('NULL_A_N') else ''))
 
 B = pd.read_parquet(CAND + '/blocks_cpg.parquet')
 cnt = B.groupby(['chr', 'blk']).size()

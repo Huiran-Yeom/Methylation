@@ -71,6 +71,12 @@ if '--cand' in a:
 if '--out' in a:
     OUT = a[a.index('--out') + 1].rstrip('/')
 
+# 귀무A 는 jsd 계열의 잣대다. 크기를 jsd200 패널 칸 수에 맞춘다(보통 200 · 교집합 패널(12)이면 그 크기).
+_js = '%s/jsd200/DMR_confirmed_jsd200.csv' % OUT
+if os.path.isfile(_js):
+    NPICK = len(pd.read_csv(_js))
+print('뽑을 칸 수 %d (jsd200 패널 %s)' % (NPICK, '있음' if os.path.isfile(_js) else '없음 — 기본 200'))
+
 B = pd.read_parquet(CAND + '/blocks_cpg.parquet')
 cnt = B.groupby(['chr', 'blk']).size()
 pool = [(str(c), int(b)) for (c, b), n in cnt.items() if n >= MINCPG]
@@ -88,11 +94,11 @@ for i in (1, 2, 3):
     d.to_csv('%s/DMR_confirmed_rand%d200.csv' % (o, i), index=False)
     with open(o + '/_origin.txt', 'w') as h:
         h.write('무작위 패널 씨앗 %d: 2026-09-14\n'
-                '  K=3 창이 서는 블록 %d개에서 200개를 비복원 추출.\n'
+                '  K=3 창이 서는 블록 %d개에서 %d개를 비복원 추출.\n'
                 '  암과 무관하게 골랐다. 실제 패널과 견줄 무작위 기준 패널로 쓴다.\n'
-                '  창이 서는 블록에서 고르므로 리드 기반 피처를 200칸 전부 받는다 —\n'
+                '  창이 서는 블록에서 고르므로 리드 기반 피처를 전 칸 받는다 —\n'
                 '  bl200(104칸)에 대해서는 보수적인(넘기 어려운) 귀무다.\n'
-                % (i, len(pool)))
+                % (i, len(pool), NPICK))
     used |= set(pick)
-    print('rand%d200  200칸' % i)
+    print('rand%d200  %d칸' % (i, NPICK))
 print('세 씨앗 합집합 %d칸 (겹침 %d)' % (len(used), 3 * NPICK - len(used)))

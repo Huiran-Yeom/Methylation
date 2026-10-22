@@ -67,33 +67,35 @@ esac
 : "${USE_NORMAL:=$HOME/tmp/use${GEN}_normal.txt}"   # 쓸 정상 BAM 목록
 : "${USE_GBM:=$HOME/tmp/use${GEN}_gbm.txt}"         # 쓸 암 BAM 목록
 
+# 패널 목록 경로는 PANEL_CSV 에 둔다. PANEL 은 config.conf 를 set -a 로 읽어 내보낸 판 이름이라,
+#   덮어쓰면 11_pool.py 가 부르는 meth_config 의 VERSION · PANEL 가드가 경로를 판 이름으로 읽고 멈춘다(2026-10-22).
 WHICH=${1:-}
 case "$WHICH" in
-  cellline) PANEL=$DMR_OUT/j_panel$GEN/panel_union3_cellline.csv
+  cellline) PANEL_CSV=$DMR_OUT/j_panel$GEN/panel_union3_cellline.csv
             # 옛 트리에서는 이 이름이 panel_union3_세포주.csv 다. 옛 트리를
             #   그대로 쓸 수 있게 새 이름이 없으면 옛 이름을 본다.
-            [ -f "$PANEL" ] || PANEL=$DMR_OUT/j_panel$GEN/panel_union3_세포주.csv ;;
-  rand)   PANEL=$DMR_OUT/j_panel$GEN/panel_union_rand3.csv ;;
-  randb)  PANEL=$DMR_OUT/j_panel$GEN/panel_union_randb3.csv ;;
+            [ -f "$PANEL_CSV" ] || PANEL_CSV=$DMR_OUT/j_panel$GEN/panel_union3_세포주.csv ;;
+  rand)   PANEL_CSV=$DMR_OUT/j_panel$GEN/panel_union_rand3.csv ;;
+  randb)  PANEL_CSV=$DMR_OUT/j_panel$GEN/panel_union_randb3.csv ;;
   *) echo "사용: $(basename "$0") cellline|rand|randb"; exit 1 ;;
 esac
 OUT=$DMR_OUT/j_pool${GEN}_$WHICH
 
-[ -f "$PANEL" ] || { echo "패널 목록이 없다: $PANEL"; exit 1; }
+[ -f "$PANEL_CSV" ] || { echo "패널 목록이 없다: $PANEL_CSV"; exit 1; }
 for f in "$USE_NORMAL" "$USE_GBM"; do
   [ -f "$f" ] || { echo "쓸 BAM 목록이 없다: $f"; exit 1; }
 done
 
 say(){ echo "[$(date +%H:%M:%S)] $*"; }
-say "패널 $PANEL"
+say "패널 $PANEL_CSV"
 say "산출 $OUT"
 
 say "정상 -> pool_normal_all"
-python -u "$_HERE/11_pool.py" --panel "$PANEL" --use "$USE_NORMAL" \
+python -u "$_HERE/11_pool.py" --panel "$PANEL_CSV" --use "$USE_NORMAL" \
         --out "$OUT/pool_normal_all.bam"
 
 say "암 -> pool_gbm_all"
-python -u "$_HERE/11_pool.py" --panel "$PANEL" --use "$USE_GBM" \
+python -u "$_HERE/11_pool.py" --panel "$PANEL_CSV" --use "$USE_GBM" \
         --out "$OUT/pool_gbm_all.bam"
 
 say "완료"

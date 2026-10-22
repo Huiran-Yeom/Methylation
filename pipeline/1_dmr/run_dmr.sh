@@ -195,7 +195,15 @@ step 05 "LLR 참조표"       python -u "$S/05_llrref.py"    --dir "$D/j_jsdcoun
 _JF=$(ls "$D/j_jsd$GEN"/jsd_K${PATTERN_K:-3}_minr${MIN_READS_PER_WINDOW:-6}.parquet 2>/dev/null | head -1)
 step 06 "JSD 상위 200 선정" python -u "$S/06_select.py" --cand "$D/j_candidates$GEN" \
                                 --jsd "$_JF" --out "$D/j_panel$GEN" --n 200
-step 06b "보완판 JSD 200 (jsdb200)" python -u "$S/06b_select_supplement.py"
+# 06b 는 설정 PANELS 에 jsdb200 이 있을 때만 계산한다. 200칸을 못 채워 jsdb200 을 «계산 불가» 로 둔 실행은
+#   PANELS 에서 빼고 돌린다(08 · 10c · 4단계도 PANELS 를 따른다). 단계 줄은 그대로 둔다(위 관문이 「^step」 줄을 센다).
+_06b() {
+  case ",${PANELS:-bl200,jsd200,jsdb200}," in
+    *,jsdb200,*) python -u "$S/06b_select_supplement.py" ;;
+    *) echo "  건너뜀 — PANELS(${PANELS}) 에 jsdb200 이 없다" ;;
+  esac
+}
+step 06b "보완판 JSD 200 (jsdb200)" _06b
 step 07 "Baseline 순위 200" python -u "$S/07_panel.py"  --cand "$D/j_candidates$GEN" \
                                 --out "$D/j_panel_dmr$GEN/bl200_d10_cellline" --topn 200
 

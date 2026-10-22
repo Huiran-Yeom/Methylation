@@ -90,6 +90,14 @@ for _p, _o in _OLD.items():
         print('  옛 이름으로 읽는다: %s' % _o)
         SRC[_p] = _o
 
+# 설정 PANELS 에 없는 판은 내보내지 않는다(그 판을 «계산 불가» 로 둔 실행 · 예: 200칸을 못 채운 jsdb200).
+_skip = [p for p in SRC if p not in _cfg.PANELS]
+if _skip:
+    print('  PANELS(%s) 에 없어 건너뜀: %s' % (','.join(_cfg.PANELS), ','.join(_skip)))
+SRC = {p: v for p, v in SRC.items() if p in _cfg.PANELS}
+if not SRC:
+    raise SystemExit('PANELS 에 내보낼 판이 없다: %s' % _cfg.PANELS)
+
 for panel, src in SRC.items():
     if not os.path.isfile(src):
         raise SystemExit(

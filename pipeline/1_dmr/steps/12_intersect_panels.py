@@ -63,12 +63,14 @@ for p in _cfg.PANELS:
     sa = dict(zip(da['Feature'], da['dbeta']))
     d = db[db['Feature'].isin(sa)].reset_index(drop=True)
     same = [(sa[f] > 0 and b > 0) or (sa[f] < 0 and b < 0) for f, b in zip(d['Feature'], d['dbeta'])]
+    # NaN · 0 은 방향을 판단할 수 없다 — «다름» 과 따로 센다(--same-direction 이면 빠진다)
+    undec = int(sum(not (abs(sa[f] * b) > 0) for f, b in zip(d["Feature"], d["dbeta"])))
     n_all, n_same = len(d), int(sum(same))
     if SAME:
         d = d[same].reset_index(drop=True)
     ok = len(d) >= MIN
-    report.append('%s  DMR1 %d · DMR2 %d · 교집합 %d (방향 같음 %d · 다름 %d) · 쓰는 칸 %d%s'
-                  % (p, len(da), len(db), n_all, n_same, n_all - n_same, len(d),
+    report.append('%s  DMR1 %d · DMR2 %d · 교집합 %d (방향 같음 %d · 다름 %d · 판단 불가 %d) · 쓰는 칸 %d%s'
+                  % (p, len(da), len(db), n_all, n_same, n_all - n_same - undec, undec, len(d),
                      '' if ok else '  → «계산 불가»(%d칸 미만)' % MIN))
     if not ok or ONLY:
         continue

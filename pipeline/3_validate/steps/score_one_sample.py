@@ -71,6 +71,9 @@ TRAIN = _M + '/results/panels/%s/%s/step04_ML_classifier/models' % (V.split('_')
 TRAIN = os.environ.get('MODELS_DIR') or TRAIN
 SM = os.path.basename(os.getcwd())
 RATIOS = [r for r in C.MUT_RATIOS if r > 0]
+if not RATIOS:
+    # 검체 리드가 모자라 모든 비율이 «풀 부족으로 건너뜀» 이 된 경우(예: 100k 깊이). 채점할 칸이 없다.
+    sys.exit('%s: 풀 부족으로 채점할 비율이 없다 — 이 깊이에서는 채점 안 함' % SM)
 _SKIP = []        # (조합, 비율) — 특징을 못 읽어 건너뛴 칸
 
 # ── 이미 된 일 관문 ──

@@ -429,4 +429,5 @@ README.md  requirements.txt  .gitignore  .gitattributes
                                   paths val_single
                                   cohorts/ sample_cohort.conf.example patient_plasma.conf.example
 4_report/     make_report.sh steps/ make_tables primary_metric plasma_metric plasma_baseline
+run/          drv.sh (2·3·4단계를 판 단위로 · main · help · finish) lib.sh profiles.sh cv_all tables_md cv_md
 ```

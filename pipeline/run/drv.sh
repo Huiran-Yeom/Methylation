@@ -9,7 +9,7 @@
 #   관문의 예외는 판 설정에 사전등록된 것(EXC_*)만 쓴다.
 set -u
 NAME=${1:?판 이름}; CODEDIR=${2:?코드 폴더 이름}; MODE=${3:?main · help · finish}; shift 3
-for k in NL MEMW O; do         # 옛 드라이버의 이름(NL=1 bash …)은 판 설정이 덮어 조용히 무시된다 — 받지 않고 멈춘다(R23 검증 세션 1)
+for k in NL MEMW O; do         # 옛 드라이버의 이름(NL=1 bash …)은 판 설정이 덮어 조용히 무시된다 — 받지 않고 멈춘다
   [ -n "${!k:-}" ] && { echo "$k 는 받지 않는다 — ${k}_SET 를 쓴다"; exit 1; }
 done
 H=$(cd "$(dirname "$0")" && pwd)
@@ -117,8 +117,8 @@ gate(){   # 관문: 학습 실패 없음 · feasible 의 모든 칸이 n/n · �
   [ "$bad" = 0 ] || { say "멈춤: 검증 미완 칸"; return 1; }
   say "학습 · 검증 관문 통과$([ "$exc" -gt 0 ] && echo "(사전등록 예외 ${exc}칸)")"
 }
-report(){   # 4단계 — 원본(코호트 표 · cv_all.csv)을 먼저 끝낸다. 표는 임시 파일에 만든 뒤 rc 0 일 때만 바꿔 넣는다(R22 Codex 7).
-  #   Markdown 은 보기용이라 맨 마지막에 만든다. 실패해도 원본은 이미 있다(R23 검증 세션 2).
+report(){   # 4단계 — 원본(코호트 표 · cv_all.csv)을 먼저 끝낸다. 표는 임시 파일에 만든 뒤 rc 0 일 때만 바꿔 넣는다.
+  #   Markdown 은 보기용이라 맨 마지막에 만든다. 실패해도 원본은 이미 있다.
   local out=${REPORT_ONLY_OUT:-$OUT} c pr rc n mdbad=0
   mkdir -p "$out/training" "$out/validation"
   for c in $COHORTS; do
@@ -149,13 +149,13 @@ case "$MODE" in
 esac
 help_alive(){ local f p n=0; for f in "$O"/help_$DS.*.pid; do [ -e "$f" ] || continue; p=$(cat "$f"); [ -d "/proc/$p" ] && n=$((n + 1)) || rm -f "$f"; done; echo "$n"; }
 case "$MODE" in
-  main)   # 같은 판의 main 은 하나만 · 살아 있는 보조 자리가 있으면 대기열 · 표지를 지우지 않게 멈춘다(R23 검증 세션 4)
+  main)   # 같은 판의 main 은 하나만 · 살아 있는 보조 자리가 있으면 대기열 · 표지를 지우지 않게 멈춘다
     exec 8> "$O/main_$DS.lock"; flock -n 8 || { say "멈춤: 같은 판의 main 이 이미 돈다"; exit 1; }
-    # 보조 자리 등록과 직렬화한다 — 확인부터 대기열을 다 만들 때까지 등록 잠금을 쥔다(R23 Codex 1)
+    # 보조 자리 등록과 직렬화한다 — 확인부터 대기열을 다 만들 때까지 등록 잠금을 쥔다
     exec 7> "$O/reg_$DS.lock"; flock 7
     [ "$(help_alive)" = 0 ] || { say "멈춤: 살아 있는 보조 자리 $(help_alive)개 — 끝난 뒤 main 을 띄운다"; exit 1; } ;;
   help)
-    # main 이 대기열을 다시 만드는 중이면 등록 잠금에서 기다린다. 표지 이름은 PID 로 고유하게(R23 Codex 1 · 2)
+    # main 이 대기열을 다시 만드는 중이면 등록 잠금에서 기다린다. 표지 이름은 PID 로 고유하게
     exec 7> "$O/reg_$DS.lock"; flock 7
     echo $$ > "$O/help_$DS.$$.pid"; trap 'rm -f "$O/help_$DS.$$.pid"' EXIT
     flock -u 7; exec 7>&- ;;
@@ -164,7 +164,7 @@ case "$MODE" in
   main)
     say "── 2·3단계 · 코드 $P · 동시 $NL · 03 조각 $NSLICE · 검체 $NV · 디스크 $(avail)G · DRY=$DRY"
     ( exec 7>&- 8>&-; while kill -0 $$ 2>/dev/null; do u=$(mem_used); [ "$u" -ge 40 ] && echo "[$(date '+%m-%d %H:%M:%S')] !! 메모리 ${u}G" >> "$L"; sleep 120; done ) &
-    # 대기열 · 상태 파일은 매번 새로 만든다(R22 Codex 6) — 끝난 칸은 V 를 앞에, 안 끝난 칸은 T 를 뒤에, 풀 부족 칸은 infeasible 로.
+    # 대기열 · 상태 파일은 매번 새로 만든다 — 끝난 칸은 V 를 앞에, 안 끝난 칸은 T 를 뒤에, 풀 부족 칸은 infeasible 로.
     : > "$Q"; : > "$O/feasible_$DS.txt"; : > "$O/infeasible_$DS.txt"; : > "$O/failed_$DS.txt"
     rm -f "$RUN"/* 2>/dev/null
     [ "$DRY" = 1 ] || rm -f "$TMP_ROOT/val__.log" "$TMP_ROOT"/val_*__*.log 2>/dev/null   # 빈 이름 검증 로그(옛 판과 같음 · DRY 는 안 지움)

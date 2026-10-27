@@ -1,13 +1,13 @@
 #!/bin/bash
-# 드라이버 공용 함수(2026-10-27 정리판). jobs_lib.sh(529b9136) · r1_env.sh(5961bd2b) · r2_env.sh(4762790d)를 한 파일로 합쳤다.
+# 드라이버 공용 함수(2026-10-27 정리판). 옛 jobs_lib.sh · r1_env.sh · r2_env.sh 를 한 파일로 합쳤다.
 #   옛 jobs_lib.sh 와 다른 점:
 #     - 코드 경로 P 를 정하지 않는다(드라이버가 정한다 · 옛 판은 P 를 Methylation-fix 로 덮어 불러오는 순서에 따라 옛 코드로 돌았다).
-#     - train_cell 의 관문을 세게 했다(R22 Codex 5): mut_* 폴더가 하나도 없으면 실패, BEST 모델은 조합 수(EXPECT_BEST=31 고정)를 다 채워야 성공.
+#     - train_cell 의 관문을 세게 했다: mut_* 폴더가 하나도 없으면 실패, BEST 모델은 조합 수(EXPECT_BEST=31 고정)를 다 채워야 성공.
 #   env_luad2 가 env_luad 를 부르므로 둘을 같은 파일에 둔다(옛 판은 r1_env 를 먼저 불러야 했다).
 export PATH=$HOME/anaconda3/envs/myenv/bin:$PATH
 export BISMARK_MULTICORE=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
 NSLICE=${NSLICE:-4}
-EXPECT_BEST=31        # 5특징의 비공집합 31조합 — 밖에서 덮지 못하게 고정한다(R23 Codex 4)
+EXPECT_BEST=31        # 5특징의 비공집합 31조합 — 밖에서 덮지 못하게 고정한다
 
 env_lung(){   # env_lung <METH_ROOT> <작업 이름> [cand]
   unset USE_NORMAL USE_GBM JSD_CAND LLR_CAND

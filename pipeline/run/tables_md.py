@@ -60,7 +60,7 @@ def convert(text):
                 elif re.match(r'^\S', l) or re.match(r'^\s+[-\d.]', l):   # 값 줄(새 피처 · 같은 피처의 다음 단위)
                     f = l.split() if re.match(r'^\S', l) else [''] * 2 + l.split()
                     vals, unit = f[2:2 + len(head)], ' '.join(f[2 + len(head):])
-                    # 값 줄은 칸 수 · 값 꼴 · 단위가 맞아야 한다 — 하나라도 어긋나면 열이 밀린 것이라 멈춘다(R23 검증 세션 3)
+                    # 값 줄은 칸 수 · 값 꼴 · 단위가 맞아야 한다 — 하나라도 어긋나면 열이 밀린 것이라 멈춘다
                     assert len(vals) == len(head) and all(VAL.fullmatch(v) for v in vals) and unit in UNITS,                         '%d행 값 줄 꼴이 다르다: %r' % (i + 1, l)
                     out.append('| %s | %s | %s | %s |' % (f[0], f[1], unit, ' | '.join(vals)))
                 else:                                        # 표 안 주석 줄은 그 자리에 한 행으로(순서 유지)

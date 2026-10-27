@@ -47,7 +47,7 @@ def build(d):
 
 
 def parse(md):
-    """만든 Markdown 을 다시 읽어 (판, 깊이, 비율, 조합) → 표시값(문자열) 을 돌려준다(R23 Codex 5 · 출력식까지 검사)."""
+    """만든 Markdown 을 다시 읽어 (판, 깊이, 비율, 조합) → 표시값(문자열) 을 돌려준다(출력식까지 검사)."""
     got, key, fr = {}, None, None
     for l in md.splitlines():
         if l.startswith('## '):

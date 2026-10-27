@@ -100,6 +100,35 @@ slot. Only 5k is practical: one person rarely has 50k reads inside a 200-block
 panel. This mode was added after the pre-registered analysis and does not replace
 the primary metric (`4_report/steps/primary_metric.py`).
 
+### Panels from two contrasts (optional · steps 12 and 12b)
+
+Stage 1 normally picks blocks from one contrast: tumour against normal cfDNA.
+Steps 12 and 12b build a panel from two contrasts instead, for example tumour
+against normal tissue (tree A) and tumour against normal cfDNA (tree B). They are
+not called by `run_dmr.sh`; run them between two stage-1 runs:
+
+```bash
+# tree A (tumour vs normal tissue) and tree B (tumour vs normal cfDNA): steps 01-08 in each
+# (run_dmr.sh takes one step at a time; with no argument it runs every step.
+#  For tree A, point NORMAL_SET / NORMAL_BAM_DIR at the normal-tissue cov / BAM folders.)
+for s in 01 02 03 04 04b 04c 05 06 06b 07 08; do METH_ROOT=<treeA> bash 1_dmr/run_dmr.sh $s; done
+for s in 01 02 03 04 04b 04c 05 06 06b 07 08; do METH_ROOT=<treeB> bash 1_dmr/run_dmr.sh $s; done
+# either: intersect the two finished panels, panel by panel
+python 1_dmr/steps/12_intersect_panels.py --a <treeA>/results/dmr/j_panel_dmr<GEN>_panels \
+       --b <treeB>/results/dmr/j_panel_dmr<GEN>_panels --out <treeC>/results/dmr/j_panel_dmr<GEN>_panels
+# or: keep blocks that pass in both trees, then rank by tree B
+python 1_dmr/steps/12b_passset_panels.py --a <treeA>/results/dmr --b <treeB>/results/dmr \
+       --out <treeC>/results/dmr/j_panel_dmr<GEN>_panels --n 200 --pct 99 --min 50
+# then the null panels and pools in tree C (null sizes follow the new panels)
+for s in 09 10 10c 11; do METH_ROOT=<treeC> bash 1_dmr/run_dmr.sh $s; done
+```
+
+Both steps write `_intersect_panels.txt` with the panels that kept at least `--min`
+blocks; a panel below that is reported as not computable and skipped. Run with
+`--report-only` first to see the block counts without writing anything. A smaller
+panel can fail at 5k for single undiluted plasma samples: in the LUAD run a
+110-block panel left 11 of 48 patients without 5,000 reads.
+
 ---
 
 ## Method in brief
@@ -391,6 +420,7 @@ README.md  requirements.txt  .gitignore  .gitattributes
                                   04b_jsdnull 04c_jsdboot 05_llrref 06_select
                                   06b_select_supplement 07_panel 08_export_panels
                                   09_null_a 10_null_b 10c_panel_union 11_pool
+                                  12_intersect_panels 12b_passset_panels (optional)
                                   run_pool.sh moderated_t
 2_train/      run_train.sh steps/ 01-03_Preprocessing…Mixing 04_coverage_check
                                   05_Feature_Matrix 06_jsdfeat 07_llrfeat

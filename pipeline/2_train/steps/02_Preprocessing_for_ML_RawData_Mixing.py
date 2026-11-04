@@ -143,6 +143,25 @@ def load_pairs_exactly_two(bam_path):
     return paired
 
 
+def load_names_exactly_two(bam_path):
+    """load_pairs_exactly_two 와 같은 이름 · 같은 순서를 내되 리드 객체는 들지 않는다(이름 → 리드 수).
+    배경(NORMAL_BAMS)이 있으면 병합 정상 풀은 이름 수 · 조각당 리드 계산에만 쓰이고 뽑지 않는다.
+    병합 풀이 수백만 쌍이면 리드 객체를 다 들 때 일꾼 하나가 7G 를 넘었다."""
+    import pysam
+
+    cnt = defaultdict(int)
+    with pysam.AlignmentFile(bam_path, 'rb') as bam:
+        for r in bam.fetch(until_eof=True):
+            cnt[r.query_name] += 1
+    total = len(cnt)
+    paired = {k: v for k, v in cnt.items() if v in (1, 2)}
+    print(
+        f'  {os.path.basename(bam_path)}: 이름 {total:,} 중 짝 2개 {len(paired):,} '
+        f'(제외 {total-len(paired):,})'
+    )
+    return paired
+
+
 def count_blocks(paths):
     import pysam
 
@@ -225,7 +244,10 @@ def main():
     # ── 2) 입력 읽기 - BAM · 배경별 조각 · 블록 수 ──
     print('BAM 로딩...')
     mut_reads = load_pairs_exactly_two(C.MUT_SORTED)
-    wt_reads = load_pairs_exactly_two(C.WT_SORTED)
+    # 배경을 선언했으면 병합 정상 풀에서는 뽑지 않는다(아래 «배경 없으면 병합본» 갈래만 리드를 쓴다).
+    #   선언한 배경 BAM 이 하나라도 없으면 아래 관문이 멈추므로, 이 갈래에서 병합본 리드가 필요할 일이 없다.
+    _have_bg = bool(getattr(C, 'NORMAL_BAMS', []) or [])
+    wt_reads = (load_names_exactly_two if _have_bg else load_pairs_exactly_two)(C.WT_SORTED)
     # 배경(공여자)별 정상 조각. 반복 i 가 배경 i 를 쓴다.
     #   없으면(=학습) 빈 목록이라 아래에서 병합본으로 간다.
     _bgnames = []

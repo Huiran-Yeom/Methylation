@@ -205,7 +205,8 @@ _06b() {
 }
 step 06b "보완판 JSD 200 (jsdb200)" _06b
 step 07 "Baseline 순위 200" python -u "$S/07_panel.py"  --cand "$D/j_candidates$GEN" \
-                                --out "$D/j_panel_dmr$GEN/bl200_d10_cellline" --topn 200
+                                --out "$D/j_panel_dmr$GEN/bl200_d10_cellline" --topn 200 \
+                                ${TOPCAP:+--topcap "$TOPCAP"}
 
 step 08 "검증용 형식으로 내보내기" python -u "$S/08_export_panels.py"
 step 09 "귀무A 3판 (씨앗 20260914+i)"      python -u "$S/09_null_a.py"

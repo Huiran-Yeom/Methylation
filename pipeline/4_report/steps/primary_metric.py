@@ -89,8 +89,12 @@ LIVE = _M + '/%s_val' % COHORT
 PANELS = _cfg.PANELS
 
 # 플랫폼: 배경 1~3 = EGAD(페어드엔드) · 4~10 = GSE301266 비악성 대조(단일말단)
-#  혼합판에서는 이 축이 존재하지 않는다. MIXED 가 참이면 쓰지 않는다. 
-EGAD_REPS = (1, 2, 3)
+#  혼합판에서는 이 축이 존재하지 않는다. MIXED 가 참이면 쓰지 않는다.
+#  기본값 1~3 은 이 논문(GBM) 자료의 배경 구성이다. 배경 구성이 다른 자료는
+#  EGAD_REPS="1 2" 처럼 첫 플랫폼의 배경 번호를 주거나, 빈 값("")으로 두면
+#  플랫폼으로 가르지 않는다(층화 없이 재표본 · 특이도는 «합본» 줄만 읽는다).
+_er = os.environ.get('EGAD_REPS')
+EGAD_REPS = (1, 2, 3) if _er is None else tuple(int(x) for x in _er.replace(',', ' ').split())
 
 
 # 검체 이름에서 「사람」을 뽑는다. 사람 단위로 묶어 한 사람이 표를 여럿 쥐지 않게 한다.
@@ -367,6 +371,8 @@ def run(combo, mixed):
     print('')
     if mixed:
         print('  특이도 (합본만: 혼합판이라 플랫폼별로 가를 수 없다)')
+    elif not EGAD_REPS:
+        print('  특이도 (합본만: EGAD_REPS 가 비어 플랫폼으로 가르지 않는다)')
     else:
         print('  특이도 (플랫폼별 · 낮은 쪽을 주장값으로 쓴다 — 조항 (2))')
     for p in PANELS:
@@ -376,7 +382,7 @@ def run(combo, mixed):
         def sp(sub):
             return float('nan') if not len(sub) else 1.0 - float(sub['y_pred'].mean())
         nvalid = neg[neg['y_pred'] >= 0]
-        if mixed:
+        if mixed or not EGAD_REPS:
             print('    %-8s 합본 %.4f  (위양성 %d개 / 음성 %d행%s)'
                   % (p, sp(nvalid), int((nvalid['y_pred'] == 1).sum()), len(nvalid),
                      '' if len(nvalid) == len(neg)

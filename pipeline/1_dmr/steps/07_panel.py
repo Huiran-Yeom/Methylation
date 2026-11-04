@@ -64,7 +64,9 @@ DBETA = 30.0
 NBOOT = 100
 TOPN  = 2000
 NJOB  = 8
+TOPCAP = 1000   # 부트스트랩 빈도의 기준 «중요도 상위 TOPCAP». 패널 크기 N 을 바꿔 비교할 때는 --topcap N 으로 맞춘다(기본 1000 = 지금까지의 표)
 a = sys.argv
+if '--topcap' in a: TOPCAP = int(a[a.index('--topcap') + 1])
 if '--dbeta' in a: DBETA = float(a[a.index('--dbeta') + 1])
 if '--boot'  in a: NBOOT = int(a[a.index('--boot')  + 1])
 if '--topn'  in a: TOPN  = int(a[a.index('--topn')  + 1])
@@ -118,7 +120,7 @@ def imp(tr, Z):
 
 def stability(Xt, yt, gt, cols, nboot):
     t0 = time.time(); rng = np.random.RandomState(42); ug = np.unique(gt)
-    freq = np.zeros(len(cols)); top = min(1000, len(cols))
+    freq = np.zeros(len(cols)); top = min(TOPCAP, len(cols))
     for b in range(nboot):
         pick = rng.choice(ug, len(ug), replace=True)
         idx = np.concatenate([np.flatnonzero(gt == u) for u in pick])
@@ -179,7 +181,8 @@ txt = [
     '최종 DMR 패널 — %s' % pd.Timestamp.now().strftime('%Y-%m-%d %H:%M'),
     '재료        %d검체 (정상 %d · 암 %d) · 후보 %d 블록'
     % (len(y), int((y == 0).sum()), int(y.sum()), X.shape[1]),
-    '조건        q<0.05 · |dbeta|>=%.0f · 부트스트랩 %d회 x 2모델' % (DBETA, NBOOT),
+    '조건        q<0.05 · |dbeta|>=%.0f · 부트스트랩 %d회 x 2모델' % (DBETA, NBOOT)
+    + ('' if TOPCAP == 1000 else ' · 빈도 기준 상위 %d' % TOPCAP),
     '정렬        빈도 내림 -> q 오름 -> |dbeta| 내림',
     '',
     'q<0.05             %d' % len(s1),

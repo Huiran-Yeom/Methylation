@@ -137,7 +137,8 @@ Panel. Among 100 bp blocks covered by several normals, blocks with ≥3 CpGs
 become candidates. Within those we count methylation patterns over K=3 CpG
 windows and take the 200 blocks with the largest Jensen-Shannon divergence
 between cancer and normal (the JSD panel). For comparison we also build a
-Baseline panel by moderated t-test plus bootstrap stability ranking.
+Baseline panel by moderated t-test plus bootstrap stability ranking (how often
+a block makes the top `TOPCAP` = 1000 by importance).
 
 Six null panels measure how much would be found if blocks were chosen without
 regard to cancer.
@@ -243,6 +244,8 @@ without renaming files. Their defaults reproduce the GBM results.
 | `PERSON_RE` | `pat_1_…` / `ind_3_…` | stage 4 only: groups validation samples by person |
 | `DEPTHS` | `5k 15k 50k 100k` | panel depths read in stages 3 and 4 |
 | `CANCER_LABEL` | `GBM` | the `type` value stage 1 writes in `samples.csv` and later steps compare against |
+| `EGAD_REPS` | `1 2 3` | stage 4 only: background numbers on the first platform. Specificity is printed per platform as `EGAD` (these) and `GSE` (the rest); empty skips the split |
+| `TOPCAP` | `1000` | stage 1, step 07: rank cutoff for the Baseline bootstrap count. The published tables use 1000 with `--topn 200`; to compare panel sizes on equal terms, set it equal to `--topn` |
 
 Steps 01 and 02 stop if two files resolve to the same sample id. `GROUP_RE` is
 not applied to normals.

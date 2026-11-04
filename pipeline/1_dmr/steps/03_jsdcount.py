@@ -1,23 +1,17 @@
 # -*- coding: utf-8 -*-
-"""S0b 리드 무늬 세기: 라벨을 쓰지 않는다.
+"""창별 리드 무늬 세기 (라벨 안 씀)
+02 의 표준 CpG 자리로 창을 만들고 BAM 전체를 훑어 창을 다 덮은 리드의 무늬를 셈
+창은 모든 검체 공통, 최소 리드 수 문턱은 여기서 안 걺, PE 두 짝은 한 조각으로 합침
 
-표준 CpG 자리(02_blockcpg)로 창을 만들고 BAM 을 통째로 훑는다.
-창을 모두 덮은 리드의 무늬를 센다. 리드를 버리지 않고 전부 센다.
-
-  - 창은 모든 검체에서 동일하다 (JSD 가 성립하려면 그래야 한다)
-  - 창당 최소 리드 수를 여기서 걸지 않는다. 문턱은 카운트를 보고 정한다
-  - 페어드엔드 두 짝은 한 조각으로 합친다 (같은 분자를 두 번 세지 않는다)
+사용: python 03_jsdcount.py [--nd <정상 cov 폴더>] [--cand ..] [--out ..] [--sample <검체>] [--limit N]
 """
 
-# 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돌아
-# 실제 자료를 덮어쓴다. 실행은 `python <파일>` 로만 한다.
+# 스크립트 전용. import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
 import os as _os, sys as _sys
-# 0_setup 을 찾는다. 이 파일이 「복사되어」 정리본 밖에서 돌 수도 있으므로
-#   ① 자기 위에서 위로 올라가며 찾고 ② 환경변수 METH_CONF_DIR ③ 그래도 없으면
-#   설정 없이 돌 수 있게 기본값으로 간다(검증이 검체 폴더로 복사해 쓰는 경로다).
+# 0_setup 찾기: 위로 올라가며 찾고, 없으면 METH_CONF_DIR 사용
 _h = _os.path.dirname(_os.path.abspath(__file__))
 for _ in range(5):
     _c = _os.path.join(_h, '0_setup')
@@ -41,7 +35,7 @@ except ImportError:
 import os, re, sys, glob
 import numpy as np, pandas as pd, pysam
 
-# 산출 폴더는 GEN(패널 세대)을 따른다. 비우면 세대 없는 옛 폴더를 가리킨다.
+# 산출 폴더 이름에 GEN(패널 세대) 붙임. 못 읽으면 중단
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:
     try:
@@ -49,15 +43,11 @@ if not _GEN:
     except Exception:
         raise SystemExit('GEN(패널 세대)을 못 읽었습니다 — config.conf 의 GEN 을 채우거나 '
                          '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
-# ── 이 단계가 쓰는 경로 ──
-#   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
-#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
-#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
-#   이 단계가 읽는 자료 폴더는 환경변수로 옮길 수 있다.
-#     NORMAL_SET      정상 cov (검체 목록을 여기서 뽑는다)
-#     GBM_COV_DIR     암 cov (같음)
-#     NORMAL_BAM_DIR  정상 BAM (실제로 읽는 곳)
-#     GBM_BAM_DIR     암 BAM (같음)
+# 이 단계 경로. 폴더 구조 다르면 여기만 수정 (환경변수, 인자로 덮어쓰기 가능)
+#   NORMAL_SET      정상 cov (검체 목록용)
+#   GBM_COV_DIR     암 cov (검체 목록용)
+#   NORMAL_BAM_DIR  정상 BAM (실제로 읽는 곳)
+#   GBM_BAM_DIR     암 BAM (실제로 읽는 곳)
 CAND = _M + '/results/dmr/j_candidates' + _GEN
 OUT  = _M + '/results/dmr/j_jsdcount' + _GEN
 NB   = _os.environ.get('NORMAL_BAM_DIR') or _D + '/for_in_silico_test/normal_cfDNA_public/aligned_bam'
@@ -65,7 +55,7 @@ GB   = _os.environ.get('GBM_BAM_DIR')    or _D + '/training/GBM_cell-line/aligne
 ND   = _os.environ.get('NORMAL_SET')     or _M + '/sample_data/_input/normal_pub15'
 GD   = _os.environ.get('GBM_COV_DIR')    or _D + '/training/GBM_cell-line/cov'
 BLOCK, KS = 100, (3, 4, 5)
-try:   # config.conf 의 BLOCK_SIZE 를 따른다. 01·02·11 과 같은 격자여야 한다.
+try:   # config.conf 의 BLOCK_SIZE 사용 (01, 02, 11 과 같은 격자)
     BLOCK = int(_cfg.BLOCK_SIZE)
 except Exception:
     pass
@@ -77,12 +67,10 @@ if '--out'  in a: OUT  = a[a.index('--out')+1]
 ONLY  = a[a.index('--sample')+1] if '--sample' in a else None
 LIMIT = int(a[a.index('--limit')+1]) if '--limit' in a else 0
 
-# 파일 이름에서 검체 이름을 뽑는다. 기본은 첫 _ 앞까지 — cov 와 BAM 의 뒤쪽
-#   꼬리표가 달라도 짝이 맞게 하기 위해서다.
-#   자료마다 이름 규칙이 다르다. 안 맞으면 「자료를 고치지 말고」 SID_RE 를 준다.
-#   첫 괄호가 검체 이름이 되고, 안 걸리면 기본 규칙으로 떨어진다. 예:
-#     SID_RE='(.+?)__'   H1876_0d__SRR…  -> H1876_0d   (밑줄 둘로 가르는 자료)
-#                        H1876__SRR…     -> H1876
+# 파일 이름에서 검체 이름 뽑기. 기본은 첫 _ 앞까지 (cov, BAM 꼬리표 달라도 짝 맞게)
+# 규칙이 안 맞으면 SID_RE 사용 (첫 괄호가 검체 이름, 안 걸리면 기본 규칙). 예:
+#   SID_RE='(.+?)__'   H1876_0d__SRR...  -> H1876_0d
+#                      H1876__SRR...     -> H1876
 _SRE = _os.environ.get('SID_RE')
 _srx = re.compile(_SRE) if _SRE else None
 def sid(p):
@@ -124,7 +112,7 @@ def scan(bam):
     f = pysam.AlignmentFile(bam, 'rb', check_sq=False)
     nr, nh = 0, 0
 
-    def _limited(it):            # LIMIT 은 1차 정렬 리드 수로 센다(전과 같음)
+    def _limited(it):            # LIMIT 은 1차 정렬 리드 수 기준
         nonlocal nr
         for r in it:
             if r.is_unmapped or r.is_secondary or r.is_supplementary: continue
@@ -132,8 +120,7 @@ def scan(bam):
             if LIMIT and nr > LIMIT: return
             yield r
 
-    # 두 짝 묶기는 정렬 순서와 상관없게 meth_config.fragments 로 한다. 학습 BAM 은 좌표 정렬이라
-    #   이름이 연달아 나올 때만 묶으면 짝이 따로 세어진다(혼합 BAM 은 이름순이라 묶였다).
+    # 두 짝 묶기는 meth_config.fragments 사용 (좌표 정렬 BAM 에서도 짝이 묶임)
     st = {}
     for grp in _cfg.fragments(_limited(f), st):
         frag = {}
@@ -158,15 +145,13 @@ def scan(bam):
 
 _CANCER = getattr(_cfg, 'CANCER_LABEL', 'GBM')   # samples.csv 의 type 값
 
-# 짝을 「아무것도 쓰기 전에」 맞춰 본다. 폴더를 만들거나 창 표를 쓴 뒤에 멈추면,
-#   경로를 고쳐 다시 돌릴 때 run_dmr.sh 의 덮어쓰기 관문이 그 몇 개 때문에 막는다.
+# cov, BAM 짝은 아무것도 쓰기 전에 맞춰 봄 (중간에 멈추면 덮어쓰기 관문에 막힘)
 jobs = [(sid(f), NB, 'Normal') for f in sorted(glob.glob(ND+'/*.cov.gz'))] + \
        [(sid(f), GB, _CANCER)    for f in sorted(glob.glob(GD+'/*.cov.gz'))]
 if ONLY: jobs = [j for j in jobs if j[0] == ONLY]
 if not jobs: sys.exit('대상 검체 없음')
 
-# 짝을 「스캔 전에」 맞춰 본다. 뒤에서 검사하면 암 30개를 다 읽고 90개 파일을 쓴 뒤에야
-#   멈추고, 다시 돌리려면 run_dmr.sh 의 덮어쓰기 관문까지 풀어야 한다.
+# 검체마다 짝 BAM 찾기
 _pair, _miss = [], []
 for s, bd, ty in jobs:
     hit = [f for f in glob.glob(bd+'/*.bam') if sid(f) == s]
@@ -183,10 +168,8 @@ if _miss:
     for _s, _t, _n, _bd in _miss[:20]:
         print('    %-16s %s BAM %d개  (%s)' % (_s, _t, _n, _bd))
     if len(_miss) > 20: print('    … 외 %d개' % (len(_miss) - 20))
-    # 넘어가면 01 이 쓴 samples.csv 와 여기서 센 검체 수가 어긋난다. 04_jsd 는
-    #   NEED_N 을 samples.csv 로 잡으므로(04_jsd.py:91), 많이 빠지면 「쓸 수 있는
-    #   창이 0」 으로 죽고, 조금 빠지면 「줄어든 정상 기준」으로 조용히 다른 패널을
-    #   고른다. 그래서 기본은 멈춤이고, 알고 넘기려면 ALLOW_SKIP=1 을 준다.
+    # 짝 없는 검체 있으면 중단 (04 가 samples.csv 기준이라 빠지면 다른 패널이 나옴)
+    # 알고 넘기려면 ALLOW_SKIP=1
     if os.environ.get('ALLOW_SKIP') != '1':
         sys.exit('중단: 짝 BAM 을 못 찾은 검체가 %d개 있습니다.' % len(_miss) + chr(10) +
                  '  cov 이름과 BAM 이름이 첫 _ 앞까지 같아야 짝이 맞습니다.' + chr(10) +
@@ -194,8 +177,7 @@ if _miss:
                  '  암   BAM: ' + GB + chr(10) +
                  '  폴더가 다르면 NORMAL_BAM_DIR · GBM_BAM_DIR 로 주십시오.' + chr(10) +
                  '  빠진 채로 진행하려면 ALLOW_SKIP=1 (04 의 정상 기준이 줄어듭니다).')
-    # ALLOW_SKIP 이라도 계급이 통째로 비면 안 된다. 넘기면 04_jsd 가 「쓸 수 있는
-    #   창이 0」 으로 죽는데, 그 메시지는 BAM 폴더를 안 알려 준다.
+    # ALLOW_SKIP 이어도 정상 또는 암이 통째로 비면 중단
     _gone = [t for t in sorted({j[2] for j in jobs}) if not any(x[2] == t for x in _pair)]
     if _gone:
         sys.exit(('중단: %s 을 한 개도 짝짓지 못했습니다 (ALLOW_SKIP 으로도 넘길 수 없습니다).'

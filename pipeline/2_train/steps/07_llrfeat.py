@@ -1,13 +1,10 @@
 #!/usr/bin/env python
-# 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돌아
-# 실제 자료를 덮어쓴다. 실행은 `python <파일>` 로만 한다.
+# 스크립트 전용 - import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
 import os as _os, sys as _sys
-# 0_setup 을 찾는다. 이 파일이 「복사되어」 정리본 밖에서 돌 수도 있으므로
-#   ① 자기 위에서 위로 올라가며 찾고 ② 환경변수 METH_CONF_DIR ③ 그래도 없으면
-#   설정 없이 돌 수 있게 기본값으로 간다(검증이 검체 폴더로 복사해 쓰는 경로다).
+# 0_setup 찾기: 위 폴더로 올라가며 → METH_CONF_DIR → 없으면 기본값 (검증 복사본용)
 _h = _os.path.dirname(_os.path.abspath(__file__))
 for _ in range(5):
     _c = _os.path.join(_h, '0_setup')
@@ -22,80 +19,23 @@ try:
     import meth_config as _cfg
     _M, _D = _cfg.METH_ROOT, _cfg.DATASET_ROOT
 except ImportError:
-    # 검증이 이 파일을 검체 폴더로 「복사」 해 돌린다. 그때는 0_setup 이 없다.
-    #   조용히 넘어가면 어느 뿌리를 썼는지 로그에 안 남는다. 알리고 넘어간다.
+    # 설정 못 찾으면 환경변수/기본값 사용, 어느 뿌리 썼는지 로그에 남김
     _M = _os.environ.get('METH_ROOT', '/ssd_data/Methylation').rstrip('/')
     _D = _os.environ.get('DATASET_ROOT', '/ssd_data/dataset').rstrip('/')
     _sys.stderr.write('  [설정 없음] 환경변수/기본값으로 진행 — METH_ROOT=%s\n' % _M)
 
 
-# coding: utf-8
-"""2_train/steps/07 - Multi-θ LLR 피처.
-
-무엇을 만드나
-  샘플 하나당 한 줄. 여러 종양 분획 θ 에 대한 로그우도비를 모아 놓은 것.
-
-    P_mix(θ)(x) = (1 − θ) · P_Normal(x)  +  θ · P_GBM(x)
-    LLR(θ)      = Σ_reads  ln [ P_mix(θ)(x) / P_Normal(x) ]
-
-  x 는 창(K자리)의 메틸 무늬. 합은 판의 모든 창에 걸쳐 돈다.
-  θ 별 reference 파일은 만들지 않는다. P_Normal · P_GBM 만 두고 즉석 계산한다.
-
-  나오는 열
-    LLR_<θ> …        θ 마다 하나
-    LLR_max          θ=0 을 포함한 최댓값. LLR(0)≡0 이므로 항상 0 이상 → GLRT 통계량
-    best_theta       LLR 을 최대로 만든 θ. 정상이면 0 이 된다
-    Type             mean CSV 에서 그대로 복사 (2_train/steps/08 가 라벨로 쓴다)
-
-참조표는 새로 만들지 않는다
-  `_dmr/05_llrref.py` 가 만들어 둔 것을 그대로 읽는다.
-  그쪽이 더 정확하다. P_GBM 을 세포주 안에서 먼저 평균 낸 뒤 세포주끼리 평균하므로
-  반복 수가 많은 세포주에 치우치지 않는다.
-
+"""2단계 07: 여러 θ 의 LLR 피처
+  P_mix(θ)(x) = (1 - θ) P_Normal(x) + θ P_GBM(x)
+  LLR(θ)      = 리드 합 ln[P_mix(θ)(x) / P_Normal(x)]   (x = 창 K 자리 메틸 무늬)
+  열: LLR_<θ>, LLR_max (θ=0 포함 최댓값이라 0 이상), best_theta, Type (mean CSV 에서 복사)
+  참조표는 1단계 05_llrref.py 결과를 그대로 읽음
     <METH_ROOT>/results/dmr/j_llrref/llrref_K3_minr6.parquet
-    열  chr blk wi pos1 pos2 pos3 wid  n0..n7(P_Normal)  g0..g7(P_GBM)  nn ng rd_n rd_g
-
-평활: 기본은 넣지 않는다. 이름을 정확히 적는다.
-
-    LLR_EPS = 0.0   (기본)   평활 없음.  P_Normal(x)=0 인 무늬의 리드는 항에서 뺀다
-    LLR_EPS > 0              P_smooth = (1 − eps) · P + eps / 2^K
-
-  바닥값(floor=0.0005)과 비교하면 무평활 쪽이 낫다. 같은 LOO 검사에서 바닥값은
-  +77 ~ +863 (양성)으로 부호가 뒤집힌다. 그래서 "무평활 + P_N=0 무늬 제외" 를 쓴다.
-
-  leave-one-donor-out(LOO) 정상의 LLR 부호는 θ 에 따라 갈린다 (학습 정상 15명):
-
-      θ=0.05    LOO 가 음수 10/15 · 중앙 −281
-      θ=0.005   LOO 가 음수  1/15 · 중앙 +31    ← 1차 지표의 비율. 부호가 뒤집힌다
-      θ=0.0005  LOO 가 음수  1/15 · 중앙  +4
-
-  짝지은 차이로 보면 자기 제외 효과가 θ=0.005 에서 중앙 +154.21 이고 15/15 전원
-  같은 방향이다(부호순위 양측 p=0.00006). 참조를 15명→14명으로 줄이는 효과는
-  −5.90 으로 부호가 반대다 — 즉 "참조가 작아져서" 가 아니라 "자기가 빠져서" 다.
-
-  → LOO 로 검증된 것은 「평활 방식의 선택」 이고, LLR 의 외부 적용 가능성이 아니다.
-
-  주의: P_Normal(x)=0 은 "정상에서 한 번도 안 나온 무늬" 라 우도비로는 증거력이 가장 크다.
-  그것을 빼는 것은 보수적인 선택이다. 뺀 리드 수를 진단 파일에 남기므로 크기를 확인할 것.
-  실측(jjsd200_50k_uni)에서는 검체당 4 / 12,606 리드 수준이었다.
-
-무늬 규칙은 03_jsdcount.py · 2_train/steps/06 와 완전히 동일하다.
-  XM 태그 'Z'=1 · 'z'=0 · 자리는 rp+1 · 첫 자리가 최상위 비트
-  같은 이름의 PE 두 짝을 한 조각으로 (정렬 순서와 상관없이 · meth_config.fragments)
-  창의 K 자리를 다 덮은 조각만 센다
-
-창 번호(wid) 정합성을 런타임에 검사한다
-  2_train/steps/06 는 blocks_cpg.parquet 로 wid 를 재구성하지만 이 검사가 없다.
-  02_blockcpg 를 다른 조건으로 다시 돌리면 조용히 어긋난다.
-  여기서는 참조표의 pos1~pos3 과 재구성한 창 좌표를 대조해 다르면 즉시 멈춘다.
-
-환경변수
-  LLR_REF     참조 parquet 경로 (기본 위 경로)
-  LLR_THETAS  쉼표로 구분한 θ 목록
-  LLR_EPS     평활 상수 (기본 0.0: 안정성 검사에서 무한 0건이었다)
-  LLR_OUT     결과만 다른 폴더에 쓴다 (시험용)
-
-명령줄:  --limit N (비율마다 앞 N개만, 시험용)
+  평활 없음이 기본 (LLR_EPS=0) - P_Normal(x)=0 인 무늬의 리드는 빼고, 뺀 수는 진단 파일에 남김
+  무늬 규칙은 03_jsdcount.py, 06_jsdfeat.py 와 같음
+  창 번호(wid)가 참조표 좌표와 다르면 바로 중단
+환경변수: LLR_REF (참조 경로), LLR_THETAS (쉼표 목록), LLR_EPS (평활 상수), LLR_OUT (출력 폴더, 시험용)
+사용: python 07_llrfeat.py [--cand <후보 폴더>] [--limit N]   (--limit: 비율마다 앞 N개만, 시험용)
 """
 import os
 import sys
@@ -106,30 +46,22 @@ import pandas as pd
 import pysam
 import config as C
 
-# ── 이 단계가 쓰는 경로 ──
-#   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
-#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
-#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
+# 이 단계 경로. 폴더 구조 다르면 여기만 수정
 CAND = _os.environ.get('METH_ROOT', _M) + '/results/dmr/j_candidates'
-if '--cand' in sys.argv:            # 판마다 후보 풀이 다르다
+if '--cand' in sys.argv:            # 판마다 후보 풀이 다름
     CAND = sys.argv[sys.argv.index('--cand') + 1]
-# 검증(run_one_sample.sh)은 인자 없이 부른다. 환경변수로도 받는다.
+# 검증은 인자 없이 부르니 환경변수 LLR_CAND 로도 받음
 CAND = os.environ.get('LLR_CAND', CAND)
-# [세대 검사] 인자를 빠뜨리면 조용히 옛 후보 풀로 돈다.
-#   호출하는 쪽을 전부 맞추기보다 지나가는 잎에서 한 번 막는다.
-# 'j15' 를 못 박으면 다음 세대에 관문이 스스로 꺼진다. GEN 을 따른다.
+# 세대 확인: 후보 폴더 이름이 정확히 j_candidates<GEN> 이어야 함
 _G = getattr(C, 'GEN')
 _want = 'j_candidates' + _G
-# 06_jsdfeat 과 같은 이유로 VERSION 조건 없이 늘 검사한다 — 판 이름이
-#   j<GEN> 으로 시작하지 않아도 관문이 꺼지지 않게.
+# VERSION 이름과 상관없이 항상 확인
 if os.path.basename(CAND.rstrip('/')) != _want:
     sys.exit('중단: 세대 불일치 — VERSION=%s · GEN=%s 인데 CAND=%s (기대 %s)'
              % (C.VERSION, _G, CAND, _want))
 REF_DEFAULT = _os.environ.get('METH_ROOT', _M) + '/results/dmr/j_llrref/llrref_K3_minr6.parquet'
 
-# [자기 증명] 실행 중인 코드가 자기 소스를 해시해 찍는다.
-#   이 줄은 이 코드를 실제로 돌려야만 로그에 생긴다. 사후에 못 만든다.
-#   해석된 입력 경로도 같이 찍는다. 참조표는 파일 이름이 같을 수 있어 경로가 있어야 구분된다.
+# 실행 중인 코드 md5, 입력 경로, 설정값을 로그에 찍음
 def _self_proof():
     import hashlib as _h
     try:
@@ -150,18 +82,13 @@ def _self_proof():
 
 
 
-# getattr 에 기본값을 주지 않는다. 기본값이 곧 조용한 오답이다 —
-#   MIN_READS_PER_WINDOW 의 기본값 4 는 쓰지 않는다. 설정의 값(6)을 따른다.
-#   복사본이 config 를 못 읽으면 06 은 4 로 세고 07 은 minr6 참조표를 읽어
-#   두 피처가 다른 문턱으로 계산된다. 파일이 따로라 아무 에러도 안 난다.
+# 기본값 없이 config 값 사용 - 06 과 같은 값이어야 함
 K = getattr(C, 'PATTERN_K')
 BLOCK = C.BLOCK_SIZE
 M_PAT = 1 << K
 
-# 처음 정한 θ 다섯(0.0005~0.01)에 0.02 · 0.05 를 더한 것.
-#   실제 혼합비가 5% 까지 있어 그대로 두면 2~5% 검체가 전부 best_theta=0.01 에 뭉친다.
-#   θ=0 은 목록에 넣지 않는다. LLR(0)≡0 이라 열로 두면 쓸모가 없다.
-#   대신 LLR_max · best_theta 계산에는 0 을 후보로 참여시킨다.
+# θ 목록 (비율 5% 까지 있어서 0.05 까지)
+# θ=0 은 LLR 이 늘 0 이라 열로는 안 만들고 LLR_max, best_theta 후보로만 씀
 THETAS_DEFAULT = [0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05]
 
 _env = os.environ.get('LLR_THETAS', '').strip()
@@ -169,24 +96,21 @@ THETAS = ([float(x) for x in _env.replace(' ', '').split(',') if x]
           if _env else list(THETAS_DEFAULT))
 EPS = float(os.environ.get('LLR_EPS', 0.0))
 REF_PATH = os.environ.get('LLR_REF', REF_DEFAULT)
-# [세대 관문 · REF] 참조표도 세대를 검사한다.
-#   j_llrref (33,903창) 와 j_llrref15 (22,685창) 는 값이 다른 표인데 「파일 이름이 같다」.
-#   REF_DEFAULT 는 세대 없는 경로라, 러너가 LLR_REF 를 안 내보내면 조용히 옛 표를 쓴다.
-#   러너가 내보내고 있지만, 관문이 그것을 증명해야 한다.
+# 참조표도 세대 확인 - 세대마다 파일 이름이 같아서 폴더 이름(j_llrref<GEN>)으로 봄
 _wref = 'j_llrref' + _G
-# 위 CAND 관문과 같은 이유로 VERSION 조건 없이 검사한다.
+# VERSION 이름과 상관없이 항상 확인
 if os.path.basename(os.path.dirname(REF_PATH)) != _wref:
     sys.exit('중단: 세대 불일치 — VERSION=%s 인데 LLR_REF=%s\n'
              '  러너가 LLR_REF 를 내보내는지 보십시오 (3_validate/steps/run_one_sample.sh).'
              % (C.VERSION, REF_PATH))
 
-_self_proof()   # 경로·설정이 다 정해진 뒤에 찍는다
+_self_proof()   # 경로, 설정 다 정한 뒤에 찍음
 _a = sys.argv
 LIMIT = int(_a[_a.index('--limit') + 1]) if '--limit' in _a else 0
 
 
 def build_windows(keep_blocks):
-    """창을 03_jsdcount 와 같은 순서로 만든다. wid 가 참조표와 맞아야 한다."""
+    """창을 03_jsdcount 와 같은 순서로 만듦 (wid 가 참조표와 맞아야 함)"""
     P = pd.read_parquet(CAND + '/blocks_cpg.parquet').sort_values(['chr', 'blk', 'pos'])
     gp = P.groupby(['chr', 'blk'], observed=True)['pos'].apply(list)
     blkwin = {}
@@ -201,7 +125,7 @@ def build_windows(keep_blocks):
 
 
 def load_reference(nwin, blkwin):
-    """참조표를 읽어 (nwin, 2^K) 배열 둘과 have 마스크로 편다."""
+    """참조표 읽어 P_Normal, P_GBM (nwin, 2^K) 배열과 have 마스크로 만듦"""
     if not os.path.exists(REF_PATH):
         sys.exit('참조표가 없습니다: %s\n  _dmr/05_llrref.py 를 먼저 돌리세요.' % REF_PATH)
     R = pd.read_parquet(REF_PATH)
@@ -223,7 +147,7 @@ def load_reference(nwin, blkwin):
     PG[wid] = R[['g%d' % i for i in range(M_PAT)]].to_numpy(dtype=np.float64)
     have[wid] = True
 
-    # ── 정합성 검사. 재구성한 창 좌표와 참조표의 pos 가 같아야 한다.
+    # 창 좌표 확인: 다시 만든 창 좌표와 참조표 pos 가 같아야 함
     ref_pos = {int(w): (int(a), int(b), int(c)) for w, a, b, c
                in zip(R['wid'], R['pos1'], R['pos2'], R['pos3'])} if K == 3 else {}
     if ref_pos:
@@ -244,7 +168,7 @@ def load_reference(nwin, blkwin):
                      % (bad, chk))
         print('  창 좌표 정합성 %s개 확인: 모두 일치' % format(chk, ','))
 
-    # ── 평활. 참조표는 날 확률이므로 여기서 넣는다.
+    # 평활 (EPS > 0 일 때만): P = (1 - eps) * P + eps / 2^K
     if EPS > 0:
         PN = (1.0 - EPS) * PN + EPS / M_PAT
         PG = (1.0 - EPS) * PG + EPS / M_PAT
@@ -256,14 +180,10 @@ def load_reference(nwin, blkwin):
 
 
 def scan(bam, blkwin, nwin):
-    """무늬 세기. 03_jsdcount · 2_train/steps/06 의 scan 과 같은 규칙.
+    """창별 무늬 세기 (03_jsdcount, 06 과 같은 규칙)
 
-    덤으로 온타겟 조각 수와 고유 조각 수를 센다.
-      이 파이프라인은 PCR 중복을 어디에서도 제거하지 않는다
-      (is_duplicate · markdup · rmdup 어디에도 없다 — 실측 확인).
-      중복은 새 정보가 아니므로 LLR 의 리드 합을 부풀린다.
-      조각의 (chr, 시작, 끝) 이 같으면 같은 분자로 보고 고유 수를 센다.
-      중복 배수 = 조각수 / 고유수. 1.0 에 가까우면 이 걱정은 닫힌다.
+    온타겟 조각 수와 고유 조각 수도 셈 - PCR 중복은 따로 안 지워서 LLR 합을 부풀릴 수 있음
+    (chr, 시작, 끝) 같으면 같은 분자로 봄. 중복 배수 = 조각 수 / 고유 수
     """
     Cm = np.zeros((nwin, M_PAT), dtype=np.int32)
     seen = set()
@@ -285,7 +205,7 @@ def scan(bam, blkwin, nwin):
                 if v >= 0:
                     Cm[wid, v] += 1
 
-    # 두 짝 묶기는 정렬 순서와 상관없게 meth_config.fragments 로 한다(03_jsdcount · 06 과 같은 함수).
+    # PE 두 짝을 한 조각으로 묶음 (03_jsdcount, 06 과 같은 meth_config.fragments)
     f = pysam.AlignmentFile(bam, 'rb', check_sq=False)
     st = {}
     for grp in _cfg.fragments(f, st):
@@ -300,7 +220,7 @@ def scan(bam, blkwin, nwin):
             hi = e // BLOCK + 1
             if not any((ch, b) in blkwin for b in range(lo, hi)):
                 continue
-            # 온타겟으로 확인된 뒤에만 조각 범위를 넓힌다 (짝 두 개를 하나로 본다)
+            # 온타겟일 때만 조각 범위 넓힘 (두 짝을 한 조각으로)
             span = ((ch, r.reference_start, e) if span is None
                     else (span[0], min(span[1], r.reference_start), max(span[2], e)))
             try:
@@ -323,14 +243,10 @@ def scan(bam, blkwin, nwin):
 
 
 def llr_row(Cm, PN, PG, have):
-    """θ 마다 LLR 합. 창·무늬를 전부 더한다.
+    """θ 마다 LLR 합 (모든 창, 무늬)
 
-    ratio = P_GBM / P_Normal 을 미리 만들어 두면
-        ln(P_mix/P_N) = ln(1 + θ·(ratio − 1))
-    로 θ 마다 곱셈 한 번이면 된다. θ 별 참조를 저장할 이유가 없는 까닭이다.
-
-    P_Normal 이 0 인 무늬는 그 항을 버린다(개수를 세어 보고한다).
-    LLR 은 리드 단위 합이므로 창당 최소 리드 문턱을 두지 않는다 — 이게 JSD 와 다른 점이다.
+    ln(P_mix/P_N) = ln(1 + θ(ratio - 1)), ratio = P_GBM / P_Normal
+    P_Normal 이 0 인 무늬는 빼고 개수만 셈. 리드 단위 합이라 창당 최소 리드 문턱 없음
     """
     use = have & (Cm.sum(1) > 0)
     out = {}
@@ -346,16 +262,12 @@ def llr_row(Cm, PN, PG, have):
     pn = PN[use]
     pg = PG[use]
     ok = pn > 0
-    drop = int(n[~ok].sum())          # P_Normal=0 인데 리드가 있는 칸
+    drop = int(n[~ok].sum())          # P_Normal=0 인데 리드 있는 무늬
     n = np.where(ok, n, 0.0)
     ratio = np.divide(pg, pn, out=np.zeros_like(pg), where=ok)
     d = np.where(ok, ratio - 1.0, 0.0)
 
-    # ── 리드 수. LLR 은 리드 하나하나의 합이라 리드가 2배면 LLR 도 2배다.
-    #   검체마다 패널에 걸리는 리드 수가 다르면 LLR 스케일이 검체마다 달라지고,
-    #   그러면 종양 분획이 아니라 패널 커버리지를 먼저 재게 된다.
-    #   그래서 리드당 값(_pr)을 함께 낸다. 어느 쪽이 쓸모 있는지는 2_train/steps/08 가 고른다.
-    #   (JSD 는 창마다 합=1 로 정규화해 이 문제에 면역이지만 LLR 은 아니다.)
+    # LLR 은 리드 수에 비례해서 리드당 값(_pr)도 같이 냄 (샘플마다 커버리지 다를 때용)
     nreads = float(n.sum())
     den = nreads if nreads > 0 else 1.0
 
@@ -366,10 +278,8 @@ def llr_row(Cm, PN, PG, have):
         out['LLR_%g_pr' % t] = v / den
         vals.append(v)
 
-    # θ=0 을 후보에 넣는다. LLR(0) ≡ 0 이므로 LLR_max 는 항상 0 이상이 되고,
-    # 이것이 일반화우도비 검정(GLRT) 통계량 그 자체다.
-    #   다만 그 때문에 정상도 LLR_max ≥ 0 이라 양수 쪽으로 몰린다.
-    #   개별 LLR_<θ> 열이 부호를 그대로 갖고 있으므로 판별은 그쪽이 맡는다.
+    # θ=0 도 후보에 넣음 → LLR_max 는 늘 0 이상 (GLRT 통계량)
+    # 정상도 0 이상으로 몰려서 부호는 개별 LLR_<θ> 열에서 봄
     cand = [0.0] + list(THETAS)
     cvals = [0.0] + vals
     i = int(np.argmax(cvals))
@@ -382,25 +292,18 @@ def llr_row(Cm, PN, PG, have):
 
 
 def main():
-    """theta 별 LLR 과 LLR_max·best_theta 를 만든다.
+    """θ 별 LLR 과 LLR_max, best_theta 행렬 만듦
 
-    받는 것
-      REF_PATH   j_llrref<GEN>/llrref_K3_minr<MINR>.parquet  (정상 기준 무늬 분포)
-      CAND       j_candidates<GEN>  (창 목록 — 03_jsdcount 와 같은 순서여야 한다)
-      BISMARK_OUT/mut_<n>_reads/  섞어 놓은 BAM
+    입력
+      REF_PATH   j_llrref<GEN>/llrref_K3_minr<MINR>.parquet  (정상, 암 기준 무늬 분포)
+      CAND       j_candidates<GEN>  (창 목록)
+      MIX_OUT/mut_<n>_reads/  섞은 BAM
 
-    내는 것
-      ML_OUT/<비율>_llr_<판>.csv    열 = <chr>_<blk>_llr_theta<θ> · _llrmax · _besttheta
+    출력
+      ML_OUT/<n>_llr_<판>.csv   열 = LLR_<θ>, _pr, _pu, LLR_max, best_theta, Type
+      ML_OUT/llr_diag_<판>.csv  비율별 진단
 
-    구역
-      1) 참조표 읽기   세대 관문 두 개가 여기서 돈다 (CAND · REF_PATH)
-      2) 창 만들기     06_jsdfeat 와 같은 규칙. wid 가 참조표와 맞아야 한다
-      3) 무늬 세기     BAM 을 훑어 K=3 무늬 빈도를 센다
-      4) LLR 계산      theta 마다 로그우도비. theta=0 은 후보로만 참여
-      5) 저장
-
-    ※ LLR(0) ≡ 0 이므로 LLR_max 는 0 에서 바닥을 친다. 중앙값 0.00 은
-      「없음」 이 아니라 「바닥」 이다.
+    LLR_max 는 0 이 바닥이라 중앙값 0 은 신호 없음이 아니라 바닥값
     """
     C.guard_not_original()
     C.banner('2_train/steps/07  Multi-theta LLR   [VERSION=%s . PANEL=%s]' % (C.VERSION, C.PANEL))
@@ -414,10 +317,7 @@ def main():
                    key=lambda p: int(re.search(r'[/\\](\d+)_mean_', p).group(1)))
     if not means:
         sys.exit('mean CSV 가 없습니다. step04_1 을 먼저 돌리세요: ' + out_dir)
-    # 검증에서는 블록 집합을 「학습」 의 mean 표에서 가져온다.
-    #   검증 검체의 mean 표는 블록을 안 버려(05 의 검증 분기) 학습 mean 표와 블록이 다르다. 그대로 쓰면 llr 이
-    #   학습과 다른 창들을 합산한다(실측 창 1,272 → 1,273). 검증 실행기(run_one_sample.sh)가
-    #   LLR_KEEP_FROM 에 학습 step04_ML_classifier 자리를 준다. 학습은 이 값을 안 주므로 그대로다.
+    # 검증은 블록 집합을 학습 mean 표에서 가져옴 (LLR_KEEP_FROM, 검증 mean 표는 블록을 안 거름)
     _kf = os.environ.get('LLR_KEEP_FROM')
     if _kf:
         _tm = sorted(glob.glob(_kf + '/*_mean_%s.csv' % C.VERSION),
@@ -425,7 +325,7 @@ def main():
         if not _tm:
             sys.exit('LLR_KEEP_FROM 에 학습 mean CSV 가 없습니다: ' + _kf)
         print('  블록 집합: 학습 mean 표 %s' % os.path.basename(_tm[0]))
-    keep_src = _tm[0] if _kf else means[0]     # 블록 집합만 학습에서 — 비율마다 읽는 것은 이 검체의 means
+    keep_src = _tm[0] if _kf else means[0]     # 블록 집합만 학습에서, 행렬은 이 샘플 것
 
     ref = pd.read_csv(keep_src, index_col=0, nrows=1)
     keep = set()
@@ -448,18 +348,14 @@ def main():
     if usable == 0:
         sys.exit('패널 창 중 참조표에 있는 것이 없습니다. 패널·참조 조합을 확인하세요.')
 
-    # ── 행 이름 ↔ BAM 번호 대응 검사.
-    #   GBM{i} 의 i 는 step04_1 이 bedGraph 를 numeric 정렬해 붙인 번호다.
-    #   여기서는 그 i 를 sampled_reads_{i}.bam 번호로 그대로 쓴다.
-    #   복제본이 하나라도 빠지면 뒤 번호가 당겨져 조용히 어긋난다 — 오류 없이 값만 틀린다.
-    #   step04_1 이 남긴 매핑 파일로 대조한다 (:86 sample_file_mapping).
+    # 행 이름 번호와 BAM 번호가 맞는지 확인 (sample_file_mapping 으로)
+    # 반복 하나라도 빠지면 05 의 번호가 당겨져 조용히 어긋남
     mp = '%s/sample_file_mapping_%s.csv' % (out_dir, C.VERSION)
     if os.path.exists(mp):
         MP = pd.read_csv(mp)
         bad = []
         for sid, fn in zip(MP['sample_id'].astype(str), MP['file'].astype(str)):
-            # 05_Feature_Matrix 의 collect(..., 'Normal'/'GBM') 가 만든 번호다.
-            #   암종 이름이 아니다. 두 파일이 같은 글자를 쓰기로 한 약속이다.
+            # Normal/GBM 은 05 가 붙인 행 이름 접두사 (암종 이름 아님)
             g = re.match(r'^(Normal|GBM)(\d+)$', sid)
             h = re.search(r'sampled_reads_(\d+)\.', fn)
             if g and h and int(g.group(2)) != int(h.group(1)):
@@ -473,11 +369,10 @@ def main():
     else:
         print('  !! 매핑 파일이 없어 대응을 검사하지 못했습니다: %s' % os.path.basename(mp))
 
-    # 원값 · 리드당(_pr) · 고유조각당(_pu) 셋을 다 낸다.
-    #   원값   실제 GLRT 통계량. 학습은 행마다 깊이가 같아 이쪽이 맞다
-    #   _pr    검체마다 커버리지가 다를 때 (검증에서 필요)
-    #   _pu    PCR 중복까지 보정. 중복 배수가 1 이면 _pr 과 같아진다
-    #   어느 것이 뽑혔는지 반드시 보고할 것: 원값이 뽑히면 커버리지를 잰 것일 수 있다
+    # 원값, 리드당(_pr), 고유 조각당(_pu) 셋 다 냄
+    #   원값  GLRT 통계량 (학습은 깊이가 같아 이걸로 충분)
+    #   _pr   샘플마다 커버리지 다를 때
+    #   _pu   PCR 중복까지 보정
     cols = ([c for t in THETAS
              for c in ('LLR_%g' % t, 'LLR_%g_pr' % t, 'LLR_%g_pu' % t)]
             + ['LLR_max', 'LLR_max_pr', 'LLR_max_pu', 'best_theta'])
@@ -495,7 +390,7 @@ def main():
         v = llr_row(Cm, PN, PG, have)
         v['_nfrag'] = nfr
         v['_nuniq'] = nuq
-        # 고유 조각으로 나눈 값. 중복이 있으면 이것만이 해석 가능하다.
+        # 고유 조각 수로 나눈 값 (중복 있을 때 사용)
         den = float(nuq) if nuq > 0 else 1.0
         for t in THETAS:
             v['LLR_%g_pu' % t] = v['LLR_%g' % t] / den

@@ -1,18 +1,14 @@
-"""두 대비의 패널을 판마다 교집합한다 (다음 판 2안).
+"""두 대비의 패널을 같은 판끼리 교집합 (설정 PANELS 의 판마다)
+  DMR1: 암 대 정상 조직 (다른 트리의 1단계 08 산출)
+  DMR2: 암 대 정상 cfDNA (이 트리의 1단계 08 산출)
+  행 순서와 dbeta, q 는 DMR2 것 사용. dbeta 부호(암 - 정상)가 같은 칸, 다른 칸을 셈
+  MIN 칸 미만인 판은 계산 불가로 빼고, 남은 판 목록을 OUT/_intersect_panels.txt 에 씀
 
-  DMR1  암 대 정상 조직 (다른 트리의 1단계 08 산출)
-  DMR2  암 대 정상 cfDNA (이 트리의 1단계 08 산출과 같은 것)
-  판마다 같은 이름끼리 교집합한다: bl200 ∩ bl200 · jsd200 ∩ jsd200 · …(설정 PANELS)
-  행은 DMR2 의 순서 · 값(dbeta · q)을 그대로 둔다.
-
-  방향: dbeta 는 두 대비 모두 «암 − 정상» 이다. 판마다 부호가 같은 칸 · 다른 칸을 센다.
-    --same-direction 이면 부호가 같은 칸만 남긴다(종양이 혈액과도 · 정상 조직과도 같은 쪽으로 다른 칸).
-    --report-only 면 수만 찍고 아무것도 쓰지 않는다(패널 목록만 보는 것이라 성능 결과와 무관).
-  교집합이 MIN(기본 50)칸 미만인 판은 «계산 불가» 다. 그 판은 쓰지 않고, 남은 판 목록을
-  OUT/_intersect_panels.txt 에 적는다. 남은 판이 없으면 멈춘다.
-  쓰는 법:
+  사용
     python 12_intersect_panels.py --a <DMR1 의 j_panel_dmr<GEN>_panels> --b <DMR2 의 같은 폴더> --out <이 트리의 같은 폴더> [--min 50]
-  무작위 패널(09 · 10)은 이 단계 뒤에 돌린다. 09 는 jsd200 칸 수, 10 은 bl200 칸 수에 맞춰 뽑는다.
+    --same-direction   부호 같은 칸만 남김
+    --report-only      수만 찍고 아무것도 안 씀
+  무작위 패널(09, 10)은 이 단계 뒤에 돌림 (09 는 jsd200, 10 은 bl200 칸 수에 맞춤)
 """
 import os as _os, sys as _sys
 _h = _os.path.dirname(_os.path.abspath(__file__))
@@ -63,7 +59,7 @@ for p in _cfg.PANELS:
     sa = dict(zip(da['Feature'], da['dbeta']))
     d = db[db['Feature'].isin(sa)].reset_index(drop=True)
     same = [(sa[f] > 0 and b > 0) or (sa[f] < 0 and b < 0) for f, b in zip(d['Feature'], d['dbeta'])]
-    # NaN · 0 은 방향을 판단할 수 없다 — «다름» 과 따로 센다(--same-direction 이면 빠진다)
+    # NaN, 0 은 방향 판단 불가로 따로 셈 (--same-direction 이면 빠짐)
     undec = int(sum(not (abs(sa[f] * b) > 0) for f, b in zip(d["Feature"], d["dbeta"])))
     n_all, n_same = len(d), int(sum(same))
     if SAME:

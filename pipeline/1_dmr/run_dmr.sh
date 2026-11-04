@@ -1,28 +1,25 @@
 #!/bin/bash
-# ── 1단계 · DMR 패널 선정 ──
+# 1단계: DMR 패널 선정
 #
-#   후보 블록을 고르고, 창별 무늬 분포로 JSD 를 재서 패널 200칸을 확정한다.
-#   무작위 패널 6판도 여기서 만든다. 실제 패널과 견줄 무작위 기준 패널이다.
+#   후보 블록 → 창별 무늬 분포로 JSD → 패널 200블록
+#   비교용 무작위 패널 6개도 여기서 만듦
 #
-#   설정은 ../0_setup/config.conf 한 곳에서만 고친다.
-#   각 단계의 실제 코드는 steps/ 에 있다. 번호가 곧 실행 순서다.
+#   설정은 ../0_setup/config.conf, 단계 코드는 steps/ (번호 = 실행 순서)
 #
-#   사용
+#   사용법
 #     bash run_dmr.sh              # 전 단계
-#     bash run_dmr.sh 04           # 그 단계만
-#     JSD_LIMIT=500000 bash run_dmr.sh   # 리드를 제한해 「도는지」 만 확인 (값은 실제와 다르다)
+#     bash run_dmr.sh 04           # 한 단계만
+#     JSD_LIMIT=500000 bash run_dmr.sh   # 리드 줄여서 도는지만 확인 (값은 다름)
 #
-#   오래 걸리는 것: 01(cov 전수 훑기) · 03(BAM 전수 훑기) · 07(부트스트랩 100회)
+#   오래 걸림: 01 (cov 전체), 03 (BAM 전체), 07 (부트스트랩 100회)
 set -u
 
 _HERE=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)
 S=$_HERE/steps
 ONE=${1:-}
 
-# 환경변수로 주는 값이 이긴다 (0_setup/meth_config.py 의 값() 과 같은 순서).
-# 보관 대상을 손으로 들고 있으면 목록에 없는 키는 conf 가 환경변수를
-#   덮는다. meth_config.py 의 「환경변수가 이긴다」와 반대가 된다. conf 에 적힌 키를
-#   「전부」 보관한다. 목록을 유지할 필요가 없어진다.
+# config.conf 읽기. 환경변수가 우선 (meth_config.py 와 같은 규칙)
+# conf 키를 미리 보관해 뒀다가 conf 읽은 뒤 되돌림
 _CONFFILE=""
 for _d in "$_HERE" "$_HERE/.." "$_HERE/../.." "$_HERE/../../.."; do
   [ -f "$_d/0_setup/config.conf" ] && { _CONFFILE="$_d/0_setup/config.conf"; break; }
@@ -40,9 +37,9 @@ for _k in $_PREKEYS; do
 done
 unset _v
 : "${METH_CONF_DIR:?0_setup/config.conf 를 못 찾았다}"
-# 수치 연산(BLAS) 스레드. 로지스틱 회귀 값이 스레드 수에 따라 달라진다.
-#   OMP_NUM_THREADS 등이 환경변수로 이미 있으면 그 값을 따른다. BLAS_THREADS=none 이면 고정하지 않는다.
-#   이 고정은 진입점(run_*.sh · make_report.sh)에만 있다. steps/ 의 파이썬을 직접 부르면 걸리지 않는다.
+# BLAS 스레드 고정 - 로지스틱 회귀 값이 스레드 수 따라 조금 달라짐
+# 환경변수에 이미 있으면 그 값 사용, BLAS_THREADS=none 이면 고정 안 함
+# 진입점(run_*.sh, make_report.sh)에서만 고정. steps/ 직접 실행하면 안 걸림
 _bt=${BLAS_THREADS:-1}
 case "$_bt" in
   [Nn][Oo][Nn][Ee]) ;;
@@ -51,23 +48,14 @@ case "$_bt" in
      [ "$OMP_NUM_THREADS" = "$OPENBLAS_NUM_THREADS" ] && [ "$OMP_NUM_THREADS" = "$MKL_NUM_THREADS" ]        || echo "주의: 스레드 값이 갈린다 · OMP=$OMP_NUM_THREADS OPENBLAS=$OPENBLAS_NUM_THREADS MKL=$MKL_NUM_THREADS" >&2 ;;
 esac
 : "${METH_ROOT:=/ssd_data/Methylation}"
-# 셸이 기본값을 채우면 conf 를 비웠을 때 관문이 못 잔다.
-#   정본은 config.conf 와 meth_config.py 둘이다. 셸은 값을 만들지 않는다.
+# GEN 은 기본값 없음. conf 에 없으면 중단
 : "${GEN:?GEN 이 없습니다 — 0_setup/config.conf 의 GEN 을 채우십시오}"
-# ── 이 단계가 쓰는 경로 ──
-#   배치가 다르면 「여기만」 고친다. config.conf 에는 뿌리 둘과 실험 설정만 둔다.
-#   정상 cov 기본값(pub15)은 스텝 기본값과 같다.
-D=$METH_ROOT/results/dmr                              # 1단계 산출물이 쌓이는 곳
+# 이 단계 경로. 폴더 구조 다르면 여기만 수정
+D=$METH_ROOT/results/dmr                              # 1단계 산출 폴더
 ND=${NORMAL_SET:-$METH_ROOT/sample_data/_input/normal_pub15}   # 정상 cov (*.cov.gz)
 
 say(){ echo "[$(date +%H:%M:%S)] $*"; }
-# ── [데이터가 막는다] ──
-#   격리 없이 이 드라이버를 부르면 실제 산출물을 덮는다. 다른 관문은 이걸 못 막는다.
-#   드라이버를 「정상 경로」 로 부른 것이니까.
-#   플래그(--confirm)는 일주일이면 손이 외워서 관문이 아니게 되고, 「격리는 부르는
-#   쪽 책임」은 방심한 사람이 부를 때 정확히 실패한다.
-#   그래서 판정 근거를 데이터에 둔다: 대상 폴더가 비어 있지 않으면 멈춘다.
-#   덮어야 하면 폴더 「이름을 다시 쳐서」 OVERWRITE 로 준다 — 관성으로 넘길 수 없다.
+# 산출 폴더 비어있지 않으면 중단 (덮어쓰려면 OVERWRITE=<폴더명>)
 _check() {   # _check <폴더>
   local d=$1
   [ -d "$d" ] || return 0
@@ -86,30 +74,24 @@ _check() {   # _check <폴더>
   exit 1
 }
 
-# 단계마다 「그 단계가 쓰는 폴더」 를 적어 둔다.
-#   후보 폴더 하나만 보면 완성된 패널·풀이 조용히 덮인다. 단일 단계 실행일 때
-#   관문을 끄면 `bash run_dmr.sh 01` 이 보호 없이 j_candidates 를 덮는다 — 실수로
-#   덮는 가장 흔한 길이다. 단계가 쓰는 곳만 보면 우회도 오탐도 없다.
-_outs() {   # _outs <단계번호> -> 그 단계가 「처음 만드는」 폴더
-  #   앞 단계가 이미 쓴 폴더에 「더하는」 단계(02·04b·04c·09·10)는 빈 값을 돌려준다.
-  #   그 폴더는 차 있어야 정상이라 검사하면 늘 멈춘다. 전체 실행에서는 앞 단계
-  #   (01·04·08)가 같은 폴더를 이미 검사하므로 보호에 구멍이 생기지 않고,
-  #   단독 실행일 때는 덮어쓰기를 막지 않는다. 그 단계들은 같은 입력에서 같은
-  #   결과를 다시 만들므로 덮어써도 잃는 것이 없다.
+# 단계별로 새로 만드는 산출 폴더 (한 단계만 돌릴 때도 그 폴더만 검사)
+_outs() {   # _outs <단계>
+  # 앞 단계 폴더에 추가만 하는 단계(02, 04b, 04c, 09, 10, 10c)는 빈 값
+  # 전체 실행이면 앞 단계에서 이미 검사됨
   case "$1" in
     01)  echo "$D/j_candidates$GEN" ;;
-    02)  : ;;                       # j_candidates 에 더한다
+    02)  : ;;                       # j_candidates 에 추가
     03)  echo "$D/j_jsdcount$GEN" ;;
     04)  echo "$D/j_jsd$GEN" ;;
-    04b|04c) : ;;                   # j_jsd 에 더한다
+    04b|04c) : ;;                   # j_jsd 에 추가
     05)  echo "$D/j_llrref$GEN" ;;
     06)  echo "$D/j_panel$GEN" ;;
     06b) echo "$D/j_panel${GEN}_supplement" ;;
     07)  echo "$D/j_panel_dmr$GEN/bl200_d10_cellline" ;;
     08)  echo "$D/j_panel_dmr${GEN}_panels" ;;
-    09|10) : ;;                     # j_panel_dmr<GEN>_panels 에 더한다
-    10c) : ;;                      # j_panel<GEN> 에 더한다 (06 이 만든 폴더)
-    11)  echo "$D/j_pool${GEN}_cellline"     # 11 은 풀 셋을 만든다. 셋 다 검사한다.
+    09|10) : ;;                     # j_panel_dmr<GEN>_panels 에 추가
+    10c) : ;;                      # j_panel<GEN> 에 추가
+    11)  echo "$D/j_pool${GEN}_cellline"     # 풀 3개 다 검사
          echo "$D/j_pool${GEN}_rand"
          echo "$D/j_pool${GEN}_randb" ;;
     *)   : ;;
@@ -123,19 +105,14 @@ step(){ # step <번호> <제목> <명령...>
   "$@" || { say "!! 실패 $no"; exit 1; }
 }
 
-# 검사는 「돌기 전에 한 번」 한다. 단계마다 검사하면 04 가 j_jsd 에 쓴
-#   직후 04b 가 그 폴더를 「비어 있지 않다」고 막아 전체 실행이 항상 04b 에서 죽는다
-#   (04·04b·04c 는 같은 폴더에 쓴다. 02 도 01 의 폴더에, 09·10 도 08 의 폴더에 쓴다).
-#   그래서 「이번에 돌 단계」 가 쓰는 폴더를 모아 중복을 빼고 미리 한 번만 본다.
-#   돌 단계 목록은 이 파일에서 직접 뽑는다. 손으로 적으면 단계를 더할 때 어긋난다.
+# 실행 전에 이번에 돌 단계들의 산출 폴더 한 번에 검사
+# 단계 목록은 이 파일의 step 줄에서 읽음
 _precheck() {
   local _ids _id _o _seen=" "
   if [ -n "$ONE" ]; then
     _ids=$ONE
   else
-    # grep 이 실패하면 「검사한 폴더 0개」 로 조용히 통과한다
-    #   (cat run_dmr.sh | bash 면 $0 가 bash 다). 비면 멈춘다 — 관문은 열린 채
-    #   실패하면 안 된다.
+    # 목록 못 읽으면(파이프로 넘긴 경우 등) 검사 없이 지나가지 않게 중단
     _ids=$(grep -oE "^step +[0-9a-z]+" "$0" 2>/dev/null | awk "{print \$2}")
     if [ -z "$_ids" ]; then
       echo "멈춤: 단계 목록을 못 읽었습니다 ($0). 파이프로 넘기지 말고" >&2
@@ -143,10 +120,7 @@ _precheck() {
       exit 1
     fi
   fi
-  # 따옴표 없이 펼치면 METH_ROOT 에 공백이 있을 때 조각조각 나뉘어
-   #   「없는 폴더」 로 전부 통과한다. 줄 단위로 읽는다.
-  # 모르는 단계 번호(오타)면 검사도 실행도 없이 exit 0 이 된다.
-  #   「돌았는데 아무 일도 없음」은 성공으로 읽힌다. 먼저 막는다.
+  # 없는 단계 번호면 아무것도 안 하고 끝나버리니까 먼저 중단
   if [ -n "$ONE" ]; then
     case " $(grep -oE "^step +[0-9a-z]+" "$0" 2>/dev/null | awk "{print \$2}" | tr "
 " " ") " in
@@ -174,17 +148,14 @@ _precheck
 
 step 01 "후보 블록"        python -u "$S/01_candidates.py" --nd "$ND" --out "$D/j_candidates$GEN"
 step 02 "블록별 CpG"       python -u "$S/02_blockcpg.py"  --nd "$ND" --cand "$D/j_candidates$GEN"
-# JSD_LIMIT 을 주면 BAM 에서 읽을 리드 수를 제한한다 — 「도는지」 만 볼 때 쓴다.
-#   본 실행에서는 주지 않는다. 전수를 읽어야 값이 맞는다.
+# JSD_LIMIT: 리드 수 제한 (도는지 확인용, 본 실행에선 안 씀)
 _LIM=""
 [ -n "${JSD_LIMIT:-}" ] && _LIM="--limit $JSD_LIMIT"
 step 03 "창별 무늬수"      python -u "$S/03_jsdcount.py"  --nd "$ND" --cand "$D/j_candidates$GEN" \
                                 --out "$D/j_jsdcount$GEN" $_LIM
 step 04 "JSD"              python -u "$S/04_jsd.py"       --dir "$D/j_jsdcount$GEN" \
                                 --cand "$D/j_candidates$GEN" --out "$D/j_jsd$GEN" --k "${PATTERN_K:-3}" --minr "${MIN_READS_PER_WINDOW:-6}"
-# 04b·04c 는 「감도 확인용」이 아니라 본선이다 —
-#   04b 가 null_*.parquet, 04c 가 boot_*.parquet 을 만들고, 06b 가 그 둘로
-#   jsdb200 판(보고하는 세 판 중 하나)을 뽑는다. 빼면 08 이 jsdb200 에서 멈춘다.
+# 04b(귀무 분포), 04c(부트스트랩)는 06b 의 jsdb200 선정에 필요
 step 04b "JSD 귀무 분포"    python -u "$S/04b_jsdnull.py"  --dir "$D/j_jsdcount$GEN" \
                                 --cand "$D/j_candidates$GEN" --out "$D/j_jsd$GEN" --k "${PATTERN_K:-3}" --minr "${MIN_READS_PER_WINDOW:-6}"
 step 04c "JSD 부트스트랩"   python -u "$S/04c_jsdboot.py"  --dir "$D/j_jsdcount$GEN" \
@@ -195,8 +166,7 @@ step 05 "LLR 참조표"       python -u "$S/05_llrref.py"    --dir "$D/j_jsdcoun
 _JF=$(ls "$D/j_jsd$GEN"/jsd_K${PATTERN_K:-3}_minr${MIN_READS_PER_WINDOW:-6}.parquet 2>/dev/null | head -1)
 step 06 "JSD 상위 200 선정" python -u "$S/06_select.py" --cand "$D/j_candidates$GEN" \
                                 --jsd "$_JF" --out "$D/j_panel$GEN" --n 200
-# 06b 는 설정 PANELS 에 jsdb200 이 있을 때만 계산한다. 200칸을 못 채워 jsdb200 을 «계산 불가» 로 둔 실행은
-#   PANELS 에서 빼고 돌린다(08 · 10c · 4단계도 PANELS 를 따른다). 단계 줄은 그대로 둔다(위 관문이 「^step」 줄을 센다).
+# 06b 는 PANELS 에 jsdb200 있을 때만. 200블록 못 채우는 자료면 PANELS 에서 빼기
 _06b() {
   case ",${PANELS:-bl200,jsd200,jsdb200}," in
     *,jsdb200,*) python -u "$S/06b_select_supplement.py" ;;
@@ -212,26 +182,14 @@ step 08 "검증용 형식으로 내보내기" python -u "$S/08_export_panels.py"
 step 09 "귀무A 3판 (씨앗 20260914+i)"      python -u "$S/09_null_a.py"
 step 10 "귀무B 3판 (씨앗 20260914+100+i)" python -u "$S/10_null_b.py"
 
-# 11단계도 본선이다 —
-#   11 이 만드는 j_pool<GEN>_cellline/pool_{gbm,normal}_all.bam 을
-#   2_train/steps/01_...Mixing.py:56-57 이 그대로 읽는다(섞기의 원천 풀이다).
-#   빼면 2단계 첫 걸음이 pysam FileNotFoundError 로 죽는다.
-#   풀은 셋이다. 풀 BAM 은 「자기 패널 영역의 리드만」 담으므로, 무작위 블록을 쓰는
-#   귀무판은 실판 풀에서 거의 아무것도 못 찾는다(실측: 200칸 중 8칸). 그래서
-#   2_train/steps/config.py 가 PANEL 로 풀을 고르고, 여기서 셋을 다 만든다.
-#   run_pool.sh 는 panel_union*.csv 와 use<GEN>_{normal,gbm}.txt 를 입력으로 받는다.
-#   이 다섯은 10c 가 판과 samples.csv 에서 만든다. 없으면 11 이 「패널 목록이 없다」
-#   로 멈춘다. GBM 자료에서 손으로 만든 것과 넷은 바이트 동일, rand3 은 집합 동일(줄
-#   차례만 다르고 11_pool 이 끝에 samtools sort 를 하므로 결과가 같다).
-# 10c 가 목록을 j_panel<GEN> 아래에 쓴다. run_pool.sh 의 기본값은 ~/tmp 라
-#   세대·자료가 섞일 수 있다. 산출 트리 안을 보게 여기서 못박는다.
-#   다만 사용자가 준 값이 있으면 그것을 쓴다. 그냥 export 하면 README 가 적어 둔
-#   USE_NORMAL= 덮어쓰기가 말없이 무시된다.
+# 11: 2단계 섞기가 읽는 풀 BAM 생성
+# 풀은 자기 패널 영역 리드만 들어있어서 cellline / rand / randb 따로 만듦
+# 입력 목록은 10c 가 만듦. USE_NORMAL, USE_GBM 주면 그걸 사용
 : "${USE_NORMAL:=$D/j_panel$GEN/use${GEN}_normal.txt}"
 : "${USE_GBM:=$D/j_panel$GEN/use${GEN}_gbm.txt}"
 export USE_NORMAL USE_GBM
 
-_pool_all() {   # 풀 셋을 차례로 만든다. 하나라도 못 만들면 실패로 끝낸다.
+_pool_all() {   # 풀 3개 순서대로, 하나라도 실패하면 중단
   local w bad=""
   for w in cellline rand randb; do
     say "   풀 $w"

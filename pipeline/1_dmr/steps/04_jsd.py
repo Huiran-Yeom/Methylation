@@ -1,22 +1,18 @@
 # -*- coding: utf-8 -*-
-"""S0c JSD 계산: 여기서 처음으로 암/정상 표지를 쓴다.
+"""창별 JSD 계산 (여기서 처음 암/정상 라벨 사용)
+03 의 무늬 카운트로 창마다 JSD, 블록 JSD 는 창 평균
+깊이 보정: 검체별로 합 1 로 나눠 평균. 복제 보정: 세포주 안에서 먼저 평균 → 세포주끼리 평균
 
-저장해둔 무늬 카운트로 창마다 JSD 를 잰다. 칸의 JSD 는 창들의 평균(기본).
-최종 선정에서는 조각마다 다시 계산해야 한다. 이 실행은 문턱을 정하기 위한 진단이다.
-
-  깊이 보정   검체별로 합이 1이 되게 나눈 뒤 평균  (한 검체 = 한 표)
-  복제 보정   세포주 안에서 먼저 평균 → 세포주끼리 평균
+사용: python 04_jsd.py [--dir ..] [--cand ..] [--out ..] [--k K] [--minr N] [--frac F]
+                       [--need N] [--needg N] [--use <검체 목록 파일>]
 """
 
-# 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돌아
-# 실제 자료를 덮어쓴다. 실행은 `python <파일>` 로만 한다.
+# 스크립트 전용. import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
 import os as _os, sys as _sys
-# 0_setup 을 찾는다. 이 파일이 「복사되어」 정리본 밖에서 돌 수도 있으므로
-#   ① 자기 위에서 위로 올라가며 찾고 ② 환경변수 METH_CONF_DIR ③ 그래도 없으면
-#   설정 없이 돌 수 있게 기본값으로 간다(검증이 검체 폴더로 복사해 쓰는 경로다).
+# 0_setup 찾기: 위로 올라가며 찾고, 없으면 METH_CONF_DIR 사용
 _h = _os.path.dirname(_os.path.abspath(__file__))
 for _ in range(5):
     _c = _os.path.join(_h, '0_setup')
@@ -40,7 +36,7 @@ except ImportError:
 import os, sys, math
 import numpy as np, pandas as pd
 
-# 산출 폴더는 GEN(패널 세대)을 따른다. 비우면 세대 없는 옛 폴더를 가리킨다.
+# 산출 폴더 이름에 GEN(패널 세대) 붙임. 못 읽으면 중단
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:
     try:
@@ -48,15 +44,12 @@ if not _GEN:
     except Exception:
         raise SystemExit('GEN(패널 세대)을 못 읽었습니다 — config.conf 의 GEN 을 채우거나 '
                          '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
-# ── 이 단계가 쓰는 경로 ──
-#   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
-#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
-#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
+# 이 단계 경로. 폴더 구조 다르면 여기만 수정 (인자로 덮어쓰기 가능)
 D    = _M + '/results/dmr/j_jsdcount' + _GEN
 CAND = _M + '/results/dmr/j_candidates' + _GEN
 OUT  = _M + '/results/dmr/j_jsd' + _GEN
 K, MINR, NEED_N, NEED_G, MINREP = 3, 6, 12, 6, 2
-try:   # 04b·04c 와 같은 값을 쓰게 설정에서 읽는다 (--minr 이 이김)
+try:   # 04b, 04c 와 같은 값 쓰게 설정에서 읽음 (인자가 우선)
     MINR = int(_cfg.MIN_READS_PER_WINDOW)
     K    = int(_cfg.PATTERN_K)
 except Exception:
@@ -66,9 +59,8 @@ FRAC = 0.60          # 후보 풀과 같은 커버 기준
 a = sys.argv
 if '--k'    in a: K    = int(a[a.index('--k')+1])
 if '--frac' in a: FRAC = float(a[a.index('--frac')+1])
-if '--need' in a: NEED_N = int(a[a.index('--need')+1])   # 정상 커버 기준을 CLI 로 (60%%)
-# '--needg' 는 값까지 읽는다. 「있는지」 만 보면 자동계산만 꺼지고 기본값이 남아
-#   인자가 조용히 무시된다.
+if '--need' in a: NEED_N = int(a[a.index('--need')+1])   # 정상 커버 기준 직접 지정
+# 암 커버 기준 직접 지정
 if '--needg' in a: NEED_G = int(a[a.index('--needg')+1])
 if '--minr' in a: MINR = int(a[a.index('--minr')+1])
 if '--dir'  in a: D    = a[a.index('--dir')+1]
@@ -83,16 +75,13 @@ norm  = sorted(s for s in typ if typ[s] == 'Normal')
 _CANCER = getattr(_cfg, 'CANCER_LABEL', 'GBM')   # samples.csv 의 type 값
 
 gbm   = sorted(s for s in typ if typ[s] == _CANCER)
-# CANCER_LABEL 과 samples.csv 의 type 이 어긋나면 양성이 0개가 된다.
-#   그대로 두면 AUC 가 nan 이 되거나 전부 음성으로 학습한다. 여기서 멈춘다.
+# CANCER_LABEL 과 samples.csv type 이 안 맞으면 암 0개 → 중단
 if int(len(gbm)) == 0:
     sys.exit('samples.csv 에 type=%s 인 검체가 없습니다. CANCER_LABEL 과 1단계가 쓴 값이'
              ' 어긋났습니다 (현재 CANCER_LABEL=%s).' % (_CANCER, _CANCER))
 lines = {}
 for s in gbm: lines.setdefault(grp[s], []).append(s)
-# NEED 를 표본 수에서 자동 계산한다. 상수로 두면 정상 인원이 바뀔 때
-#   기준이 저 혼자 엄격해진다 (20명의 12 = 60%, 15명의 12 = 80%).
-#   01_candidates.py:56-57 과 같은 규칙 — ceil(FRAC x 독립단위).
+# NEED 는 표본 수로 자동 계산: ceil(FRAC x 사람 또는 세포주 수), 01 과 같은 규칙
 if '--need' not in a: NEED_N = int(math.ceil(FRAC * len(norm)))
 if '--needg' not in a: NEED_G = int(math.ceil(FRAC * len(lines)))
 print('커버 %.0f%% -> 정상 %d명 이상 · 암 %d종 이상' % (FRAC*100, NEED_N, NEED_G))
@@ -144,8 +133,7 @@ J = np.full(nw, np.nan, np.float32); J[ok] = jsd(P[ok], Q[ok])
 W['jsd'], W['rd'], W['nn'], W['ng'] = J, rdN + rdG, nQ, nP
 V = W[ok]
 print('쓸 수 있는 창 %d / %d (%.1f%%)' % (len(V), nw, 100.0*len(V)/nw))
-# 0 이면 여기서 멈춘다. 그대로 가면 np.percentile([]) 안에서
-#   터져 numpy traceback 만 남고 「왜 0인지」 를 알 수 없다.
+# 쓸 수 있는 창 0 이면 이유 찍고 중단
 if len(V) == 0:
     raise SystemExit(
         '쓸 수 있는 창이 0 입니다. 기준을 채운 창이 없습니다.'

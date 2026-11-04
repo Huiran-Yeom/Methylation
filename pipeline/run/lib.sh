@@ -1,13 +1,11 @@
 #!/bin/bash
-# 드라이버 공용 함수(2026-10-27 정리판). 옛 jobs_lib.sh · r1_env.sh · r2_env.sh 를 한 파일로 합쳤다.
-#   옛 jobs_lib.sh 와 다른 점:
-#     - 코드 경로 P 를 정하지 않는다(드라이버가 정한다 · 옛 판은 P 를 Methylation-fix 로 덮어 불러오는 순서에 따라 옛 코드로 돌았다).
-#     - train_cell 의 관문을 세게 했다: mut_* 폴더가 하나도 없으면 실패, BEST 모델은 조합 수(EXPECT_BEST=31 고정)를 다 채워야 성공.
-#   env_luad2 가 env_luad 를 부르므로 둘을 같은 파일에 둔다(옛 판은 r1_env 를 먼저 불러야 했다).
+# 드라이버 공용 함수 (환경 설정, 학습 한 칸)
+#   코드 경로 P 는 여기서 안 정함 (드라이버가 정함)
+#   train_cell 성공 조건: mut_* 폴더 1개 이상, BEST 모델 수 = EXPECT_BEST
 export PATH=$HOME/anaconda3/envs/myenv/bin:$PATH
 export BISMARK_MULTICORE=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
 NSLICE=${NSLICE:-4}
-EXPECT_BEST=31        # 5특징의 비공집합 31조합 — 밖에서 덮지 못하게 고정한다
+EXPECT_BEST=31        # 5특징 비공집합 31조합, 밖에서 못 덮게 고정
 
 env_lung(){   # env_lung <METH_ROOT> <작업 이름> [cand]
   unset USE_NORMAL USE_GBM JSD_CAND LLR_CAND
@@ -32,7 +30,7 @@ env_gbm(){    # env_gbm <METH_ROOT> <작업 이름>
   mkdir -p "$WORK_ROOT" "$TMP_ROOT"
 }
 
-# ── 다음 판 1안 · 2안 (LUAD) ─────────────────────────────────────────────
+# 다음 판 1안, 2안 (LUAD)
 R1_RAW=/ssd_data/dataset_for_lung/stage1_catalog/tumor_cellline_luad
 R2_TISSUE=/ssd_data/dataset_for_lung/stage1_catalog/normal_lung_tissue
 r1_root(){ case "$1" in 10) echo /ssd_data/Methylation_luad_a1;; 5) echo /ssd_data/Methylation_luad_a1u;; *) return 1;; esac; }
@@ -59,11 +57,11 @@ env_luad2(){   # env_luad2 <판 10|5> <t|m>
   mkdir -p "$WORK_ROOT" "$TMP_ROOT"
 }
 
-best_n(){      # best_n <판 버전 폴더> — BEST 모델 수
+best_n(){      # best_n <판 버전 폴더> → BEST 모델 수
   ls "$1"/step04_ML_classifier/models/*/pooled/BEST.joblib 2>/dev/null | wc -l
 }
 
-train_cell(){  # train_cell <판> <깊이> <리드 수> — 드라이버가 P · env_* 를 먼저 정한다
+train_cell(){  # train_cell <판> <깊이> <리드 수>, P 와 env_* 먼저 정해야 함
   local p=$1 d=$2 n=$3 rc=0 i s T0 dir a b nd=0
   : "${P:?P(코드 경로)를 먼저 정한다}"
   export PANEL=$p VERSION=j${GEN}${p}_${d}_uni TARGET_DEPTH_READS=$n
@@ -72,7 +70,7 @@ train_cell(){  # train_cell <판> <깊이> <리드 수> — 드라이버가 P ·
   T0=$(date +%s)
   for s in 01 02; do [ "$rc" = 0 ] && { bash "$P/2_train/run_train.sh" $s >> "$l" 2>&1 || rc=1; }; done
   if [ "$rc" = 0 ]; then
-    local pids=()   # wait -n 은 같은 셸의 다른 배경 작업도 센다 — 조각 PID 로 하나씩
+    local pids=()   # 조각 PID 로 하나씩 기다림 (wait -n 은 다른 배경 작업도 셈)
     for i in $(seq 1 "$NSLICE"); do SLICE_N=$NSLICE SLICE_I=$i bash "$P/2_train/run_train.sh" 03 > "$l.s$i" 2>&1 & pids+=($!); done
     for i in "${pids[@]}"; do wait "$i" || rc=1; done
     for i in $(seq 1 "$NSLICE"); do echo "── 03 조각 $i/$NSLICE" >> "$l"; cat "$l.s$i" >> "$l"; rm -f "$l.s$i"; done

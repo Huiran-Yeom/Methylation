@@ -1,19 +1,17 @@
 #!/bin/bash
-# ── 3단계 · 외부검증 ──
+# 3단계: 외부검증
 #
-#   학습에 쓰지 않은 정상을 배경으로, 외부 코호트의 암 검체를 학습과 「똑같은」
-#   비율·깊이·믹싱 방식으로 섞어 학습된 모델로 채점한다.
-#   바뀌는 것은 입력 BAM 과 출력 경로뿐이다. 계산은 학습과 같아야 한다.
+#   학습에 안 쓴 정상 배경에 외부 코호트 암 검체를 학습과 같은 비율, 깊이, 섞기로 섞고
+#   학습된 모델로 채점. 바뀌는 건 입력 BAM 과 출력 경로뿐
 #
-#   이 단계는 학습 스크립트를 검체 폴더로 「복사해」 돌린다.
-#     그래서 2_train/steps 의 파일 이름이 config.conf 의 STEP_MAP 과 엮여 있다.
-#     이름을 바꾸면 STEP_MAP 도 같이 고친다.
+#   학습 스크립트를 검체 폴더로 복사해서 돌림
+#   2_train/steps 파일 이름이 config.conf 의 STEP_MAP 과 묶여 있음 (이름 바꾸면 같이 수정)
 #
 #   흐름
-#     검체마다   make_val_config -> run_one_sample (피처 다섯) -> score_one_sample (채점)
-#     끝난 뒤    4_report/make_report.sh 가 검체별 채점 파일을 직접 읽어 표를 만든다
+#     검체마다   make_val_config -> run_one_sample (피처 5종) -> score_one_sample (채점)
+#     끝난 뒤    4_report/make_report.sh 가 검체별 채점 파일 읽어 표 만듦
 #
-#   사용
+#   사용법
 #     bash run_validate.sh <판이름> [동시실행수]
 #     COHORT=<your_cohort> bash run_validate.sh j15bl200_5k_uni 8
 set -u
@@ -21,9 +19,8 @@ set -u
 _HERE=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)
 S=$_HERE/steps
 
-# 보관 대상을 손으로 들고 있으면 목록에 없는 키는 conf 가 환경변수를
-#   덮는다. meth_config.py 의 「환경변수가 이긴다」와 반대가 된다. conf 에 적힌 키를
-#   「전부」 보관한다. 목록을 유지할 필요가 없어진다.
+# config.conf 읽기. 환경변수가 우선 (meth_config.py 와 같은 규칙)
+# conf 키를 전부 미리 보관해 뒀다가 conf 읽은 뒤 되돌림
 _CONFFILE=""
 for _d in "$_HERE" "$_HERE/.." "$_HERE/../.." "$_HERE/../../.."; do
   [ -f "$_d/0_setup/config.conf" ] && { _CONFFILE="$_d/0_setup/config.conf"; break; }
@@ -41,9 +38,9 @@ for _k in $_PREKEYS; do
 done
 unset _v
 : "${METH_CONF_DIR:?0_setup/config.conf 를 못 찾았다}"
-# 수치 연산(BLAS) 스레드. 로지스틱 회귀 값이 스레드 수에 따라 달라진다.
-#   OMP_NUM_THREADS 등이 환경변수로 이미 있으면 그 값을 따른다. BLAS_THREADS=none 이면 고정하지 않는다.
-#   이 고정은 진입점(run_*.sh · make_report.sh)에만 있다. steps/ 의 파이썬을 직접 부르면 걸리지 않는다.
+# BLAS 스레드 고정 - 로지스틱 회귀 값이 스레드 수 따라 조금 달라짐
+# 환경변수에 이미 있으면 그 값 사용, BLAS_THREADS=none 이면 고정 안 함
+# 진입점(run_*.sh, make_report.sh)에서만 고정. steps/ 직접 실행하면 안 걸림
 _bt=${BLAS_THREADS:-1}
 case "$_bt" in
   [Nn][Oo][Nn][Ee]) ;;
@@ -53,18 +50,14 @@ case "$_bt" in
 esac
 : "${COHORT:?COHORT 를 주십시오 (예: COHORT=<your_cohort>)}"
 
-# flock 이 없으면 아래 회계가 「잠금을 못 잡았다」 로 읽어 전부
-#   「다른 실행이 쥐고 있다」가 된다. 판정이 거꾸로 선다. 먼저 확인한다.
-#   (Git Bash 에는 flock 이 없다.)
+# flock 없으면 중단 - 없으면 전부 다른 실행이 잡은 걸로 잘못 셈 (Git Bash 에는 없음)
 command -v flock >/dev/null 2>&1 || {
   echo "멈춤: flock 이 없습니다 (util-linux). 이 파이프라인은 검체별 잠금에 씁니다." >&2
   echo "      없으면 「빠짐」과 「남이 쥐고 있음」을 구분하지 못합니다." >&2
   exit 1; }
 
-# 코호트 관문은 코호트를 「고르는 자리」 인 여기에 둔다.
-#   목적: 옛 코호트나 오타를 넣으면 조용히 빈 결과를 내는 대신 멈춘다.
-#   VAL_COHORTS 가 비어 있으면 아무 코호트나 허용한다 (내려받은 그대로 쓸 수 있게).
-#   구분자 뒤 공백을 허용한다. 없으면 `a, b` 로 적었을 때 b 를 거절한다.
+# COHORT 가 VAL_COHORTS 에 없으면 중단 (오타, 옛 코호트 방지)
+# VAL_COHORTS 비어 있으면 아무 코호트나 허용. 쉼표 뒤 공백은 지움
 if [ -n "${VAL_COHORTS:-}" ]; then
   _VC=$(printf %s "$VAL_COHORTS" | tr -d " 	")
   case ",${_VC}," in
@@ -78,14 +71,13 @@ fi
 
 V=${1:?사용: bash run_validate.sh <판이름> [동시실행수]}
 PAR=${2:-8}
-# 검증이 학습 스크립트를 복사해 오는 자리와 make_val_config 위치
+# 학습 스크립트 원본 자리, make_val_config 자리
 export TRAIN_SRC=${TRAIN_SRC:-$_HERE/../2_train/steps}
 export ANALYSIS_DIR=${ANALYSIS_DIR:-$S}
 
 say(){ echo "[$(date +%H:%M:%S)] $*"; }
 
-# 코호트 정의에서 검체 수를 센다. 박지 않는다
-# COHORT_CONF 로 못 박을 수 있게 한다. 읽은 자리를 절대경로로 찍는다.
+# 코호트 정의 파일 찾기 (COHORT_CONF 주면 그 파일 사용). 검체 수는 여기서 셈
 if [ -n "${COHORT_CONF:-}" ]; then
   _CONF=$COHORT_CONF
 else
@@ -93,12 +85,9 @@ else
 fi
 [ -f "$_CONF" ] || _CONF=$S/cohorts/${COHORT}.conf
 [ -f "$_CONF" ] || { echo "코호트 정의가 없다: ${COHORT}.conf"; exit 1; }
-# ① 검체마다 피처 다섯 (run_one_sample 안에서 make_val_config 를 부른다)
-#   목록 이름에 코호트와 판을 「둘 다」 넣는다. 같은 판을 코호트 둘로 동시에 돌리면
-#   판만으로는 서로의 목록을 밟는다.
-#   `tr -d '\r'` : 코호트 정의가 CRLF 로 저장돼 있으면 마지막 검체 이름에 CR 이
-#   붙어 경로가 어긋나고, 그런데도 wc -w 는 그것을 하나로 세어 「1개 빠짐」으로만
-#   보인다. 여기서 한 번 걷어낸다.
+# 1) 검체마다 피처 5종 (run_one_sample 안에서 make_val_config 부름)
+# 목록 파일 이름에 코호트와 판 둘 다 넣음 - 코호트 둘 동시 실행 시 충돌 방지
+# CRLF 로 저장된 코호트 정의 대비해 CR 제거
 _TMP=${TMP_ROOT:-$HOME/tmp}
 mkdir -p "$_TMP"
 _LIST=$_TMP/samples_${COHORT}_$V.txt
@@ -109,13 +98,8 @@ N=$(wc -l < "$_LIST")
 say "검증 시작: 판 $V · 코호트 $COHORT · 검체 $N개 · 동시 $PAR"
 say "  코호트 정의  $(cd "$(dirname "$_CONF")" && pwd)/$(basename "$_CONF")"
 say "① 피처 만들기"
-# -0 : 검체 이름에 따옴표가 들어가면 xargs -I{} 는 「전체 묶음」 을 unmatched quote 로
-#   중단한다. 뒤의 검체가 조용히 안 돈다. NUL 구분이면 그 부류가 없다.
-# xargs 의 종료값을 버리지 않는다. run_one_sample.sh 는 원본 폴더를 못
-#   찾거나 단계 파일이 없으면 exit 1 하는데(둘 다 AUC 0.500 길목이다), 그 신호가
-#   여기서 사라지면 「검체별 로그를 열어 보지 않는 한」 아무 표시가 없다.
-#   이 스크립트는 set -e 를 쓰지 않으므로 종료값만 받아 두면 된다 (set -e 를 켜면
-#   flock 건너뜀 같은 「정상적인 0 아님」 에서 죽는다).
+# NUL 구분(-0) - 검체 이름에 따옴표 있어도 xargs 가 안 멈춤
+# xargs 종료값 받아둠 (set -e 는 안 씀, flock 건너뜀에서 죽음)
 tr '\n' '\0' < "$_LIST" | xargs -0 -P"$PAR" -I{} bash "$S/run_one_sample.sh" {} "$V"
 _rc1=$?
 if [ "$_rc1" -ne 0 ]; then
@@ -123,34 +107,25 @@ if [ "$_rc1" -ne 0 ]; then
   say "   검체별 로그: ${TMP_ROOT:-$HOME/tmp}/logs/${COHORT}/${V%%_*}/${V}/<검체>.log"
 fi
 
-# ② 검체마다 채점
-#   별도 런처 없이 여기서 바로 돈다. 필요한 값은 「위치 인자로」 넘긴다 —
-#     export 에 기대지 않으면 단일인용 안에서 변수가 비는 부류가 구조적으로 생기지 않는다.
+# 2) 검체마다 채점. 필요한 값은 export 말고 위치 인자로 넘김
 _APPLY=$S/score_one_sample.py
 [ -f "$_APPLY" ] || { echo "score_one_sample.py 가 없습니다: $_APPLY" >&2; exit 1; }
 _M=$METH_ROOT/results/panels/${V%%_*}/$V/step04_ML_classifier/models
 _nm=$(ls -d "$_M"/*/pooled 2>/dev/null | wc -l)
 [ "$_nm" -ge 1 ] || { say "!! 모델이 없습니다 ($V) — 2_train 의 09 굳히기를 먼저"; exit 1; }
 say "② 채점: pooled 모델 ${_nm}개"
-# 채점 로그를 버리지 않는다. 버리면 결측 특징 %·비율 건너뜀·트레이스백이 사라지고
-#   「파일이 있나」만 남는다.
-# 이름에 PID 를 넣는다. 코호트·판으로만 가르면 드라이버 둘이 같은 파일에 써서
-#   지난 줄이 섞인다(run_one_sample.sh:73 이 같은 이유로 코호트·판을 다 넣는다).
-#   판정은 잠금 실측으로 하므로 로그는 기록용이다.
+# 채점 로그 남김. 이름에 PID 넣어 드라이버 둘이 같은 파일에 안 씀 (기록용)
 _SLOG=${TMP_ROOT:-$HOME/tmp}/logs/${COHORT}/score_${V}_$$.log
 mkdir -p "$(dirname "$_SLOG")"
 say "  채점 로그  $_SLOG"
 tr '\n' '\0' < "$_LIST" | xargs -0 -P"$PAR" -I{} bash -c '
   s=$1; v=$2; apply=$3; root=$4; coh=$5; work=$6; slog=$7; wtmp=$8
   W=$work/${coh}_val/$v/$s
-  # 작업 폴더가 없으면 ① 이 안 돈 것이다. 조용히 넘기면 「전부 건너뜀」 이
-  #   0/N 으로만 보인다. 무엇이 없었는지 남긴다.
+  # 작업 폴더 없으면 1) 이 안 돈 것, 로그에 남기고 넘어감
   [ -d "$W" ] || { echo "[없음] 작업 폴더 $W" >> "$slog"; exit 0; }
   ML=$root/${coh}_val/$s/results/$v/step04_ML_classifier
-  # 여기서 「model_md5 가 있으면 건너뛴다」를 「하지 않는다」.
-  #   score_one_sample.py 의 _already_done() 은 표의 지문을 「현재」 BEST.joblib 의
-  #   md5 와 맞춰 보고, 모델을 다시 굳히면 스스로 다시 채점한다. 셸에서 헤더만
-  #   보고 건너뛰면 그 자기치유가 영구히 죽어 옛 모델 점수가 표에 남는다.
+  # 여기서 건너뛰기 판단 안 함 - score_one_sample.py 가 모델 지문(md5) 보고 직접 판단
+  #   셸에서 건너뛰면 모델 다시 굳혀도 옛 점수가 남음
   mkdir -p "$wtmp/lock/val"                           # run_one_sample.sh 와 같은 잠금
   exec 9>"$wtmp/lock/val/${v}__${s}.lock"
   flock -n 9 || { echo "[잠김] 다른 실행이 잡고 있다 $s" >> "$slog"; exit 0; }
@@ -162,22 +137,17 @@ tr '\n' '\0' < "$_LIST" | xargs -0 -P"$PAR" -I{} bash -c '
 _rc2=$?
 [ "$_rc2" -ne 0 ] && say "!! ② 에서 실패한 검체가 있습니다 (xargs rc=$_rc2) — 채점 로그 $_SLOG"
 
-# 판정 근거는 「로그 세기」 가 아니라 「잠금 실측」 이다.
-#   로그로 세면 셋이 어긋난다. (가) 「잠겨 건너뜀」은 ② 에만 적히는데 이어달리기
-#   충돌은 ① 에서 나고, (나) 로그 파일을 코호트·판으로만 갈라 드라이버 둘이 같은
-#   파일을 쓰며, (다) 「파일 있음」과 「이번에 건너뜀」이 겹쳐 두 번 세어진다.
-#   그래서 남은 검체마다 「그 잠금을 지금 누가 쥐고 있나」 를 직접 본다. 겹치지 않는다.
-# 잠금 폴더를 「여기서도」 만든다. 없으면 `exec 9>` 가 flock 에 닿기도
-#   전에 실패하고, 그 실패가 「다른 실행이 쥐고 있다」로 읽힌다. 즉 ① 이 전 검체에서
-#   죽은 상황이 「실패 아님 · exit 0」 이 된다. 판정이 정확히 거꾸로 선다.
+# 완료 판정은 로그가 아니라 점수 파일과 잠금으로 함
+#   점수 파일 없는 검체는 잠금 잡아 봄 - 잡히면 빠짐, 안 잡히면 다른 실행이 도는 중
+# 잠금 폴더 여기서도 만듦 - 없으면 exec 9> 실패가 다른 실행 중으로 잘못 읽힘
 mkdir -p "${TMP_ROOT:-$HOME/tmp}/lock/val"
 _d=0; _busy=0; _miss=""
 while read -r s; do
-  # 옛 트리의 꼬리 _모든조합.csv 도 끝난 것으로 세도록 둘 다 본다.
+  # 파일 이름 꼬리 _all_combos, _모든조합 둘 다 완료로 셈
   if [ -s "$METH_ROOT/${COHORT}_val/$s/results/$V/step04_ML_classifier/y_prob_all_${V}_all_combos.csv" ] || [ -s "$METH_ROOT/${COHORT}_val/$s/results/$V/step04_ML_classifier/y_prob_all_${V}_모든조합.csv" ]; then
     _d=$((_d+1)); continue
   fi
-  # 잠금을 잡아 보고 곧 놓는다. 잡히면 아무도 안 하고 있다(진짜 빠짐).
+  # 잠금 잡았다 바로 놓음. 잡히면 아무도 안 도는 중 (진짜 빠짐)
   if ( exec 9>"${TMP_ROOT:-$HOME/tmp}/lock/val/${V}__${s}.lock"; flock -n 9 ) 2>/dev/null; then
     _miss="$_miss $s"
   else
@@ -185,8 +155,7 @@ while read -r s; do
   fi
 done < "$_LIST"
 say "  채점된 검체 $_d/$N"
-# 이번 실행의 ① · ② 실패는 «점수 파일이 있다» 로 덮지 않는다. 옛 점수 파일이 남아 있으면
-#   위 세기는 완료로 보지만, 이번에 다시 만든 특징 · 점수가 그 파일과 맞는지는 모른다.
+# 이번 실행 1), 2) 에서 실패 있으면 중단 (옛 점수 파일 남아 있어도 완료로 안 봄)
 if [ "$_rc1" -ne 0 ] || [ "$_rc2" -ne 0 ]; then
   say "!! 이번 실행에서 실패한 검체가 있습니다(① rc=$_rc1 · ② rc=$_rc2). 남은 점수 파일로 완료라 하지 않습니다."
   say "   로그를 보고 고친 뒤 다시 부르십시오. 다음 단계로 넘어가지 마십시오."
@@ -194,10 +163,8 @@ if [ "$_rc1" -ne 0 ] || [ "$_rc2" -ne 0 ]; then
 fi
 say "검증 끝 — 검체별 채점: <뿌리>/${COHORT}_val/*/results/$V/step04_ML_classifier/"
 
-# 다 못 했으면 「0 이 아닌 값」 으로 끝낸다. 마지막 명령이 say 면 0/N 이어도
-#   exit 0 이 되어 `run_validate.sh && make_report.sh` 가 빈 표로 넘어간다.
-# 「다른 실행이 쥐고 있다」도 「이 실행은 못 끝냈다」 이다. 뒤 단계로
-#   넘어가면 안 된다. 표는 빠진 것을 메우지 않는다. 다만 원인이 다르므로 말은 나눈다.
+# 다 못 끝냈으면 exit 1 (run_validate.sh && make_report.sh 가 빈 표로 안 넘어가게)
+# 다른 실행이 잡고 있는 것도 미완료로 셈. 안내 문구만 따로
 if [ -n "$_miss" ] || [ "$_busy" -gt 0 ]; then
   [ "$_busy" -gt 0 ] && {
     say "  ${_busy}개는 다른 실행이 「지금」 잡고 있습니다 — 그 실행이 끝난 뒤"

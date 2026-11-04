@@ -1,21 +1,19 @@
 # -*- coding: utf-8 -*-
-"""config.conf 를 읽는다. 고칠 곳은 옆의 config.conf 하나다.
-
-보는 순서는 환경변수 → config.conf → 기본값이다.
+"""config.conf 읽기 (고칠 곳은 옆의 config.conf 하나)
+우선순위: 환경변수 → config.conf → 기본값
 
     import meth_config as cfg
     cfg.METH_ROOT            '/ssd_data/Methylation'
     cfg.TARGET_DEPTH_READS   5000
     cfg.MUT_RATIOS           [0.0, 0.001, ...]
-    cfg.snapshot('<output folder>')     해결된 값과 그 출처를 산출물 옆에 남긴다
+    cfg.snapshot('<output folder>')     최종 값과 출처를 산출 폴더에 남김
 """
 import datetime
 import os
 import re
 import sys
 
-# 코드가 있는 자리에서 기본값을 만든다. 저장소 안을 가리키면 내려받은 그대로 동작한다.
-#   서버 고유 경로를 박아 두면 검증이 「학습 스크립트를 못 찾은 채」 돌아 그 피처만 빠진다.
+# 기본 경로는 코드 위치 기준 (저장소 받은 그대로 동작)
 _TREE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 _DEFAULTS = {
@@ -26,10 +24,9 @@ _DEFAULTS = {
     'TRAIN_SRC': os.path.join(_TREE, '2_train', 'steps'),
     'ANALYSIS_DIR': os.path.join(_TREE, '3_validate', 'steps'),
     'GEN': '15',
-    # samples.csv 의 type 열에 적히는 「암」 쪽 이름. 쓰는 곳과 읽는 곳이 모두
-    #   이 값을 본다. 바꾸면 1단계를 처음부터 다시 돌려야 한다.
+    # samples.csv type 열의 암 쪽 이름. 바꾸면 1단계부터 다시 돌림
     'CANCER_LABEL': 'GBM',
-    # 빈 값이면 「어느 코호트든 허용」. 이름을 적으면 그 목록만 허용한다.
+    # 비우면 아무 코호트나 허용, 적으면 그 목록만
     'VAL_COHORTS': '',
     'PANELS': 'bl200,jsd200,jsdb200',
     'NULL_PANELS': 'rand1200,rand2200,rand3200,randb1200,randb2200,randb3200',
@@ -50,9 +47,9 @@ _DEFAULTS = {
     'SEED': '42',
     'TEST_SIZE': '0.2',
     'N_JOBS': '1',
-    # 비우면 모델 넷을 교차검증으로 겨뤄 1등.
+    # 비우면 모델 4개를 교차검증으로 겨뤄 1등 사용
     'FIXED_MODEL': '',
-    # 0 이면 LLR 참조표와 학습 풀에 같은 사람이 들어간다.
+    # 0 이면 LLR 참조표와 학습 풀에 같은 사람이 들어감
     'LLR_HELDOUT': '0',
 }
 _CACHE = None
@@ -60,10 +57,8 @@ SOURCE = {}
 
 
 def _conf():
-    """config.conf 를 찾아 읽는다. 못 찾으면 멈춘다.
-
-    조용히 기본값으로 도는 것을 막는다. 그러면 「어느 설정으로 돌았나」 를 알 방법이 없다.
-    일부러 기본값만 쓰려면 METH_CONF_OPTIONAL=1 을 준다.
+    """config.conf 찾아 읽기. 못 찾으면 중단 (조용히 기본값으로 도는 것 방지)
+    기본값만 쓰려면 METH_CONF_OPTIONAL=1
     """
     global _CACHE
     if _CACHE is not None:
@@ -89,14 +84,8 @@ def _conf():
 
 
 def get(key):
-    """환경변수 -> conf -> 기본값. 출처를 출처[key] 에 적어 둔다.
-
-    셸 헤더가 `set -a; . config.conf` 로 conf 를 환경에 export 하므로
-      conf 값도 os.environ 에 올라온다. 그것을 「환경변수」 로 적으면 스냅샷의
-      출처 열이 「항상」 거짓이 된다. 기록() 의 목적이 무너진다.
-      그래서 두 값이 같으면 출처는 conf 로 적는다.
-      한계: 사용자가 conf 와 「똑같은」 값을 환경변수로 줬다면 conf 로 적힌다.
-      구별할 방법이 없고, 값이 같으므로 해석에 영향이 없다.
+    """환경변수 → conf → 기본값. 출처는 SOURCE[key] 에 기록
+    셸이 conf 를 export 해서 환경변수에도 같은 값이 올라옴 → 값이 conf 와 같으면 출처는 conf
     """
     _e = os.environ.get(key)
     _c = _conf().get(key)
@@ -115,10 +104,8 @@ def get_path(key):
     return _expand(get(key))
 
 
-# conf 안의 $METH_ROOT·$DATASET_ROOT 를 여기서 푼다.
-#   셸은 `set -a; . config.conf` 로 풀지만, 파이썬이 conf 를 직접 읽을 때는
-#   그 둘이 「환경변수가 아니라서」 expandvars 가 못 푼다. 문자 그대로 남는다.
-#   뿌리 둘은 자기 자신을 참조할 수 없으므로 먼저 푼 값을 담아 두고 쓴다.
+# conf 안의 $METH_ROOT, $DATASET_ROOT 를 직접 풂
+# 파이썬이 conf 를 읽을 땐 둘이 환경변수가 아니라 expandvars 로 안 풀림
 _ROOTS = {}
 
 
@@ -143,12 +130,12 @@ GEN = get('GEN')
 CANCER_LABEL = get('CANCER_LABEL')
 VAL_COHORTS = [x.strip() for x in get('VAL_COHORTS').split(',') if x.strip()]
 PANELS = [x.strip() for x in get('PANELS').split(',') if x.strip()]
-# STEP_MAP 도 다른 키처럼 모듈 속성으로 노출한다. 다루는 법을 하나로 맞춘다.
+# STEP_MAP 도 다른 키처럼 모듈 속성으로 노출
 STEP_MAP = get('STEP_MAP')
 NULL_PANELS = [x.strip() for x in get('NULL_PANELS').split(',') if x.strip()]
 
 def version_name(panel, depth):
-    """접두(세대) + 명단(자료) + 깊이 를 한 곳에서 조립한다."""
+    """판 이름 조립: 세대 + 패널 + 깊이"""
     return 'j%s%s_%s_uni' % (GEN, panel, depth)
 VERSION = get('VERSION')
 PANEL = get('PANEL')
@@ -179,28 +166,24 @@ if COLSET_FROM not in ('all', 'normal'):
 TEST_SIZE = float(get('TEST_SIZE'))
 MUT_RATIOS = [float(x) for x in get('MUT_RATIOS').replace(' ', '').split(',') if x]
 
-# 모델을 미리 하나로 고정한다. 이름은 08·09 의 모델 키와 같아야 한다.
-#   결과를 보고 고르면 그 자체가 선택이라 귀무 바닥이 0.03~0.04 오른다.
+# 모델 고정. 이름은 2단계 08, 09 의 모델 키와 같아야 함
 FIXED_MODEL = get('FIXED_MODEL').strip()
-# LLR 참조표 공여자와 섞기 공여자를 가른다. 1 이면 켠다.
+# 1 이면 LLR 참조표 공여자와 섞기 공여자를 가름
 LLR_HELDOUT = int(get('LLR_HELDOUT') or 0)
 
 
 def split_ref_mix(units):
-    """(참조군, 혼합군). 단위 이름을 바이트 순으로 줄 세워 번갈아 가른다.
-
-    바이트 순 = `LC_ALL=C sort`. 기본 로케일 정렬은 대소문자를 무시해 다른 명단을 낸다.
-    1·3·5…번째가 참조군, 2·4·6…번째가 혼합군. 시드를 쓰지 않는다 — 고르는 행위가 선택이 된다.
-    단위는 「사람·세포주」 다. 같은 세포주의 반복을 쪼개면 누수가 남는다.
+    """(참조군, 혼합군) 반환. 단위 이름을 바이트 순(LC_ALL=C sort)으로 세워 번갈아 가름
+    홀수 번째가 참조군, 짝수 번째가 혼합군. 시드 안 씀
+    단위는 사람 또는 세포주 (같은 세포주 반복을 쪼개면 누수)
     """
     u = sorted(set(units), key=lambda s: s.encode('utf-8'))
     return u[0::2], u[1::2]
 
-# VERSION 이름 안의 깊이와 TARGET_DEPTH_READS 가 어긋나면 멈춘다.
-#   둘은 conf 에 따로 적히므로 어긋날 수 있다. 적어 두는 것은 방어가 아니다.
+# VERSION 이름 안의 깊이와 TARGET_DEPTH_READS 가 어긋나면 중단
 _depth_match = re.search(r'_(\d+)k_', VERSION)
 if _depth_match is None:
-    # 못 찾은 것을 「통과」 로 두면 이름이 조금만 달라져도 가드가 조용히 사라진다.
+    # 깊이를 못 찾아도 중단 (그냥 넘기면 가드가 꺼짐)
     raise SystemExit(
         'VERSION(%s) 에서 깊이(_Nk_)를 못 찾았다.\n'
         '  j15bl200_5k_uni 처럼 이름 안에 깊이가 들어가야 한다.' % VERSION)
@@ -209,8 +192,8 @@ if int(_depth_match.group(1)) * 1000 != TARGET_DEPTH_READS:
         'VERSION(%s)의 깊이와 TARGET_DEPTH_READS(%d)가 어긋난다.\n'
         '  둘을 같이 고친다. 한쪽만 고치면 폴더 이름과 내용이 달라진다.'
         % (VERSION, TARGET_DEPTH_READS))
-# VERSION 의 세대 · 판도 GEN · PANEL 과 맞아야 한다. 어긋나면 다른 판 자료로 만든 모델이 이 판 경로에 저장된다.
-#   VERSION · PANEL 을 환경변수로 준 실행(2 · 3단계 드라이버)만 본다. 1단계는 VERSION 을 쓰지 않아 conf 기본값이 남는다.
+# VERSION 의 세대, 판도 GEN, PANEL 과 맞아야 함 (어긋나면 다른 판 모델이 이 판 경로에 저장됨)
+# VERSION, PANEL 을 환경변수로 준 실행(2, 3단계)만 검사. 1단계는 VERSION 안 씀
 if '환경변수' in (SOURCE.get('VERSION'), SOURCE.get('PANEL')) and VERSION.startswith('j') and not VERSION.startswith('j%s%s_' % (GEN, PANEL)):
     raise SystemExit(
         'VERSION(%s) 이 GEN(%s) · PANEL(%s) 과 어긋난다 — j<GEN><PANEL>_<깊이>k_<방식> 꼴이어야 한다.'
@@ -218,20 +201,9 @@ if '환경변수' in (SOURCE.get('VERSION'), SOURCE.get('PANEL')) and VERSION.st
 
 
 def snapshot(folder):
-    """해결된 설정과 각 값의 출처를 산출 폴더에 「덧붙인다」.
-
-    산출물 옆에 이것이 없으면 「어느 설정에서 나온 숫자인가」 를 나중에 못 댄다.
-    환경변수로 한 번 돌린 실행은 특히 아무 데도 안 남는다.
-
-    덮어쓰지 않고 이어쓰는 이유 —
-      폴더 이름을 정하는 것은 ROOT 와 VERSION 뿐이다. MIN_READS_PER_WINDOW ·
-      PATTERN_K · SEED · MUT_RATIOS · DEPTH_MODE 는 **경로를 안 바꾸면서
-      산출물을 바꾼다.** 그래서 한 폴더에 서로 다른 설정의 산출물이 섞일 수 있다.
-      MIN_READS_PER_WINDOW 를 4에서 6으로 바꿨을 때 실제로 섞였다.
-      덮어쓰면 마지막 실행의 설정 하나만 남아 「이 폴더는 하나다」 라고
-      단언한다. 없는 것보다 나쁘다. 이어쓰면 블록이 갈려 섞인 것이 보인다.
-      폴더가 정말 한 설정이면 같은 블록이 반복될 뿐이라 잃는 것이 없다.
-      「현재」 를 알고 싶으면 마지막 블록을 본다.
+    """최종 설정과 출처를 산출 폴더의 config_snapshot.txt 에 이어씀
+    덮어쓰지 않음 - 경로 안 바꾸는 설정(PATTERN_K, SEED 등)이 바뀌면 한 폴더에 섞여서
+    지금 설정은 마지막 블록
     """
     os.makedirs(folder, exist_ok=True)
     p = os.path.join(folder, 'config_snapshot.txt')
@@ -241,7 +213,7 @@ def snapshot(folder):
                 % (datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), who))
         for k in sorted(SOURCE):
             f.write('%-22s %-46s (%s)\n' % (k, globals().get(k, ''), SOURCE[k]))
-        # 수치 연산이 실제로 본 스레드 값. 환경변수로 미리 준 값이 BLAS_THREADS 보다 이기므로 따로 적는다.
+        # 실제 스레드 값도 기록 (환경변수가 BLAS_THREADS 보다 우선)
         for k in ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS'):
             f.write('%-22s %-46s (%s)\n' % (k, os.environ.get(k, '없음(라이브러리 기본)'), 'env'))
     return p
@@ -254,16 +226,14 @@ if __name__ == '__main__':
               'MIN_READS_PER_WINDOW', 'BLOCK_SIZE', 'MIN_SAMPLE_COVERAGE', 'COLSET_FROM', 'BLAS_THREADS', 'SCORE_UNIT', 'REPORT_BASELINE', 'CONVERGENCE_GATE',
               'SEED', 'TEST_SIZE', 'N_JOBS', 'FIXED_MODEL', 'LLR_HELDOUT'):
         print('%-22s %-44s (%s)' % (k, globals()[k], SOURCE.get(k, '-')))
-    # 실제로 수치 연산이 본 스레드 값(진입점이 내보낸 값 · 없으면 라이브러리 기본)
+    # 실제 스레드 값 (진입점이 내보낸 값, 없으면 라이브러리 기본)
     for k in ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS'):
         print('%-22s %-44s (%s)' % (k, os.environ.get(k, '없음(라이브러리 기본)'), 'env'))
 
 
 def check_same_refs(paths, what=''):
-    """BAM 들의 참조 서열 목록(이름 · 길이 · 순서)이 같은지 본다. 다르면 멈춘다.
-
-    리드를 다른 BAM 헤더로 옮겨 쓰면 reference_id 가 그대로 옮겨져, 순서가 다른 BAM 의 리드가
-    엉뚱한 염색체에 붙는다. 그래서 섞기 · 풀 만들기 전에 먼저 맞춰 본다.
+    """BAM 들의 참조 서열 목록(이름, 길이, 순서)이 같은지 확인, 다르면 중단
+    리드를 다른 헤더로 옮기면 reference_id 가 그대로라 엉뚱한 염색체에 붙음
     """
     import pysam
     sig = None
@@ -278,14 +248,11 @@ def check_same_refs(paths, what=''):
 
 
 def fragments(reads, stats=None):
-    """BAM 리드를 조각 단위로 묶어 내준다. 정렬 순서(좌표 · 이름)와 상관없이 PE 두 짝을 한 조각으로 합친다.
-
-    PE(짝 표시가 있고 짝이 정렬된 리드): read1 · read2 가 다 올 때까지 이름으로 기다렸다가 낸다.
-      파일 끝까지 짝이 안 온 리드는 마지막에 낸다.
-    짝 표시가 없는 리드: 이름이 같은 리드가 바로 이어 오면 한 조각으로 합친다(단일말단으로
-      정렬된 자료에서 한 조각의 두 끝이 따로 기록된 경우 · 예전 규칙과 같다).
-    정렬 안 됨 · 2차 · 보조 정렬은 건너뛴다.
-    stats 를 주면 같은 이름 · 같은 짝 번호가 두 번 온 수를 stats['dup'] 에 센다(복원 추출 · 이름 충돌 신호).
+    """BAM 리드를 조각 단위로 묶어 내줌. 정렬 순서와 상관없이 PE 두 짝을 한 조각으로
+    PE: read1, read2 다 올 때까지 이름으로 기다림 (끝까지 짝 없으면 마지막에 냄)
+    짝 표시 없는 리드: 같은 이름이 바로 이어 오면 한 조각으로 합침
+    정렬 안 됨, 2차, 보조 정렬은 건너뜀
+    stats 주면 같은 이름, 같은 짝 번호 중복 수를 stats['dup'] 에 셈
     """
     pend, se = {}, []
     for r in reads:
@@ -320,8 +287,8 @@ def fragments(reads, stats=None):
 
 
 def dup_check(n, allow, what):
-    """fragments 가 센 「같은 이름 · 같은 짝 번호」 리드 수를 알린다. 파일 이름은 찍지 않는다
-    (정상 BAM 이름에 사람 이름이 있다). allow 가 거짓이면 0 이 아닐 때 멈춘다."""
+    """fragments 가 센 중복 리드 수 출력. allow 거짓이면 0 아닐 때 중단
+    파일 이름은 안 찍음 (정상 BAM 이름에 사람 이름 있음)"""
     if not n:
         return
     m = '%s: 같은 이름 · 같은 짝 번호 리드 %d 개 (복원 추출 또는 이름 충돌)' % (what, n)
@@ -331,11 +298,8 @@ def dup_check(n, allow, what):
 
 
 def count_convergence():
-    """수렴 경고(ConvergenceWarning)를 세는 칸 [n] 을 돌려준다. 2단계 08 · 09 가 부른다.
-
-    경고마다 세되 화면에는 처음 하나만 낸다. 다른 경고는 그대로 지나간다.
-    'always' 는 같은 자리 경고를 한 번만 보여 주는 설정에서도 다 세게 한다.
-    이 프로세스에서 난 것만 센다 — joblib 일꾼(n_jobs > 1)에서 난 경고는 못 센다.
+    """수렴 경고(ConvergenceWarning) 세는 칸 [n] 반환. 2단계 08, 09 에서 사용
+    다 세고 화면엔 첫 1건만 출력. 이 프로세스 것만 셈 (joblib 일꾼 경고는 못 셈)
     """
     import warnings
     from sklearn.exceptions import ConvergenceWarning
@@ -354,23 +318,17 @@ def count_convergence():
 
 
 def convergence_check(n, failures, step):
-    """수렴 경고 건수를 찍고, CONVERGENCE_GATE=on 이면 1건 이상일 때 failures 에 넣는다."""
+    """수렴 경고 건수 출력. CONVERGENCE_GATE=on 이고 1건 이상이면 failures 에 추가"""
     print('\n수렴 경고 %d건 (%s · CONVERGENCE_GATE=%s)' % (n[0], step, CONVERGENCE_GATE))
     if n[0] and CONVERGENCE_GATE == 'on':
         failures.append('수렴 경고 %d건 - CONVERGENCE_GATE=on' % n[0])
 
 
 def unify_score_unit(D, keys=('feature_set',)):
-    """SCORE_UNIT=consistent 이면 keys 묶음마다 점수 단위를 하나로 맞춘다.
-
-    채점(score_one_sample.py)은 검체마다 점수 폭이 1e-6 미만으로 뭉치면 그 검체만
-    decision_function 으로 바꾼다. 그러면 한 칸 안에 확률과 decision_function 이 섞여
-    AUC 를 해석할 수 없다. consistent 에서는 채점이 y_df 열을 늘 같이 적고, 여기서
-    decision_function 이 있는 모형(묶음 안 y_df 가 다 찬 묶음)은 묶음 전체를 y_df 로 바꾼다.
-    전환이 없어도 바꾼다 — 폭은 넓지만 일부 행이 1.0 에 붙은 «부분 포화» 동률도 없앤다.
-    LR 은 시그모이드라 순서는 같고 동률만 풀린다. RF · XGB 처럼 decision_function 이 없으면 확률 그대로다.
-    as_is 면 D 를 그대로 돌려준다(지금까지의 표를 낸 동작).
-    돌려주는 값: (D, 단위를 바꾼 묶음 수)
+    """SCORE_UNIT=consistent 이면 keys 묶음마다 점수 단위를 하나로 맞춤
+    채점은 점수가 뭉친 검체만 decision_function 으로 바꿔서 한 칸에 단위가 섞임
+    y_df 가 다 찬 묶음은 전체를 y_df 로 바꿈 (RF, XGB 는 확률 그대로). as_is 면 그대로
+    반환: (D, 단위 바꾼 묶음 수)
     """
     if SCORE_UNIT != 'consistent' or not len(D):
         return D, 0
@@ -384,14 +342,14 @@ def unify_score_unit(D, keys=('feature_set',)):
                          'consistent 로 다시 채점되지 않은 검체 파일이 섞였습니다')
     have = D['y_df'].notna().groupby(K)
     g = have.transform('all')                                     # decision_function 이 있는 모형의 묶음
-    if (have.transform('any') & ~g).any():                        # 일부만 빔 — 옛 설정 파일이 섞였다
+    if (have.transform('any') & ~g).any():                        # 일부만 빔 (다른 설정 채점 파일 섞임)
         raise SystemExit('한 묶음 안에서 y_df 가 일부 행만 비었습니다 — consistent 로 다시 채점되지 않은 '
                          '검체 파일이 섞였습니다')
     conv = g & st.str.startswith('predict_proba')               # 단위가 실제로 바뀌는 행 (SVM 은 이미 df)
     D = D.copy()
     D.loc[g, 'y_score'] = D.loc[g, 'y_df']
-    # 확률 단위였던 행의 문턱(thr_spec95)은 이제 y_score 와 단위가 달라 비운다. y_pred 는 원래 단위로
-    #   이미 판정된 값이라 그대로 둔다. 포화로 이미 decision_function 이던 행은 문턱도 z 공간이라 둔다.
+    # 확률 단위였던 행의 문턱(thr_spec95)은 단위가 달라져서 비움. y_pred 는 그대로
+    # 이미 decision_function 이던 행은 문턱도 같은 단위라 그대로
     if 'thr_spec95' in D.columns:
         D.loc[conv & ~sw, 'thr_spec95'] = float('nan')
     D.loc[conv, 'score_type'] = 'decision_function(통일)'

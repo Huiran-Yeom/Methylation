@@ -1,20 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 """
-2_train/steps/01: DMR 영역 리드만 추출해 가벼운 BAM 을 만든다.
+2_train/steps/01: DMR 블록 리드만 뽑아 작은 BAM 만듦
 
-원본 : 초기 공개본 scripts/step03_1_Preprocessing_for_ML_RawData_Mixing.py
-       (저장소에서 삭제됨 · git 기록에 있음)
-변경 : 경로를 config.py 로 옮긴 것뿐. 계산 로직은 원본과 동일하다.
-       - DMR 블록마다 암/정상 리드를 세고
-       - 양쪽 모두 MIN_READS_PER_BLOCK(5) 이상인 블록만 통과시키고
-       - 통과한 블록의 리드를 새 BAM 에 쓰고 samtools sort + index
-
-출력은 전부 v3 폴더로 간다. 원본 v1/v2 는 건드리지 않는다.
+DMR 블록마다 암, 정상 리드 세고 양쪽 모두 MIN_READS_PER_BLOCK 이상인 블록만 남김
+남은 블록 리드를 새 BAM 에 쓰고 samtools sort + index
 """
 
-# 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돌아
-# 실제 자료를 덮어쓴다. 실행은 `python <파일>` 로만 한다.
+# 스크립트 전용 - import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
@@ -39,7 +32,7 @@ def load_dmr():
 
 
 def main():
-    import pysam  # 지연 임포트: 서버에만 있으면 됨
+    import pysam  # 서버에만 있으면 돼서 여기서 import
 
     C.guard_not_original()
     C.banner('2_train/steps/01  DMR 영역 리드 추출')
@@ -70,12 +63,11 @@ def main():
                 mut_n = sum(1 for _ in mut_bam.fetch(chrom, start, end))
                 wt_n = sum(1 for _ in wt_bam.fetch(chrom, start, end))
             except ValueError:
-                # 참조 이름이 BAM 에 없는 경우
+                # BAM 에 없는 염색체
                 continue
-            # 원본과 동일한 조건: 양쪽 모두 5개 이상
+            # 암, 정상 모두 MIN_READS_PER_BLOCK 이상
             if mut_n >= C.MIN_READS_PER_BLOCK and wt_n >= C.MIN_READS_PER_BLOCK:
-                # 이웃한 두 블록에 걸친 리드는 블록마다 한 번씩 걸린다. 한 번만 쓴다 —
-                #   두 번 쓰면 다음 단계가 이름당 레코드 수(1 · 2)로 조각을 거를 때 조각 전체가 빠진다.
+                # 두 블록에 걸친 리드는 한 번만 씀 (두 번 쓰면 아래 이름당 레코드 수 거르기에서 빠짐)
                 for r in mut_bam.fetch(chrom, start, end):
                     key = (r.query_name, r.flag, r.reference_id, r.reference_start)
                     if key not in seen_mut:
@@ -113,13 +105,9 @@ def main():
         )
 
     print('\nsamtools sort + index...')
-    # ── 검증 음성 배경을 공여자별로 따로 뽑는다 ──
-    #   왜: 음성 반복본 10개를 병합 BAM 하나에서 뜨면 Normal1~10 이 사람 10명이
-    #       아니라 같은 통에서 10번 뜬 것이 된다. 음성 쪽 사람 간 변동이 0 이 되어
-    #       특이도가 실제보다 좋게 보인다.
-    #   블록 집합은 위에서 병합본으로 이미 정했다. 여기서는 그 블록만 배경별로 떠낸다.
-    #   그래야 배경마다 칸이 달라지지 않는다.
-    #   C.NORMAL_BAMS 가 없으면(=학습) 통째로 건너뛴다.
+    # 검증용 정상 배경은 사람별로 따로 뽑음
+    # 병합 BAM 하나에서 뽑으면 사람 간 차이가 없어져 특이도가 좋게 나옴
+    # 블록은 위에서 정한 것 그대로 사용. NORMAL_BAMS 없으면(학습) 건너뜀
     _bgs = getattr(C, 'NORMAL_BAMS', None)
     if _bgs:
         print('')
@@ -133,7 +121,7 @@ def main():
             _tmp = _out + '.tmp.bam'
             _b = pysam.AlignmentFile(_bp, 'rb')
             _cnt = 0
-            _seen = set()          # 두 블록에 걸친 리드는 한 번만 쓴다(위 섞기 풀과 같은 이유)
+            _seen = set()          # 두 블록에 걸친 리드는 한 번만 씀
             with pysam.AlignmentFile(_tmp, 'wb', header=_b.header) as _o:
                 for _c, _s in _blocks:
                     try:
@@ -157,7 +145,7 @@ def main():
         subprocess.run(['samtools', 'index', sorted_path], check=True)
         print(f'  {sorted_path}')
 
-    # 2_train/steps/02 가 쓰는 쿼리 이름 목록: 짝이 정확히 2개인 것만 남긴다
+    # 02 가 쓰는 리드 이름 목록 (이름당 레코드 1~2개인 것만)
     print('\n리드쌍 이름 목록 생성 (짝 2개인 것만)...')
     for bam_path, out_txt, label in (
         (C.MUT_SORTED, C.MUT_NAMES, '암'),

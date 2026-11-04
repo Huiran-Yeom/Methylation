@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
-"""S1 후보 블록 생성: 라벨을 쓰지 않는다"""
+"""후보 블록 만들기 (정상, 암 cov 에서 커버 기준 통과 블록, 라벨 안 씀)
 
-# 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돌아
-# 실제 자료를 덮어쓴다. 실행은 `python <파일>` 로만 한다.
+사용: python 01_candidates.py [--nd <정상 cov 폴더>] [--out ..] [--frac F] [--depth N] [--cpg N] [--dry]
+"""
+
+# 스크립트 전용. import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
 import os as _os, sys as _sys
-# 0_setup 을 찾는다. 이 파일이 「복사되어」 정리본 밖에서 돌 수도 있으므로
-#   ① 자기 위에서 위로 올라가며 찾고 ② 환경변수 METH_CONF_DIR ③ 그래도 없으면
-#   설정 없이 돌 수 있게 기본값으로 간다(검증이 검체 폴더로 복사해 쓰는 경로다).
+# 0_setup 찾기: 위로 올라가며 찾고, 없으면 METH_CONF_DIR 사용
 _h = _os.path.dirname(_os.path.abspath(__file__))
 for _ in range(5):
     _c = _os.path.join(_h, '0_setup')
@@ -33,16 +33,12 @@ except ImportError:
 import os, re, sys, glob, math
 import numpy as np, pandas as pd
 
-# ── 이 단계가 쓰는 경로 ──
-#   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
-#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
-#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
-#   이 단계가 읽는 자료 폴더는 환경변수로 옮길 수 있다.
-#     NORMAL_SET      정상 cov (*.cov.gz)
-#     GBM_COV_DIR     암 cov
+# 이 단계 경로. 폴더 구조 다르면 여기만 수정 (환경변수, 인자로 덮어쓰기 가능)
+#   NORMAL_SET      정상 cov (*.cov.gz)
+#   GBM_COV_DIR     암 cov
 ND  = _os.environ.get('NORMAL_SET')  or _M + '/sample_data/_input/normal_pub15'
 GD  = _os.environ.get('GBM_COV_DIR') or _D + '/training/GBM_cell-line/cov'
-# 산출 폴더는 GEN(패널 세대)을 따른다. 비우면 세대 없는 옛 폴더를 가리킨다.
+# 산출 폴더 이름에 GEN(패널 세대) 붙임. 못 읽으면 중단
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:
     try:
@@ -52,11 +48,11 @@ if not _GEN:
                          '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
 OUT = _M + '/results/dmr/j_candidates' + _GEN
 BLOCK, MINCOV, MINCPG, FRAC = 100, 9, 3, 0.60   # MINCOV=9 → 리드 10 이상
-try:   # 02·03·11 과 같은 격자를 써야 한다. 여기만 100 을 박으면 04 가
-    BLOCK = int(_cfg.BLOCK_SIZE)   #   「쓸 수 있는 창이 0」 으로 죽는다.
+try:   # 02, 03, 11 과 같은 블록 격자 사용 (BLOCK_SIZE)
+    BLOCK = int(_cfg.BLOCK_SIZE)
 except Exception:
     pass
-MINREP = 2   # 한 독립단위(세포주)는 파일 이만큼 관측돼야 관측으로 친다
+MINREP = 2   # 세포주 하나가 관측으로 치려면 필요한 파일 수
 
 a = sys.argv
 if '--frac'  in a: FRAC   = float(a[a.index('--frac')+1])
@@ -66,12 +62,10 @@ if '--cpg'   in a: MINCPG = int(a[a.index('--cpg')+1])
 if '--out' in a: OUT = a[a.index('--out')+1]
 DRY = '--dry' in a
 
-# 파일 이름에서 검체 이름을 뽑는다. 기본은 첫 _ 앞까지 — cov 와 BAM 의 뒤쪽
-#   꼬리표가 달라도 짝이 맞게 하기 위해서다.
-#   자료마다 이름 규칙이 다르다. 안 맞으면 「자료를 고치지 말고」 SID_RE 를 준다.
-#   첫 괄호가 검체 이름이 되고, 안 걸리면 기본 규칙으로 떨어진다. 예:
-#     SID_RE='(.+?)__'   H1876_0d__SRR…  -> H1876_0d   (밑줄 둘로 가르는 자료)
-#                        H1876__SRR…     -> H1876
+# 파일 이름에서 검체 이름 뽑기. 기본은 첫 _ 앞까지 (cov, BAM 꼬리표 달라도 짝 맞게)
+# 규칙이 안 맞으면 SID_RE 사용 (첫 괄호가 검체 이름, 안 걸리면 기본 규칙). 예:
+#   SID_RE='(.+?)__'   H1876_0d__SRR...  -> H1876_0d
+#                      H1876__SRR...     -> H1876
 _SRE = _os.environ.get('SID_RE')
 _srx = re.compile(_SRE) if _SRE else None
 def sid(p):
@@ -83,14 +77,10 @@ def sid(p):
         m = _srx.match(b)
         if m and m.groups(): return m.group(1)
     return b.split('_')[0]
-# 반복본을 독립단위(세포주 한 종)로 묶는 규칙. 커버 조건을 파일이 아니라
-#   독립단위로 세기 때문에 이 규칙이 need_g 와 MINREP 에 바로 들어간다.
-#   기본값은 이 연구의 GBM 자료 이름 규칙(SNU<n>-<반복>)이다. 다른 자료는
-#   GROUP_RE 로 준다 — 첫 괄호가 독립단위 이름이 된다. 예:
-#     GROUP_RE='(.+?)_\d+d$'        H1876_0d -> H1876 · H1876 -> H1876
-#   맞지 않는 이름은 그대로 한 단위가 된다. 위 패턴이 '([A-Za-z0-9]+)' 보다
-#   안전하다 — 후자는 SHP_77 을 SHP 로 잘라 다른 세포주와 섞을 수 있다.
-#   안 주면 이름이 그대로 독립단위가 되어, 반복본이 서로 다른 종으로 세어진다.
+# 반복본을 세포주 하나로 묶는 규칙 (커버를 세포주 단위로 세서 need_g, MINREP 에 바로 들어감)
+# 기본은 SNU<n>-<반복>. 다른 자료는 GROUP_RE 사용 (첫 괄호가 세포주 이름). 예:
+#   GROUP_RE='(.+?)_\d+d$'        H1876_0d -> H1876, H1876 -> H1876
+# 안 맞는 이름은 그대로 한 단위 (안 주면 반복본이 서로 다른 세포주로 세어짐)
 _GRE = _os.environ.get('GROUP_RE')
 _grx = re.compile(_GRE) if _GRE else None
 
@@ -98,10 +88,7 @@ _grx = re.compile(_GRE) if _GRE else None
 _CANCER = getattr(_cfg, 'CANCER_LABEL', 'GBM')   # samples.csv 의 type 값
 
 def grp(s, t=_CANCER):
-    # GROUP_RE 는 「암 쪽에만」 쓴다. 반복본 묶기는 세포주 개념이고, 정상은
-    #   한 사람당 한 파일이 전제다(아래 assert u_norm == n_norm 이 그것을 지킨다).
-    #   정상까지 묶으면 NC-P-1·NC-P-3·… 아홉이 'NC' 하나가 되어 커버 기준이
-    #   9명에서 5명으로 느슨해진다.
+    # GROUP_RE 는 암 쪽에만 사용. 정상은 한 사람당 한 파일 전제 (아래 assert 로 확인)
     if _grx is not None and t == _CANCER:
         m = _grx.match(s)
         return m.group(1) if (m and m.groups()) else s
@@ -123,8 +110,7 @@ def read_one(p):
 files = [(f,'Normal') for f in sorted(glob.glob(ND+'/*.cov.gz'))] + \
         [(f,_CANCER)    for f in sorted(glob.glob(GD+'/*.cov.gz'))]
 if not files: sys.exit('cov 파일 없음')
-# 같은 sid 가 둘 이상이면 멈춘다. sid 는 검체 이름이자 표의 열 이름이라,
-#   겹치면 pivot_table(aggfunc='first') 이 뒤엣것을 「조용히 버린다」.
+# 같은 sid 가 둘 이상이면 중단 (표 열 이름이라 겹치면 pivot_table 이 하나를 버림)
 _byid = {}
 for _f, _t in files: _byid.setdefault(sid(_f), []).append(_os.path.basename(_f))
 _dup = {k: v for k, v in _byid.items() if len(v) > 1}
@@ -136,17 +122,13 @@ if _dup:
     _msg.append('  겹치면 표의 열이 덮여 한 쪽이 조용히 사라집니다.')
     _msg.append('  파일 이름의 첫 _ 앞을 서로 다르게 바꾸십시오.')
     sys.exit(chr(10).join(_msg))
-# 한 쪽만 비어도 멈춘다. 그냥 두면 그 반의 need 가 0 이 되어 아래 계급 조건이
-#   늘 참이 되고, 한 계급만으로 만든 후보를 조용히 내보낸다(종료값 0).
+# 정상, 암 한 쪽만 비어도 중단 (need 가 0 이 돼서 한 쪽만으로 후보가 나옴)
 _nn = sum(1 for _, _t in files if _t == 'Normal')
 if _nn == 0:        sys.exit('정상 cov 가 없다 — NORMAL_SET 또는 --nd 를 확인하라: ' + ND)
 if _nn == len(files): sys.exit('암 cov 가 없다 — GBM_COV_DIR 을 확인하라: ' + GD)
 if DRY: files = files[:1] + files[-1:]   # 정상 1 + 암 1 (암 경로도 지나가게)
-# 커버 기준을 집단별로 나눈다.
-#   한 덩어리로 세면 한쪽으로 몰린 블록이 통과해 t검정에서 NaN 이 된다.
-#   검체 수가 바뀔 때 문턱이 요동치는 문제도 같이 없앤다.
-# 문턱을 파일 수가 아니라 독립단위 수로 잡는다.
-#   SNU 30파일 = 세포주 10종 x 3복제. 파일로 세면 암 표본이 3배로 부푼다.
+# 커버 기준은 정상, 암 따로 (합쳐 세면 한쪽에 몰린 블록이 통과해 t검정 NaN)
+# 문턱은 파일 수 말고 세포주 수 기준 (복제 파일로 세면 암 표본이 부풂)
 n_norm = sum(1 for _, t in files if t == 'Normal')
 n_gbm  = len(files) - n_norm
 u_norm = len({grp(sid(f), 'Normal') for f, t in files if t == 'Normal'})
@@ -170,13 +152,12 @@ for i,(p,t) in enumerate(files,1):
     print('  [%2d/%d] %-16s %8d' % (i,len(files),s,len(g)))
 
 A = pd.concat(parts, ignore_index=True)
-# 커버를 파일이 아니라 독립단위로 센다.
-#   한 세포주는 파일 MINREP개 이상 관측돼야 '관측된 종'으로 친다.
+# 커버는 세포주 단위로 셈 (파일 MINREP개 이상 관측돼야 관측으로 침)
 _gmap = {m['sample']: m['group'] for m in meta}
 _nset = {m['sample'] for m in meta if m['type'] == 'Normal'}
 A['_n'] = A['sample'].isin(_nset)
 
-# 세포주별 파일 수. 파일이 MINREP보다 적으면 있는 만큼만 요구한다.
+# 세포주별 파일 수. MINREP 보다 적으면 있는 만큼만 요구
 _nrep = {}
 for _f, _t in files:
     if _t == _CANCER:

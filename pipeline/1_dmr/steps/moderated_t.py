@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
-"""moderated t-test (limma eBayes) + BH-FDR. R 의존성 없음.
-
-블록마다 분산을 그 블록 표본만으로 추정하면 표본이 적을 때 불안정하다.
-우연히 분산이 작게 나온 블록이 가짜 유의가 된다. 전체 블록의 분산 분포에서
-사전분산 (d0, s0^2) 을 추정해 개별 추정치를 그쪽으로 수축시킨다 (Smyth 2004).
+"""moderated t-test (limma eBayes) + BH-FDR, R 없이
+블록별 분산을 전체 블록 분산 분포(d0, s0^2) 쪽으로 수축 (Smyth 2004)
 
     s~^2 = (d0*s0^2 + d*s^2) / (d0 + d)
     t    = diff / sqrt(s~^2 * (1/n1 + 1/n2)),   df = d + d0
@@ -73,8 +70,7 @@ def bh(p):
 
 
 def efp(q, sel):
-    """BH-FDR 로 뽑은 sel 중 기대 위양성 수. q 합이 표준 추정치이고,
-       0.05 x 개수 는 상한이다 (표 3단계의 '1,000개 중 약 50개'가 이 상한)."""
+    """sel 중 기대 위양성 수 (q 합, 상한 0.05 x 개수)"""
     import numpy as np
     n = len(sel)
     if n == 0: return 0.0, 0.0

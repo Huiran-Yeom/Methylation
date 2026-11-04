@@ -1,43 +1,16 @@
 #!/usr/bin/env python
 # coding: utf-8
 """
-step04_1: bedGraph → Mean / Entropy feature 행렬
+2_train/steps/05: bedGraph → 블록별 mean, entropy 행렬 (비율마다 csv)
 
-기준 : 초기 공개본 scripts/step04_ML_classifier.py (저장소에서 삭제됨 · git 기록에 있음) 의
-       `0) bed 파일 전처리`, `1) Mean`, `2) Entropy`
+entropy 는 SITE_ENTROPY_METHOD (기본 histogram, 베타값 10구간)
+bedGraph 는 0-based 라 +1 해서 DMR 좌표(1-based)에 맞춤, 파일은 이름 숫자순
+학습은 MIN_SAMPLE_COVERAGE 미만 커버 블록 버림 (남은 빈칸은 08, 09 에서 채움)
 
-최종 코드 구조를 그대로 따른다. 가중치 엔트로피
-(entropy_site / entropy_read / entropy_siteAread)는 최종 코드에 없으므로 넣지 않는다.
-리드 단위 엔트로피(readent)·MHL 은 쓰지 않으므로 여기서 만들지 않는다.
-
-최종 코드와 다른 점 (엔트로피 관련만)
-  1. 엔트로피 계산식: `SITE_ENTROPY_METHOD`
-       'value_counts' : 최종 코드 방식. 서로 다른 실수값을 각각 하나의 범주로 센다.
-                        문제: 값 종류 수는 커버리지의 대리 지표다. GBM 리드가 섞이면
-                        값 종류가 늘어 엔트로피가 올라간다(mut_0 5,555종 vs mut_5 6,441종).
-                        즉 "외부 리드가 추가됐는지" 감지기로 작동할 수 있다.
-       'histogram'    : 베타값을 10구간으로 묶어 계산한다.
-                        값 종류 증가에 둔감해 위 문제에 면역이다.
-                        config 기본값이며, 지금 나오는 entropy 열은 히스토그램 방식이다.
-  2. 좌표계: bedGraph 는 0-based, step02 의 DMR 좌표는 cov(1-based) 기준이다.
-     읽을 때 +1 해서 좌표계를 맞춘다. 최종 코드는 이 보정이 없어 블록 경계에서
-     약 1% 가 다른 블록에 배정됐다.
-  3. 파일 정렬: 파일명 숫자순. 최종 코드는 크기 내림차순이라 Normal_i 가
-     sampled_reads_i 와 무관해졌다. 숫자순이면 일치한다.
-  4. 결측 블록 처리: `MIN_SAMPLE_COVERAGE`
-     최종 코드의 `dropna(how='any')` 는 샘플 하나라도 비면 블록을 버린다.
-     depth 가 658배였을 때는 문제가 없었지만 총 5,000 reads 에서는 위험하다.
-     실측(5샘플): 5개 전부 커버한 블록 849/1,139 = 74.5%
-     반드시 `04_coverage_check.py` 를 먼저 돌려 실제 잔존 블록 수를 확인할 것.
-       1.0  = 최종 코드와 동일
-       0.8  = 지금 설정. 20%까지 결측을 허용한다. 채우기는 08 · 09 의 Imputer 가 한다.
-       0.95 = 95% 이상 샘플에서 커버된 블록 유지
-
-원본 불변: bedGraph 는 읽기만 하고 출력은 v3 폴더로만 간다.
+옵션: --entropy <방식>  --suffix <출력 이름>  --ratios 0.001,0.01
 """
 
-# 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돌아
-# 실제 자료를 덮어쓴다. 실행은 `python <파일>` 로만 한다.
+# 스크립트 전용 - import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
@@ -53,11 +26,9 @@ import config as C
 INPUT_FORMAT = getattr(C, 'INPUT_FORMAT', 'bedgraph')
 FILE_ORDER = getattr(C, 'FILE_ORDER', 'numeric')
 MIN_SAMPLE_COVERAGE = getattr(C, 'MIN_SAMPLE_COVERAGE', 1.0)
-COLSET_FROM = getattr(C, 'COLSET_FROM', 'all')     # all | normal — 블록을 어느 행의 커버율로 고르나
+COLSET_FROM = getattr(C, 'COLSET_FROM', 'all')     # all | normal - 어느 행 커버율로 블록 고를지
 
-# 엔트로피 방식과 출력 이름을 명령줄로 바꾼다.
-# value_counts 는 값 종류 수 = 커버리지 대리지표라 0.1% 에서 AUC 0.50 이었다.
-# histogram(10구간) 은 종류 수에 둔감하므로 따로 만들어 비교한다.
+# 엔트로피 방식, 출력 이름 명령줄로 변경 (value_counts 는 커버리지 따라가서 비교용)
 _a = sys.argv
 if '--entropy' in _a:
     C.SITE_ENTROPY_METHOD = _a[_a.index('--entropy') + 1]
@@ -99,7 +70,7 @@ def list_files(folder):
 
 
 def read_beta(path):
-    """(chr, pos, beta[0~1]). pos 는 항상 1-based 로 맞춘다."""
+    """(chr, pos, beta[0~1]) 읽음. pos 는 1-based 로 맞춤"""
     if INPUT_FORMAT == 'cov':
         df = pd.read_csv(
             path, sep='\t', header=None, usecols=[0, 1, 3],
@@ -107,8 +78,7 @@ def read_beta(path):
             dtype={'chr': str, 'pos': np.int64, 'beta': np.float64},
         )
     else:
-        # bismark 가 바로 쓴 bedGraph 는 첫 줄이 `track type=bedGraph` 다. 그러나 03 의 merge_cov 가
-        #   다시 쓴 파일에는 그 줄이 없다. 첫 줄이 track 일 때만 건너뛴다(아니면 첫 CpG 가 빠진다).
+        # 첫 줄이 track 일 때만 건너뜀 (03 이 다시 쓴 파일엔 없음, 무조건 건너뛰면 첫 CpG 빠짐)
         with gzip.open(path, 'rt') as _h:
             _skip = 1 if _h.readline().startswith('track') else 0
         df = pd.read_csv(
@@ -133,7 +103,7 @@ def _ent_histogram(x, bins=10):
     x = pd.Series(x).dropna()
     if x.empty:
         return np.nan
-    h = np.histogram(x, bins=bins, range=(0.0, 1.0))[0]   # 눈금을 0~1 로 고정
+    h = np.histogram(x, bins=bins, range=(0.0, 1.0))[0]   # 구간 0~1 고정
     h = h[h > 0]
     if h.size == 0:
         return 0.0
@@ -145,7 +115,7 @@ ENT = _ent_value_counts if C.SITE_ENTROPY_METHOD == 'value_counts' else _ent_his
 
 
 def sample_features(path, dmr):
-    """한 샘플의 블록별 (mean, entropy). 최종 코드의 groupby 계산과 동일."""
+    """한 샘플의 블록별 (mean, entropy)"""
     df = read_beta(path)
     df['blk'] = df['pos'] // C.BLOCK_SIZE
     keys = list(zip(df['chr'].to_numpy(), df['blk'].to_numpy()))
@@ -171,40 +141,32 @@ def collect(folder, prefix, dmr):
     return means, ents, mapping
 
 
-# 검증은 이 파일을 검체 폴더에 val04_1.py 로 복사해 돌린다.
-# 파일 이름만으로 가르면 STEP_MAP 이름을 바꿀 때 조용히 학습 동작이 되므로,
-#   검증 실행기(run_one_sample.sh)가 내보내는 METH_VALIDATE=1 도 본다.
+# 검증 실행인지 - 파일 이름(val*) 또는 METH_VALIDATE=1 로 판단
 _VAL = os.path.basename(__file__).startswith('val') or os.environ.get('METH_VALIDATE') == '1'
 
 
 def to_frame(rows_normal, rows_gbm, label):
-    """행=샘플, 열=블록. MIN_SAMPLE_COVERAGE 로 결측 블록을 정리한다."""
+    """행=샘플, 열=블록. 학습이면 MIN_SAMPLE_COVERAGE 로 블록 거름"""
     df = pd.DataFrame.from_dict({**rows_normal, **rows_gbm}, orient='index')
     n_total = len(df)
     before = df.shape[1]
     if _VAL:
-        # 검증에서는 블록을 버리지도 채우지도 않는다.
-        #   검증의 「묶음」은 한 검체 · 한 비율의 양성 N + 음성 N 이다. 그 커버율로 블록을
-        #   버리면 반복 수에 따라 남는 블록이 달라지고, 묶음 평균으로 채우면 양성의
-        #   빈칸이 양성·음성을 섞은 값으로 채워진다. 빈칸은 비운 채 넘기면
-        #   score_one_sample 이 학습 평균(train_mean)으로 채운다.
+        # 검증은 블록 안 버리고 안 채움 - 빈칸은 score_one_sample 이 학습 평균으로 채움
         pass
     else:
-        # 커버율을 재는 행. all 은 정상 + 암 섞인 행 전부라 암 행의 커버리지가 칸 선택에
-        #   끼어든다. normal 은 학습 정상 행만 본다. 정상 행은 비율마다 같은
-        #   0% 행렬이라 비율마다 같은 블록이 남는다.
+        # 커버율 재는 행. normal 이면 정상 행만 봐서 비율마다 같은 블록이 남음
         ref = df[df.index.astype(str).str.startswith('Normal')] if COLSET_FROM == 'normal' else df
         if len(ref) == 0:
             raise SystemExit(f'COLSET_FROM={COLSET_FROM} 인데 정상 행이 0개입니다 ({label}) — 행 이름이 Normal 로 시작해야 합니다')
         if MIN_SAMPLE_COVERAGE >= 1.0:
-            keep = ref.notna().all(axis=0)              # 최종 코드의 dropna(how='any') 와 같다
+            keep = ref.notna().all(axis=0)              # dropna(how='any') 와 같음
         else:
             keep = ref.notna().sum(axis=0) >= int(np.ceil(MIN_SAMPLE_COVERAGE * len(ref)))
-        df = df.loc[:, keep].copy()                    # 아래 df['Type'] = 가 원본 조각에 쓰지 않게
+        df = df.loc[:, keep].copy()                    # 아래 df['Type'] 대입이 원본에 안 가게 복사
         del ref
-        # 남은 결측은 여기서 채우지 않는다. 08 · 09 의 Imputer 가 학습 접기 평균으로만 채운다.
+        # 남은 빈칸은 여기서 안 채움 (08, 09 의 Imputer 가 학습 fold 평균으로 채움)
         if COLSET_FROM == 'normal':
-            # 정상에서는 덮이지만 암 행에서 많이 비는 블록 — 빈칸 자체가 신호가 될 수 있어 센다.
+            # 정상은 덮이고 암 행에서 많이 비는 블록 수 (빈칸 자체가 신호가 될 수 있음)
             tum = df[~df.index.astype(str).str.startswith('Normal')]
             thin = int((tum.notna().mean(axis=0) < MIN_SAMPLE_COVERAGE).sum()) if len(tum) else 0
             print(f'    {label}: 암 행 커버율 {MIN_SAMPLE_COVERAGE} 미만인 남은 블록 {thin}개')
@@ -241,10 +203,7 @@ def main():
             print(f'건너뜀: {gbm_dir} 없음')
             continue
         print(f'GBM(mut_{p}_reads) 처리 중...')
-        # 이 'GBM' 은 암종 이름이 아니라 검체 번호 접두사다 (GBM1·GBM2…).
-        #   07_llrfeat 의 ^(Normal|GBM)(\d+)$ 와 to_frame 의 startswith('Normal')
-        #   이 같은 글자를 전제한다. 1단계의 CANCER_LABEL 과는 무관하다 —
-        #   여기를 바꾸면 07 이 「행 이름을 못 읽었습니다」 로 멈춘다.
+        # 'GBM' 은 행 이름 접두사 (GBM1, GBM2 ...). 07 이 이 이름으로 읽어서 바꾸면 안 됨
         g_mean, g_ent, g_map = collect(gbm_dir, 'GBM', dmr)
         all_map += [{**r, 'mut_reads': p} for r in g_map]
 

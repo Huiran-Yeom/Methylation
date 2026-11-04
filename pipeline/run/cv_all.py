@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-"""4단계 학습 표: 트리의 모든 판 · 깊이의 학습 CV 를 한 CSV 로 모은다(옛 드라이버 셋의 heredoc 파이썬을 그대로 옮김).
-쓰는 법: python cv_all.py <METH_ROOT> <GEN> <출력 CSV>"""
+"""4단계 학습 표: 모든 판, 깊이의 학습 CV 를 CSV 하나로 모음
+사용법: python cv_all.py <METH_ROOT> <GEN> <출력 CSV>"""
 import glob, re, sys
 import pandas as pd
 

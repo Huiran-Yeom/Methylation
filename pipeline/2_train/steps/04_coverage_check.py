@@ -1,35 +1,18 @@
 #!/usr/bin/env python
 # coding: utf-8
 """
-2_train/steps/04: 블록 커버리지 진단.  step04_1 을 돌리기 전에 반드시 먼저 실행할 것
+2_train/steps/04: 블록 커버리지 확인 (05 전에 실행)
 
-왜 필요한가
-  원본 step04 는 feature 행렬을 만든 뒤 `dropna(axis=0, how='any')` 로 결측 블록을
-  버린다. 즉 샘플 하나라도 커버가 없으면 그 블록은 전체에서 탈락한다.
-  원본은 depth 가 658배였기 때문에 모든 블록이 모든 샘플에서 커버돼 문제가 없었다.
+깊이가 낮으면 샘플 하나만 비어도 그 블록이 빠지니 몇 개 남는지 미리 셈
+블록 x 샘플 커버 여부 세고, 요구 커버율별 남는 블록과 샘플 수 늘릴 때 감소 곡선 출력
+--limit N   앞 N개 샘플만 확인
 
-  실측 (옛 작업 기계의 5_base_Normal.csv: 총 5,000 reads, 5샘플)
-      ※ 그 파일은 이 저장소에 없다. 숫자만 인용한 것이다.
-      자리 15,418개 · 블록 1,139개 · 샘플당 커버 자리 약 76%
-      5개 샘플 전부 커버한 블록 849개 = 74.5%   (샘플-블록 커버 확률 q≈0.885)
-      요구 샘플 수를 늘리면  ≥1:1139  ≥2:1078  ≥3:1021  ≥4:955  ≥5:849
-
-  샘플이 2,000개면 `how='any'` 로 살아남는 블록이 몇 개일지 5샘플 데이터로는 알 수 없다.
-  블록마다 커버리지 성향이 다르기 때문이다. 그래서 직접 세어봐야 한다.
-
-이 스크립트가 하는 일
-  1. 커버리지 파일을 읽어 블록 x 샘플 커버 여부를 센다
-  2. "N개 샘플 이상에서 커버된 블록" 곡선을 출력한다
-  3. MIN_SAMPLE_COVERAGE 후보값마다 남는 블록 수를 보여준다
-  4. 샘플 수를 늘려가며 잔존 블록이 어떻게 줄어드는지(감쇠 곡선) 측정한다
-     → 실제로 포화하는지, 계속 줄어드는지가 여기서 드러난다
-
-출력: {ML_OUT}/coverage_check_{VERSION}.csv  (블록별 커버 샘플 수)
-      {ML_OUT}/coverage_curve_{VERSION}.csv  (요구 샘플 수별 잔존 블록)
+출력: {ML_OUT}/coverage_check_{VERSION}.csv       (블록별 커버 샘플 수)
+      {ML_OUT}/coverage_curve_{VERSION}.csv       (샘플 수별 전부 커버 블록)
+      {ML_OUT}/coverage_thresholds_{VERSION}.csv  (요구 커버율별 남는 블록)
 """
 
-# 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돌아
-# 실제 자료를 덮어쓴다. 실행은 `python <파일>` 로만 한다.
+# 스크립트 전용 - import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
@@ -42,11 +25,11 @@ import pandas as pd
 
 import config as C
 
-# 진단용 표본 수. None 이면 config.NUM_FILES 전부. 먼저 100~200 으로 감을 잡는 것을 권장.
+# 확인할 샘플 수. None 이면 전부
 SAMPLE_LIMIT = None
 if '--limit' in sys.argv:
     SAMPLE_LIMIT = int(sys.argv[sys.argv.index('--limit') + 1])
-# 어느 조건을 볼지. 정상 대조군이 기준이므로 mut_0 이 기본.
+# 정상만 섞은 mut_0 기준으로 봄
 FOLDERS = ['mut_0_reads']
 
 
@@ -58,12 +41,12 @@ def load_dmr_set():
 
 
 def covered_blocks(path, dmr, fmt):
-    """이 파일이 커버한 DMR 블록 집합."""
+    """이 파일이 커버한 DMR 블록 집합"""
     opener = gzip.open(path, 'rt')
     out = set()
     with opener as f:
         for line in f:
-            if line.startswith('track'):      # track 줄이 있을 때만 건너뛴다(03 이 다시 쓴 파일에는 없다)
+            if line.startswith('track'):      # track 줄 있으면 건너뜀
                 continue
             parts = line.rstrip('\n').split('\t')
             if len(parts) < 4:
@@ -121,14 +104,13 @@ def main():
         raise SystemExit('읽은 파일이 없습니다. 2_train/steps/03 출력 경로를 확인하세요.')
 
     N = len(per_sample)
-    # 동률 블록의 순서가 glob 순서에 달리면 파일 md5 가 실행마다 달라진다
-    #   (내용은 같고 행 순서만 다름). 인덱스로 먼저 정렬한 뒤 안정 정렬하면 결정적이다.
+    # 인덱스로 먼저 정렬 후 안정 정렬 - 동률 블록 순서를 실행마다 같게
     cov = (pd.Series(counts, dtype=int).sort_index()
              .sort_values(ascending=False, kind='mergesort'))
     print(f'\n샘플 {N}개 · 한 번이라도 커버된 DMR 블록 {len(cov)}개 / {len(dmr)}개')
     print(f'샘플당 커버 블록 중간값 {int(np.median([len(s) for s in per_sample]))}개')
 
-    # --- 요구 커버율별 잔존 블록 ---
+    # 요구 커버율별 남는 블록
     print(f"\n{'요구 커버율':>10} {'요구 샘플수':>10} {'잔존 블록':>9}")
     print('-' * 34)
     rows = []
@@ -139,7 +121,7 @@ def main():
         mark = '  <- dropna(how="any") 와 동일' if frac == 1.0 else ''
         print(f'{frac*100:>9.0f}% {need:>10} {keep:>9}{mark}')
 
-    # --- 감쇠 곡선: 샘플 수를 늘려가며 '전부 커버' 블록이 어떻게 줄어드나 ---
+    # 감소 곡선: 샘플 수 늘릴 때 전부 커버 블록 수
     print('\n샘플 수를 늘릴 때 "전부 커버" 블록의 변화 (포화 여부 확인)')
     print(f"{'샘플수':>7} {'전부커버 블록':>13} {'직전 대비':>9}")
     print('-' * 33)
@@ -157,8 +139,7 @@ def main():
         curve.append({'n_samples': k, 'blocks_all_covered': cnt})
         prev = cnt
 
-    # 인덱스가 (염색체, 블록번호) 2단이므로 index_label 도 두 개여야 한다.
-    # 하나만 주면 헤더 2개 / 데이터 3개가 되어 읽을 때 염색체가 인덱스로 먹힌다.
+    # 인덱스가 (염색체, 블록번호) 2단이라 열로 풀어서 저장
     out1 = f'{C.ML_OUT}/coverage_check_{C.VERSION}.csv'
     _cov = cov.rename('n_samples_covered').reset_index()
     _cov.columns = ['chr', 'block', 'n_samples_covered']
@@ -169,7 +150,7 @@ def main():
     pd.DataFrame(rows).to_csv(f'{C.ML_OUT}/coverage_thresholds_{C.VERSION}.csv', index=False)
     print(f'\n저장 {out1}\n     {out2}')
 
-    # --- 판단 ---
+    # 판단
     keep_any = int((cov >= N).sum())
     print('\n' + '=' * 66)
     if keep_any == 0:

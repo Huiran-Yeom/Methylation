@@ -1,47 +1,26 @@
 # -*- coding: utf-8 -*-
-"""1차 지표를 계산한다. 규칙은 결과를 보기 전에 정했다.
+"""1차 지표 계산 (규칙은 결과 보기 전에 정함)
 
-    지표   외부 검증 검체 단위 AUC = primary_auc.py 의 a1 (검체·복제본 전체)
-    검체   (GBM) EGAD00001003427 환자 178검체 / 100명(양성) · 음성 배경 10명 혼합(EGAD 건강인 3 · GSE301266 비악성 대조 7)
-           배경 구성은 코호트마다 다르다 — 코호트 설정의 NORMALS* 를 본다(폐 Patient 는 GSE301266 7명뿐).
-    모델   깊이 5k 판의 pooled 모델(모든 비율을 합쳐 학습) · 채점은 0.5% 양성
-    조합   mean|entropy|jsd|llr|pdr  (5종 고정)
-           + 병기 mean|entropy|jsd|pdr  (llr 뺀 것 — 플랫폼 조항 (1))
-    교집합 세 패널이 모두 값을 낸 검증 검체만
-    판정   짝지은 부트스트랩 2,000회 · 쌍이 셋이라 Bonferroni a=0.05/3 -> 98.33% 구간
-           복원추출로 두 번 이상 뽑힌 사람은 뽑힌 횟수만큼 무게를 준다(집합으로 받으면 구간이 좁아진다)
+    지표    외부검증 검체 단위 AUC (검체, 복제본 전체)
+    모델    깊이 5k 판의 pooled 모델, 채점은 0.5% 양성
+    조합    mean|entropy|jsd|llr|pdr 고정 (+ llr 뺀 조합 병기). 최고 조합 고르지 않음
+    교집합  세 판 모두 값 낸 행만
+    판정    짝지은 부트스트랩 2000회, Bonferroni 0.05/3 → 98.33% 구간
+            복원추출로 여러 번 뽑힌 사람은 뽑힌 횟수만큼 가중
 
-   최고 조합을 고르지 않는다.  전수 표는 부차이고 여기서는 박은 조합만 본다.
+    원점수는 make_tables.py 와 같은 검증 산출 트리에서 읽음
+    혼합판은 음성 rep 번호가 공여자 아니라 반복본 번호라서 음성 고정, 양성 사람만 재표본
+    (구간에 음성 쪽 불확실성 없음, 특이도도 합본만)
 
-  [주의할 점]
-
-  (1) 원점수는 make_tables.py 와 같은 곳(검증 산출 트리 안)에서 읽는다.
-      같은 원본을 읽어야 표의 숫자와 여기 숫자가 어긋나지 않는다.
-
-  (2) 혼합판(5k)에서는 음성 한 검체에 배경 전원(GBM 은 10명)의 리드가 섞여 들어간다.
-      음성 행의 `rep`(`Normal1`..`Normal10`)은 공여자가 아니라 반복본 번호다.
-      이 숫자를 공여자로 읽어 EGAD=[1,2,3] · GSE=[4..10] 로 층화하면
-      둘 다 안 비므로 경고 없이 없는 축으로 재표본하게 된다.
-
-      그래서 혼합판이면 음성 축을 아예 만들지 않는다. 양성만 사람 단위로
-      재표본하고 음성은 고정한다.
-      그 대가를 출력에 매번 박는다: 산출 구간에 음성 축 불확실성이 0 이므로
-      새 음성에서의 위양성 변동은 이 구간에 없다.
-
-  (3) 특이도의 EGAD/GSE 분리도 같은 이유로 혼합판에서는 합본만 낸다.
-
-사용:  primary_metric.py [--depth 5k] [--ratio 0.005] [--combo "..."] [--nboot 2000]
-       COHORT 는 환경변수이고 「반드시」 주어야 한다 (기본값을 두지 않는다).
+사용법:  primary_metric.py [--depth 5k] [--ratio 0.005] [--combo "..."] [--nboot 2000]
+         COHORT 환경변수 필수 (기본값 없음)
 """
-# 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돌아
-# 실제 자료를 덮어쓴다. 실행은 `python <파일>` 로만 한다.
+# 스크립트 전용 (import 하면 본체가 돎). python <파일> 로만 실행
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
 import os as _os, sys as _sys
-# 0_setup 을 찾는다. 이 파일이 「복사되어」 정리본 밖에서 돌 수도 있으므로
-#   ① 자기 위에서 위로 올라가며 찾고 ② 환경변수 METH_CONF_DIR ③ 그래도 없으면
-#   설정 없이 돌 수 있게 기본값으로 간다(검증이 검체 폴더로 복사해 쓰는 경로다).
+# 0_setup 찾기: 위 폴더로 올라가며 찾고, 없으면 METH_CONF_DIR
 _h = _os.path.dirname(_os.path.abspath(__file__))
 for _ in range(5):
     _c = _os.path.join(_h, '0_setup')
@@ -73,33 +52,28 @@ RATIO = float(a[a.index('--ratio') + 1]) if '--ratio' in a else 0.005
 COMBO = a[a.index('--combo') + 1] if '--combo' in a else 'mean|entropy|jsd|llr|pdr'
 NBOOT = int(a[a.index('--nboot') + 1]) if '--nboot' in a else 2000
 SEED = 42
-try:   # config.conf 의 SEED 를 따른다. 못 읽으면 42.
+try:   # config.conf 의 SEED 사용, 못 읽으면 42
     SEED = int(_cfg.SEED)
 except Exception:
     pass
-# 기본값을 우리 내부 코호트 이름으로 두지 않는다. 두면 남이 받아
-#   돌릴 때 「없는 코호트」 를 읽어 표가 다 빈 채 정상 종료한다.
+# COHORT 기본값 없음 - 없는 코호트 읽으면 빈 표로 정상 종료돼서
 COHORT = os.environ.get('COHORT') or ''
 if not COHORT:
     raise SystemExit('COHORT 를 주십시오: 3단계에서 쓴 것과 같아야 합니다.'
                      '  예: COHORT=<your_cohort> python ' + os.path.basename(__file__))
 LIVE = _M + '/%s_val' % COHORT
-# 판 명단을 config.conf 한 곳에서 읽는다. 여기 복사본이 있으면
-#   표·감시·귀무사슬이 서로 어긋날 수 있다.
+# 판 명단은 config.conf 에서만 읽음
 PANELS = _cfg.PANELS
 
-# 플랫폼: 배경 1~3 = EGAD(페어드엔드) · 4~10 = GSE301266 비악성 대조(단일말단)
-#  혼합판에서는 이 축이 존재하지 않는다. MIXED 가 참이면 쓰지 않는다.
-#  기본값 1~3 은 이 논문(GBM) 자료의 배경 구성이다. 배경 구성이 다른 자료는
-#  EGAD_REPS="1 2" 처럼 첫 플랫폼의 배경 번호를 주거나, 빈 값("")으로 두면
-#  플랫폼으로 가르지 않는다(층화 없이 재표본 · 특이도는 «합본» 줄만 읽는다).
+# 플랫폼 구분용 배경 번호. 기본 1 2 3 = 이 GBM 자료의 EGAD 배경 (나머지는 GSE)
+# 다른 자료는 EGAD_REPS 로 지정, 빈 값이면 플랫폼 구분 안 함 (특이도는 합본만)
+# 혼합판에서는 안 씀
 _er = os.environ.get('EGAD_REPS')
 EGAD_REPS = (1, 2, 3) if _er is None else tuple(int(x) for x in _er.replace(',', ' ').split())
 
 
-# 검체 이름에서 「사람」을 뽑는다. 사람 단위로 묶어 한 사람이 표를 여럿 쥐지 않게 한다.
-#   기본값은 이 논문의 이름 규칙(pat_1_... · ind_3_...)이다.
-#   다른 자료를 쓰면 PERSON_RE 로 바꾼다. 괄호 하나가 사람 이름이 된다.
+# 검체 이름에서 사람 뽑기 (한 사람이 표 여럿 쥐지 않게)
+#   기본은 pat_1_..., ind_3_... 규칙. 다른 자료면 PERSON_RE 로, 괄호 하나 = 사람 이름
 #   예: PERSON_RE='^([A-Z0-9]+)-'
 _PRE = re.compile(os.environ.get('PERSON_RE') or r'^((pat|ind)_\d+)_')
 _pmiss = [0, 0]
@@ -115,15 +89,14 @@ def person(s):
 
 
 def person_warn():
-    """하나도 못 맞추면 사람 묶기가 검체 묶기와 같아진다. 조용히 넘기지 않는다."""
+    """PERSON_RE 가 하나도 못 맞추면 경고 (사람 단위 = 검체 단위가 돼서)"""
     if _pmiss[1] == 0 and _pmiss[0]:
         print('  ! PERSON_RE 가 검체 %d개 중 하나도 못 맞췄습니다 — 사람 단위 묶기가 검체 단위와'
               ' 같아집니다. 환경변수 PERSON_RE 를 자료의 이름 규칙에 맞추세요.' % _pmiss[0])
 
 
 def donor(rep):
-    """혼합 이전 판에서만 뜻이 있다. 음성 행의 rep 'Normal7' -> 7.
-       혼합판에서는 이 숫자가 반복본 번호이지 공여자가 아니다. is_mixed() 로 가른다."""
+    """음성 행 rep 'Normal7' → 7. 혼합 이전 판에서만 공여자 번호 (혼합판은 반복본 번호)"""
     m = re.search(r'(\d+)$', str(rep))
     return int(m.group(1)) if m else 0
 
@@ -133,8 +106,8 @@ def val_dir(panel):
 
 
 def is_mixed():
-    """혼합판이면 참. background_map CSV 의 `take` 열이 NEW_MIX 만 내는 서명이다.
-       못 찾으면 참으로 본다: 모르는데 층화하는 쪽이 훨씬 나쁘다."""
+    """혼합판이면 참 (background_map CSV 에 take 열 있으면 혼합판)
+       못 찾으면 참으로 봄 (모르고 층화하는 쪽이 더 나빠서)"""
     for p in PANELS:
         fs = glob.glob(val_dir(p) + '/step03_Preprocessing_for_ML/*/background_map*.csv')
         if fs:
@@ -146,16 +119,11 @@ def is_mixed():
 
 
 
-_GEN_SEEN = {}      # 판_깊이 -> (이름세대, 조합수)
+_GEN_SEEN = {}      # 판_깊이 -> (이름세대, 1차 조합 유무 1/0/-1)
 
 
 def _width(f):
-    """1차 조합이 그 파일에 있으면 1, 없으면 0.
-
-    담긴 조합 총수는 1차 지표를 흔들지 않는다 — 조합은 결과를 보기 전에
-    하나로 정해 뒀고 최대값을 고르지 않는다. 확인할 것은 그 한 조합의 칸이
-    판마다 다 있는지다. 없는 판이 있으면 그 판은 1차 지표가 없는 것이다.
-    """
+    """1차 조합이 그 파일에 있으면 1, 없으면 0 (못 읽으면 -1)"""
     try:
         return int(COMBO in set(pd.read_csv(f, usecols=['feature_set']).feature_set.unique()))
     except Exception:
@@ -163,11 +131,9 @@ def _width(f):
 
 
 def _allcombo(prefix):
-    """all_combos 채점 파일을 찾는다.
+    """all_combos 채점 파일 찾기
 
-    옛 산출물은 꼬리가 _모든조합.csv 다. 새 이름만 찾으면 옛 트리에서는
-    한 칸도 못 읽는다. 새 이름이 하나도 없을 때만 옛 이름을 본다. 끝을 맞춰 글롭하므로
-    _모든조합_포화전.csv (중간 산출물) 는 안 걸린다.
+    없으면 옛 이름 _모든조합.csv 로 찾음 (_모든조합_포화전.csv 중간 산출은 안 걸림)
     """
     _k = prefix.split('/')[-1][len('y_prob_all_'):]
     fs = glob.glob(prefix + '_all_combos.csv')
@@ -176,20 +142,14 @@ def _allcombo(prefix):
         return fs
     fs = glob.glob(prefix + '_모든조합.csv')
     if fs:
-        # [기록] 이름만이 아니라 조합 수까지 남긴다. 이름이 다른 것은 그 자체로
-        #   해롭지 않다. 해로운 것은 「고를 수 있었던 폭」이 칸마다 다른 것이다
-        #   — 폭이 넓은 쪽이 최대값을 고를 기회를 더 받는다.
+        # 이름과 함께 1차 조합 유무도 기록 (gen_warn 에서 출력)
         _GEN_SEEN[_k] = ('모든조합', _width(fs[0]))
         print('   [옛 이름으로 읽음] %s_모든조합.csv (%d개)' % (prefix.split('/')[-1], len(fs)))
     return fs
 
 
 def gen_warn():
-    """칸마다 읽은 산출물의 이름세대나 조합 수가 다르면 표 밑에 찍는다.
-
-    1차 조합은 결과를 보기 전에 하나로 정해 뒀으므로 담긴 조합 총수에
-    영향받지 않는다. 그래도 찍는다 — 출처가 다르면 재현 경로가 다르다.
-    """
+    """칸마다 읽은 산출물의 이름세대나 1차 조합 유무가 다르면 표 밑에 경고"""
     if len(_GEN_SEEN) < 2:
         return
     gens = {g for g, _ in _GEN_SEEN.values()}
@@ -208,14 +168,14 @@ def gen_warn():
         print('        %-28s %-11s 1차조합 %s' % (_n, _g, '있음' if _w == 1 else '없음'))
 
 def load(panel, combo):
-    """make_tables.py 와 같은 원본을 읽는다. 검체마다 파일 하나."""
+    """make_tables.py 와 같은 원본 읽기 (검체마다 파일 하나)"""
     v = _cfg.version_name(panel, DEPTH)
     pat = '%s/step04_ML_classifier/y_prob_all_%s' % (val_dir(panel), v)
     fs = sorted(_allcombo(pat))
     if not fs:
         return None, '채점 파일 없음: %s' % pat
     d = pd.concat([pd.read_csv(f) for f in fs], ignore_index=True)
-    d, _nu = _cfg.unify_score_unit(d)          # SCORE_UNIT=consistent 일 때만 바뀐다
+    d, _nu = _cfg.unify_score_unit(d)          # SCORE_UNIT=consistent 일 때만 바뀜
     d = d[d.feature_set == combo]
     if not len(d):
         return None, '조합 %s 가 %d개 파일에 없음' % (combo, len(fs))
@@ -227,7 +187,7 @@ def load(panel, combo):
 
 
 def a1w(pos, neg, wp, wn):
-    """a1 에 뽑힌 횟수를 무게로 준 것(복원추출 부트스트랩)."""
+    """a1 에 뽑힌 횟수로 가중 (복원추출 부트스트랩용)"""
     mp, mn = wp > 0, wn > 0
     if not mp.any() or not mn.any():
         return float('nan')
@@ -237,7 +197,7 @@ def a1w(pos, neg, wp, wn):
 
 
 def a1(pos, neg):
-    """a1: 검체·복제본 전체."""
+    """a1: 검체, 복제본 전체 AUC"""
     if not len(pos) or not len(neg):
         return float('nan')
     y = np.r_[np.zeros(len(neg)), np.ones(len(pos))]
@@ -245,33 +205,14 @@ def a1(pos, neg):
     return float(roc_auc_score(y, s))
 
 
-GATE = 0.70   # 판정 문턱: 셋 다 이것을 못 넘으면 순위를 매기지 않는다
+GATE = 0.70   # 판정 문턱: 셋 다 못 넘으면 순위 안 매김
 
 
 def run(combo, mixed):
-    """한 피처 조합에 대해 판별 표와 짝지은 부트스트랩 구간을 찍는다. 120줄.
+    """조합 하나의 판별 AUC, 짝지은 부트스트랩 구간, 특이도 출력 (표준출력만)
 
-    받는 것
       combo   '|' 로 이은 피처 조합 (예: mean|entropy|jsd|llr|pdr)
-      mixed   혼합판인가. 참이면 공여자 층화를 하지 않는다
-      전역    DEPTH · RATIO · NBOOT · SEED · PANELS (config.conf)
-
-    읽는 것
-      <뿌리>/<코호트>_val/*/results/<판>/step04_ML_classifier/
-        y_prob_all_<판>_all_combos.csv      <- make_tables.py 와 「같은 원본」
-
-    내는 것 (파일 없음. 표준출력만)
-      판별 AUC 표 · 동점폭 · 쌍별 차이 구간 · 특이도
-
-    구역
-      1) 자료 읽기    판마다 load() · 없으면 이유를 적고 넘어간다
-      2) 검체 맞추기  비율마다 세 판 공통 검체로 거른다
-      3) 지표         검체 단위 · 사람 단위 AUC · 동점폭
-      4) 부트스트랩   양성 사람만 재표본 (음성 고정) · Bonferroni
-      5) 특이도       합본만. 혼합판이라 플랫폼별로 못 가른다
-
-    ※ 음성을 고정하므로 구간에 음성 축 불확실성이 0 으로 들어간다.
-      새 음성에서의 위양성 변동은 이 구간에 없다. 각주로 표에 박는다.
+      mixed   혼합판 여부, 참이면 음성 공여자 층화 안 함
     """
     print('')
     print('=' * 74)
@@ -284,9 +225,7 @@ def run(combo, mixed):
             print('  !! %s: %s' % (p, err))
             return 1
         D[p] = d
-    # 세 판이 «같은 행» 으로 비교되게 (검체 · 비율 · 반복 · 라벨) 단위로 교집합을 낸다.
-    #   검체 단위로만 맞추면 어떤 판에서 한 비율이 빠진 검체가 남아, 목표 비율 양성이나
-    #   «음성 전 비율» 의 행 수가 판마다 달라진다.
+    # (검체, 비율, 반복, 라벨) 단위로 세 판 교집합 (검체 단위로만 맞추면 판마다 행 수 달라짐)
     _keys = ['sample', 'ratio', 'rep', 'y_true']
     _rows = set.intersection(*[set(d[_keys].itertuples(index=False, name=None)) for d in D.values()])
     common = {k[0] for k in _rows}
@@ -306,7 +245,7 @@ def run(combo, mixed):
         print('  %-8s AUC %.4f  (양성 %d행 · 음성 %d행)'
               % (p, out[p][2], len(pos), len(neg)))
 
-    # ── 판정 문턱(0.70)을 여기서 본다 ──
+    # 판정 문턱(0.70) 확인
     aucs = [out[p][2] for p in PANELS]
     if all(v == v for v in aucs) and max(aucs) < GATE:
         print('')
@@ -315,7 +254,7 @@ def run(combo, mixed):
         print('    이 기준은 결과를 보기 전에 정했다.')
         print('    아래 구간은 순위를 내려는 것이 아니라 구간을 보고하려고 낸다.')
 
-    # ── 음성 재추출 축이 있는가 ──
+    # 음성 공여자 재표본 가능 여부
     if mixed:
         print('')
         print('  [혼합판] 음성 한 검체에 배경 전원의 리드가 섞여 들어간다(배경 구성은 코호트 설정의 NORMALS*).')
@@ -367,7 +306,7 @@ def run(combo, mixed):
         print('       음성 축 불확실성이 0 으로 들어간다. 새 음성에서의')
         print('       위양성 변동은 이 구간에 없다.')
 
-    # ── 특이도 ──
+    # 특이도
     print('')
     if mixed:
         print('  특이도 (합본만: 혼합판이라 플랫폼별로 가를 수 없다)')

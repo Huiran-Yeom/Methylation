@@ -1,21 +1,17 @@
 # -*- coding: utf-8 -*-
-"""S0a 후보 칸의 표준 CpG 자리 — 라벨을 쓰지 않는다.
+"""후보 블록마다 표준 CpG 자리 정하기 (라벨 안 씀)
+JSD 창이 모든 검체에서 같아야 해서 충분한 검체가 함께 보는 자리만 남김
+기준은 01 과 같음: 정상 60% AND 암 60% (세포주당 파일 MINREP개 이상)
 
-JSD 창은 모든 검체에서 같아야 한다. 검체마다 관측된 자리로 창을 만들면
-서로 다른 자리의 분포를 맞대게 되어 JSD 가 성립하지 않는다.
-그래서 칸마다 '충분한 검체가 함께 보는 자리'를 먼저 확정한다.
-기준은 후보 칸과 같다. 정상 60% AND 암 60%(종당 파일 MINREP개 이상).
+사용: python 02_blockcpg.py [--nd <정상 cov 폴더>] [--cand ..] [--out ..] [--depth N]
 """
 
-# 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돌아
-# 실제 자료를 덮어쓴다. 실행은 `python <파일>` 로만 한다.
+# 스크립트 전용. import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
 import os as _os, sys as _sys
-# 0_setup 을 찾는다. 이 파일이 「복사되어」 정리본 밖에서 돌 수도 있으므로
-#   ① 자기 위에서 위로 올라가며 찾고 ② 환경변수 METH_CONF_DIR ③ 그래도 없으면
-#   설정 없이 돌 수 있게 기본값으로 간다(검증이 검체 폴더로 복사해 쓰는 경로다).
+# 0_setup 찾기: 위로 올라가며 찾고, 없으면 METH_CONF_DIR 사용
 _h = _os.path.dirname(_os.path.abspath(__file__))
 for _ in range(5):
     _c = _os.path.join(_h, '0_setup')
@@ -39,16 +35,12 @@ except ImportError:
 import os, re, sys, glob, math
 import numpy as np, pandas as pd
 
-# ── 이 단계가 쓰는 경로 ──
-#   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
-#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
-#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
-#   이 단계가 읽는 자료 폴더는 환경변수로 옮길 수 있다.
-#     NORMAL_SET      정상 cov (*.cov.gz)
-#     GBM_COV_DIR     암 cov
+# 이 단계 경로. 폴더 구조 다르면 여기만 수정 (환경변수, 인자로 덮어쓰기 가능)
+#   NORMAL_SET      정상 cov (*.cov.gz)
+#   GBM_COV_DIR     암 cov
 ND   = _os.environ.get('NORMAL_SET')  or _M + '/sample_data/_input/normal_pub15'
 GD   = _os.environ.get('GBM_COV_DIR') or _D + '/training/GBM_cell-line/cov'
-# 산출 폴더는 GEN(패널 세대)을 따른다. 비우면 세대 없는 옛 폴더를 가리킨다.
+# 산출 폴더 이름에 GEN(패널 세대) 붙임. 못 읽으면 중단
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:
     try:
@@ -58,7 +50,7 @@ if not _GEN:
                          '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
 CAND = _M + '/results/dmr/j_candidates' + _GEN
 BLOCK, MINCOV, FRAC, MINREP = 100, 9, 0.60, 2
-try:   # config.conf 의 BLOCK_SIZE 를 따른다. 01·03·11 과 같은 격자여야 한다.
+try:   # config.conf 의 BLOCK_SIZE 사용 (01, 03, 11 과 같은 격자)
     BLOCK = int(_cfg.BLOCK_SIZE)
 except Exception:
     pass
@@ -69,12 +61,10 @@ if '--cand' in a: CAND = a[a.index('--cand')+1]
 if '--depth' in a: MINCOV = int(a[a.index('--depth')+1]) - 1
 OUT = a[a.index('--out')+1] if '--out' in a else CAND
 
-# 파일 이름에서 검체 이름을 뽑는다. 기본은 첫 _ 앞까지 — cov 와 BAM 의 뒤쪽
-#   꼬리표가 달라도 짝이 맞게 하기 위해서다.
-#   자료마다 이름 규칙이 다르다. 안 맞으면 「자료를 고치지 말고」 SID_RE 를 준다.
-#   첫 괄호가 검체 이름이 되고, 안 걸리면 기본 규칙으로 떨어진다. 예:
-#     SID_RE='(.+?)__'   H1876_0d__SRR…  -> H1876_0d   (밑줄 둘로 가르는 자료)
-#                        H1876__SRR…     -> H1876
+# 파일 이름에서 검체 이름 뽑기. 기본은 첫 _ 앞까지 (cov, BAM 꼬리표 달라도 짝 맞게)
+# 규칙이 안 맞으면 SID_RE 사용 (첫 괄호가 검체 이름, 안 걸리면 기본 규칙). 예:
+#   SID_RE='(.+?)__'   H1876_0d__SRR...  -> H1876_0d
+#                      H1876__SRR...     -> H1876
 _SRE = _os.environ.get('SID_RE')
 _srx = re.compile(_SRE) if _SRE else None
 def sid(p):
@@ -86,14 +76,10 @@ def sid(p):
         m = _srx.match(b)
         if m and m.groups(): return m.group(1)
     return b.split('_')[0]
-# 반복본을 독립단위(세포주 한 종)로 묶는 규칙. 커버 조건을 파일이 아니라
-#   독립단위로 세기 때문에 이 규칙이 need_g 와 MINREP 에 바로 들어간다.
-#   기본값은 이 연구의 GBM 자료 이름 규칙(SNU<n>-<반복>)이다. 다른 자료는
-#   GROUP_RE 로 준다 — 첫 괄호가 독립단위 이름이 된다. 예:
-#     GROUP_RE='(.+?)_\d+d$'        H1876_0d -> H1876 · H1876 -> H1876
-#   맞지 않는 이름은 그대로 한 단위가 된다. 위 패턴이 '([A-Za-z0-9]+)' 보다
-#   안전하다 — 후자는 SHP_77 을 SHP 로 잘라 다른 세포주와 섞을 수 있다.
-#   안 주면 이름이 그대로 독립단위가 되어, 반복본이 서로 다른 종으로 세어진다.
+# 반복본을 세포주 하나로 묶는 규칙 (커버를 세포주 단위로 세서 need_g, MINREP 에 바로 들어감)
+# 기본은 SNU<n>-<반복>. 다른 자료는 GROUP_RE 사용 (첫 괄호가 세포주 이름). 예:
+#   GROUP_RE='(.+?)_\d+d$'        H1876_0d -> H1876, H1876 -> H1876
+# 안 맞는 이름은 그대로 한 단위 (안 주면 반복본이 서로 다른 세포주로 세어짐)
 _GRE = _os.environ.get('GROUP_RE')
 _grx = re.compile(_GRE) if _GRE else None
 
@@ -101,10 +87,7 @@ _grx = re.compile(_GRE) if _GRE else None
 _CANCER = getattr(_cfg, 'CANCER_LABEL', 'GBM')   # samples.csv 의 type 값
 
 def grp(s, t=_CANCER):
-    # GROUP_RE 는 「암 쪽에만」 쓴다. 반복본 묶기는 세포주 개념이고, 정상은
-    #   한 사람당 한 파일이 전제다(아래 assert u_norm == n_norm 이 그것을 지킨다).
-    #   정상까지 묶으면 NC-P-1·NC-P-3·… 아홉이 'NC' 하나가 되어 커버 기준이
-    #   9명에서 5명으로 느슨해진다.
+    # GROUP_RE 는 암 쪽에만 사용. 정상은 한 사람당 한 파일 전제
     if _grx is not None and t == _CANCER:
         m = _grx.match(s)
         return m.group(1) if (m and m.groups()) else s
@@ -113,8 +96,7 @@ def grp(s, t=_CANCER):
 files = [(f,'Normal') for f in sorted(glob.glob(ND+'/*.cov.gz'))] + \
         [(f,_CANCER)    for f in sorted(glob.glob(GD+'/*.cov.gz'))]
 if not files: sys.exit('cov 파일 없음')
-# 같은 sid 가 둘 이상이면 멈춘다. sid 는 검체 이름이자 표의 열 이름이라,
-#   겹치면 pivot_table(aggfunc='first') 이 뒤엣것을 「조용히 버린다」.
+# 같은 sid 가 둘 이상이면 중단 (표 열 이름이라 겹치면 하나가 버려짐)
 _byid = {}
 for _f, _t in files: _byid.setdefault(sid(_f), []).append(_os.path.basename(_f))
 _dup = {k: v for k, v in _byid.items() if len(v) > 1}
@@ -158,7 +140,7 @@ for i,(p,t) in enumerate(files,1):
     print('  [%2d/%d] %-16s %8d' % (i,len(files),s,len(d)))
     if d.empty: continue
     d = d[['chr','blk','start']].copy()
-    d['grp'] = grp(s, t); d['ty'] = t        # 정상은 GROUP_RE 로 묶지 않는다(위 u_norm 과 같은 규칙)
+    d['grp'] = grp(s, t); d['ty'] = t        # 정상은 GROUP_RE 로 안 묶음
     rows.append(d)
 
 A = pd.concat(rows, ignore_index=True)

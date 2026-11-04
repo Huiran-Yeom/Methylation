@@ -1,13 +1,11 @@
-"""두 대비에서 «둘 다 통과한» 블록으로 패널을 만든다 (다음 판 2안-b).
+"""두 대비에서 모두 통과한 블록으로 패널을 만듦
+  DMR1: 암 대 정상 조직 (다른 트리의 1단계 산출), DMR2: 암 대 정상 cfDNA (이 트리)
+  bl200   두 트리 07 순위 목록(DMR_ranked_m.csv)에 다 있는 칸 → DMR2 순위로 상위 N
+  jsd200  두 트리 다 JSD 가 귀무 PCT 백분위 넘는 칸 (06b 와 같은 기준) → DMR2 jsd_obs 순으로 상위 N
+  dbeta, q 는 06 과 같은 방법으로 트리마다 계산, 부호 같은 칸 셈
+  MIN 칸 미만인 판은 계산 불가로 빼고, 남은 판 목록을 OUT/_intersect_panels.txt 에 씀
 
-  DMR1  암 대 정상 조직 (다른 트리의 1단계 산출 · 정상 = 정상 폐 조직)
-  DMR2  암 대 정상 cfDNA (이 판의 1안 트리 1단계 산출)
-  bl200   두 트리의 07 순위 목록(DMR_ranked_m.csv · q<0.05 · |dbeta|>=30)에 모두 있는 칸 → DMR2 순위 상위 N
-  jsd200  두 트리 모두 JSD 가 귀무 PCT 백분위를 넘는 칸(06b 와 같은 정의 · jsd_obs > t) → DMR2 jsd_obs 순서 상위 N
-  dbeta · q 는 06 과 같은 방법(세포주 단위 평균 · moderated t · BH)으로 각 트리에서 낸다. 방향(dbeta 부호)은 두 대비를 맞대어 센다.
-  MIN(기본 50)칸 미만인 판은 «계산 불가» 다. 남은 판 목록을 OUT/_intersect_panels.txt 에 적는다.
-
-  쓰는 법:
+  사용
     python 12b_passset_panels.py --a <DMR1 results/dmr> --b <DMR2 results/dmr> --out <이 트리 j_panel_dmr<GEN>_panels>
                                  [--n 200] [--pct 99] [--min 50] [--report-only]
 """
@@ -53,7 +51,7 @@ _CANCER = getattr(_cfg, 'CANCER_LABEL', 'GBM')
 
 
 def stats(R):
-    """06 과 같은 dbeta · q (세포주 단위 평균 · moderated t · BH). 칸 이름 → (dbeta, q)."""
+    """06 과 같은 dbeta, q (세포주 평균, moderated t, BH). 칸 이름별 표로 돌려줌"""
     C = '%s/j_candidates%s' % (R, GEN)
     B = pd.read_parquet(C + '/beta_matrix.parquet')
     M = pd.read_csv(C + '/samples.csv')

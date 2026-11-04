@@ -1,13 +1,10 @@
 
-# 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돌아
-# 실제 자료를 덮어쓴다. 실행은 `python <파일>` 로만 한다.
+# 스크립트 전용 (import 하면 본체가 돎). python <파일> 로만 실행
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
 import os as _os, sys as _sys
-# 0_setup 을 찾는다. 이 파일이 「복사되어」 정리본 밖에서 돌 수도 있으므로
-#   ① 자기 위에서 위로 올라가며 찾고 ② 환경변수 METH_CONF_DIR ③ 그래도 없으면
-#   설정 없이 돌 수 있게 기본값으로 간다(검증이 검체 폴더로 복사해 쓰는 경로다).
+# 0_setup 찾기: 위 폴더로 올라가며 찾고, 없으면 METH_CONF_DIR
 _h = _os.path.dirname(_os.path.abspath(__file__))
 for _ in range(5):
     _c = _os.path.join(_h, '0_setup')
@@ -28,22 +25,18 @@ except ImportError:
         '  트리 밖에서 돌리려면 METH_CONF_DIR 로 0_setup 자리를 주십시오.')
 
 
-# 외부검증 표: 비율마다 그 비율의 양성/음성만 (1,780 대 1,780).
-#   검체 단위 : 행 그대로
-#   사람 단위 : 양성만 person 으로 묶는다(평균). 음성은 검체 단위로 묶는다.
-#               aggregate_scores.py 의 [사람 단위] 집계와 같은 규칙.
-#               (음성을 공여자로 묶으면 분포가 뭉개지므로 묶지 않는다)
+# 외부검증 표: 비율마다 그 비율의 양성, 음성만
+#   검체 단위: 행 그대로
+#   사람 단위: 양성만 사람으로 묶어 평균, 음성은 검체 단위 (aggregate_scores.py 와 같은 규칙)
 import pandas as pd, numpy as np, glob, os, re, sys
-# 기본값을 우리 내부 코호트 이름으로 두지 않는다. 두면 남이 받아
-#   돌릴 때 「없는 코호트」 를 읽어 표가 다 빈 채 정상 종료한다.
+# COHORT 기본값 없음 - 없는 코호트 읽으면 빈 표로 정상 종료돼서
 COHORT = os.environ.get('COHORT') or ''
 if not COHORT:
     raise SystemExit('COHORT 를 주십시오: 3단계에서 쓴 것과 같아야 합니다.'
                      '  예: COHORT=<your_cohort> python ' + os.path.basename(__file__))
 V = _M + '/%s_val' % COHORT
-NTOT = len(glob.glob(V + '/*/results'))   # 분모를 178 로 박지 않는다
-# 판 이름에 기본값을 두지 않는다. 두면 인자 없이 돌릴 때 조용히 특정
-#   세대·특정 판을 본다.
+NTOT = len(glob.glob(V + '/*/results'))   # 분모는 폴더 수에서 셈
+# 판 이름 기본값 없음, 인자 필수
 if len(sys.argv) < 2:
     sys.exit('사용: python make_tables.py <판이름>   예) python make_tables.py %s'
              '   ·  판 명단은 config.conf 의 PANELS · NULL_PANELS 에 있습니다: %s'
@@ -57,12 +50,11 @@ SHORT = {'mean|entropy': 'ME', 'mean|entropy|jsd': 'ME+JSD', 'llr': 'LLR',
          'mean|entropy|llr': 'ME+LLR', 'mean|entropy|jsd|llr': 'ME+JSD+LLR', 'pdr': 'PDR',
          'mean|entropy|pdr': 'ME+PDR', 'mean|entropy|jsd|pdr': 'ME+JSD+PDR',
          'mean|entropy|jsd|llr|pdr': 'ME+JSD+LLR+PDR'}
-# 읽을 깊이. 자료를 바꾸면 DEPTHS='5k 50k' 처럼 준다.
+# 읽을 깊이 (다른 자료면 DEPTHS='5k 50k' 처럼)
 DEPTHS = tuple((os.environ.get('DEPTHS') or '5k 15k 50k 100k').split())
 
-# 검체 이름에서 「사람」을 뽑는다. 사람 단위로 묶어 한 사람이 표를 여럿 쥐지 않게 한다.
-#   기본값은 이 논문의 이름 규칙(pat_1_... · ind_3_...)이다.
-#   다른 자료를 쓰면 PERSON_RE 로 바꾼다. 괄호 하나가 사람 이름이 된다.
+# 검체 이름에서 사람 뽑기 (한 사람이 표 여럿 쥐지 않게)
+#   기본은 pat_1_..., ind_3_... 규칙. 다른 자료면 PERSON_RE 로, 괄호 하나 = 사람 이름
 #   예: PERSON_RE='^([A-Z0-9]+)-'
 _PRE = re.compile(os.environ.get('PERSON_RE') or r'^((pat|ind)_\d+)_')
 _pmiss = [0, 0]
@@ -78,7 +70,7 @@ def person(s):
 
 
 def person_warn():
-    """하나도 못 맞추면 사람 묶기가 검체 묶기와 같아진다. 조용히 넘기지 않는다."""
+    """PERSON_RE 가 하나도 못 맞추면 경고 (사람 단위 = 검체 단위가 돼서)"""
     if _pmiss[1] == 0 and _pmiss[0]:
         print('  ! PERSON_RE 가 검체 %d개 중 하나도 못 맞췄습니다 — 사람 단위 묶기가 검체 단위와'
               ' 같아집니다. 환경변수 PERSON_RE 를 자료의 이름 규칙에 맞추세요.' % _pmiss[0])
@@ -88,13 +80,7 @@ _GEN_SEEN = {}      # 판_깊이 -> (이름세대, 조합수)
 
 
 def _width(f):
-    """이 표가 쓰는 보고 9조합 중 그 파일에 몇 개가 있는지.
-
-    담긴 조합 총수(31 이냐 9 냐)는 이 표를 치우치게 하지 않는다 — 이 표는
-    COMBOS 를 한 줄씩 내고 조합 최대값을 쓰지 않는다. 해로운 것은 보고
-    조합인데 칸이 아예 없는 경우다. 그러면 그 열은 판마다 다른 조합 집합을
-    나란히 놓은 것이 된다.
-    """
+    """보고 9조합(COMBOS) 중 그 파일에 있는 수 (보고 조합 칸이 빠진 판 확인용)"""
     try:
         have = set(pd.read_csv(f, usecols=['feature_set']).feature_set.unique())
     except Exception:
@@ -103,11 +89,9 @@ def _width(f):
 
 
 def _allcombo(prefix):
-    """all_combos 채점 파일을 찾는다.
+    """all_combos 채점 파일 찾기
 
-    옛 산출물은 꼬리가 _모든조합.csv 다. 새 이름만 찾으면 옛 트리에서는
-    한 칸도 못 읽는다. 새 이름이 하나도 없을 때만 옛 이름을 본다. 끝을 맞춰 글롭하므로
-    _모든조합_포화전.csv (중간 산출물) 는 안 걸린다.
+    없으면 옛 이름 _모든조합.csv 로 찾음 (_모든조합_포화전.csv 중간 산출은 안 걸림)
     """
     _k = prefix.split('/')[-1][len('y_prob_all_'):]
     fs = glob.glob(prefix + '_all_combos.csv')
@@ -116,18 +100,14 @@ def _allcombo(prefix):
         return fs
     fs = glob.glob(prefix + '_모든조합.csv')
     if fs:
-        # [기록] 이름만이 아니라 보고 조합이 몇 개 있는지까지 남긴다. 이름이
-        #   다른 것은 그 자체로 해롭지 않다. 해로운 것은 보고 조합인데 칸이
-        #   없는 것이다. 이름만 찍으면 읽는 사람이 「이름만 다르겠지」 로
-        #   넘긴다.
+        # 이름과 함께 보고 조합 수도 기록 (gen_warn 에서 출력)
         _GEN_SEEN[_k] = ('모든조합', _width(fs[0]))
         print('   [옛 이름으로 읽음] %s_모든조합.csv (%d개)' % (prefix.split('/')[-1], len(fs)))
     return fs
 
 
 def gen_warn():
-    """칸마다 읽은 산출물의 이름세대나 조합 수가 다르면 표 밑에 찍는다.
-       막을 수는 없어도 모르고 넘어가는 것은 막는다."""
+    """칸마다 읽은 산출물의 이름세대나 조합 수가 다르면 표 밑에 경고"""
     if len(_GEN_SEEN) < 2:
         return
     gens = {g for g, _ in _GEN_SEEN.values()}
@@ -155,15 +135,10 @@ def auc(y, s):
 
 
 def tie_width(y, s):
-    """동점 때문에 정해지지 않는 AUC 폭. (최소, 최대, 고유값 수)
+    """동점 때문에 안 정해지는 AUC 폭 → (최소, 최대, 고유값 수)
 
-    RandomForest 를 고른 칸에서 predict_proba 가 k/100 으로 양자화되고,
-      학습이 양성 90% 라 표가 몰려 3,300행에 고유값 10개 까지 떨어진다.
-      같은 점수끼리는 누가 위인지 모르므로 AUC 가 한 점이 아니라 구간이 된다.
-      보고값(auc)은 동점을 반반으로 센 구간 안의 한 점일 뿐이다.
-      폭이 판 사이 격차보다 크면 순위를 주장할 수 없다. 그래서 같이 낸다.
-      RandomForest 에는 decision_function 이 없어 df 전환으로 못 고친다.
-        값을 바꾸는 대신 폭을 함께 보고한다.
+    RandomForest 점수는 k/100 으로 양자화돼서 동점이 많음
+    폭이 판 사이 차이보다 크면 순위 주장 불가라 같이 출력
     """
     y, s = np.asarray(y, float), np.asarray(s, float)
     P, N = (y == 1).sum(), (y == 0).sum()
@@ -171,7 +146,7 @@ def tie_width(y, s):
         return np.nan, np.nan, 0
     o = np.argsort(s, kind='mergesort')
     ys, ss = y[o], s[o]
-    def w(t):                      # t=0 동점을 양성에 불리 · 1 유리
+    def w(t):                      # t=0 동점을 양성에 불리하게, 1 유리하게
         U = 0.0; seen = 0; i = 0
         while i < len(ss):
             j = i
@@ -186,17 +161,13 @@ def tie_width(y, s):
 
 
 def baseline_lines(D, depth, ratios):
-    """REPORT_BASELINE=on 일 때 패널 표 밑에 붙는 대조 줄. 판정에 쓰지 않는다.
+    """REPORT_BASELINE=on 일 때 패널 표 밑에 붙는 대조 줄 (판정에 안 씀)
 
-    값: 행(검체 · 비율 · 반복)마다, 패널 점수와 같은 깊이의 같은 뽑기로 만든 mean 특징 표
-        (<비율>_mean_<판>.csv)의 블록 평균 메틸화를 다시 평균한 숫자 하나. 리드나 CpG 로 가중하지 않고,
-        빈 블록은 행마다 빠진다.
-    주의: 이것은 «전역» 평균 메틸화가 아니다. DMR 로 고른 패널 블록만의 평균이라 암 신호가 이미 들어 있다.
-        «같은 뽑기의 전역 평균» 은 뽑은 리드의 cov 가 남지 않아 낼 수 없어 이것으로 대신했다. 그래서 플랫폼 · 전역 메틸화 교란을 재는 대조가 아니라, «패널 점수가 블록 평균 하나보다
-        나은가» 를 보는 대조다.
-    행: 1차 조합(COMBOS 의 마지막)의 행과 같다 — 교집합 거르기를 이미 거친 D 를 쓴다.
-    방향: 같은 판 학습 mean 표(비율 0 을 뺀 전부)에서 한 번 정한다 — 암 행 평균 ≥ 정상 행 평균이면 높을수록 암.
-        패널 점수의 방향도 학습 모델이 정하므로 같은 조건이다. 검증 라벨로 고르면 기준선이 유리해진다.
+    값: 행(검체, 비율, 반복)마다 같은 뽑기의 mean 특징 표(<비율>_mean_<판>.csv) 블록 평균을 다시 평균
+        (가중 없음, 빈 블록 제외)
+    전역 평균 메틸화 아님 - 패널 블록만의 평균이라 패널 점수가 블록 평균 하나보다 나은지 보는 용도
+    행: 교집합 거친 D 의 1차 조합(COMBOS 마지막) 행
+    방향: 같은 판 학습 mean 표(비율 0 제외)에서 정함 (검증 라벨로 정하면 기준선이 유리해짐)
     """
     v = '%s_%s_uni' % (PAN, depth)
     base = D[D.feature_set == COMBOS[-1]]
@@ -239,30 +210,24 @@ def baseline_lines(D, depth, ratios):
     print('%-16s %-5s %s   사람' % ('', '', ''.join('%9.3f' % v for v in rp)))
     print('%-16s %-5s   ↑ 대조 · 판정 아님: 같은 뽑기의 패널 블록 평균 메틸화 하나(전역 아님) · 방향 %s (학습 표로 정함)%s'
           % ('', '', '높을수록 암' if up else '낮을수록 암', (' · 값이 없어 뺀 행 %d' % nan) if nan else ''))
-    # 채점 파일에는 모델을 낸 트리가 남지 않는다. 다른 트리의 모델로 채점했다면 이 경로가 그 트리인지 본다.
+    # 방향 정한 학습 표 경로 출력 (다른 트리 모델로 채점했을 때 확인용)
     print('%-16s %-5s   방향을 정한 학습 표: %s (%d개)' % ('', '', trd, len(tr)))
 
 
 for depth in DEPTHS:
-    # 태그 없는 단일모델 파일과 섞이지 않게 all_combos만 읽는다
+    # all_combos 파일만 읽음 (단일모델 파일과 안 섞이게)
     fs = _allcombo('%s/*/results/%s_%s_uni/step04_ML_classifier/y_prob_all_%s_%s_uni'
                    % (V, PAN, depth, PAN, depth))
     if not fs:
         print('\n== %s 리드: all_combos 채점 파일 없음' % depth); continue
     D = pd.concat([pd.read_csv(f) for f in fs], ignore_index=True)
-    D, _nu = _cfg.unify_score_unit(D)          # SCORE_UNIT=consistent 일 때만 바뀐다
+    D, _nu = _cfg.unify_score_unit(D)          # SCORE_UNIT=consistent 일 때만 바뀜
     if _nu:
         print('  [점수 단위] 확률과 decision_function 이 섞인 조합 %d개를 decision_function 으로 맞췄다' % _nu)
     D['person'] = D['sample'].map(person)
     person_warn()
-    # [교집합 · 비율별] 「세 패널이 모두 값을 낸 검증 검체만」.
-    #   실측: 빠짐은 검체 전체가 아니라 (검체,비율) 칸 단위로 일어난다.
-    #     5k   모든 비율 178/178/178            깨끗
-    #     50k  2% 부터 갈림 · 5% 164/165/165
-    #     100k 1% 부터 갈림 · 5% 110/111/120 → 교집합 99 (178의 56%)
-    #   높은 비율에서 종양 리드를 채우려면 원본에 그만큼 리드가 있어야 하는데 못 채우는 검체가 있다.
-    #   빠짐이 커버리지와 상관하므로 무작위가 아니다 → 전수로 내면 판마다 다른 환자 집단을 비교하게 된다.
-    #   그래서 비율마다 세 판 공통 검체로 거른다.
+    # 비율마다 세 판 모두 값 낸 검체만 사용
+    #   깊이, 비율 높으면 리드 못 채워 빠지는 검체 있음 (무작위 아님, 판마다 집단 달라짐)
     _ISEC = {}      # 비율 -> 공통 검체 집합
     _HAS = {}       # 비율 -> 그 비율이 하나라도 있는 판 수
     _NPAN = 0
@@ -284,11 +249,11 @@ for depth in DEPTHS:
         for _r, _s in _byr.items():
             _UNI[_r] = _UNI.get(_r, set()) | _s
             _ISEC[_r] = _s if _r not in _ISEC else (_ISEC[_r] & _s)
-        if _byr:                # 채점 파일이 하나라도 있는 판만 센다(그 깊이에 안 돌린 판은 빼고 맞춘다)
+        if _byr:                # 채점 파일 있는 판만 셈 (그 깊이에 안 돌린 판은 제외)
             _NPAN += 1
         for _r in _byr:
             _HAS[_r] = _HAS.get(_r, 0) + 1
-    # 어떤 판에 한 비율이 통째로 없으면 그 비율의 공통 검체는 없다(있는 판들만으로 교집합을 내지 않는다).
+    # 어떤 판에 그 비율이 통째로 없으면 공통 검체 없음으로 처리
     for _r in list(_ISEC):
         if _HAS.get(_r, 0) < _NPAN:
             _ISEC[_r] = set()
@@ -326,20 +291,17 @@ for depth in DEPTHS:
         print('%-16s %-5s %s   검체' % (SHORT.get(c, c), (mdl.iloc[0][:3] if len(mdl) else '?'),
                                         ''.join('%9.3f' % v for v in rs)))
         print('%-16s %-5s %s   사람' % ('', '', ''.join('%9.3f' % v for v in rp)))
-        # [관문] 모델이 상수를 내뱉으면 동점 폭이 0 이라 아래 경고를 비켜 간다.
-        #   고유값 1개면 양성·음성에 같은 점수를 줬다는 뜻이고 AUC 는 정확히 0.5 로
-        #   「성능이 낮다」 처럼 보인다. 실제로 폐 100k 의 llr 단독에서 XGBoost 가
-        #   840행 전부 0.9995 를 냈다. 낮은 성능이 아니라 못 쓰는 칸이다.
+        # 상수 예측 경고 - 고유값 1개면 AUC 0.5 지만 성능 아니라 구별 실패
+        #   (동점 폭 0 이라 아래 동점폭 경고에는 안 걸림)
         _const = [i for i, (_, _, u) in enumerate(tw) if u == 1]
         if _const:
             print('%-16s %-5s   !! 상수 예측: 비율 %s 에서 점수 고유값이 1개다.'
                   '  이 줄의 AUC 는 성능이 아니라 구별 실패다.'
                   % ('', '', ','.join('%g%%' % ratios[i] for i in _const)))
 
-        # 동점 폭이 0.02 를 넘는 칸이 있으면 그 줄 밑에 구간을 적는다.
-        #   0.02 는 「세 판 사이 격차의 최소 단위」 정도. 이보다 크면 순위 주장이 흔들린다.
+        # 동점 폭 0.02 넘는 칸 있으면 그 줄 밑에 폭 출력 (판 사이 차이 최소 단위 정도)
         if any((h - l) > 0.02 for l, h, _ in tw if l == l):
-            # 폭만 낸다. 구간 두 수를 9칸에 넣으면 붙어서 안 읽힌다
+            # 폭만 출력 (구간 두 수는 9칸에 안 들어감)
             print('%-16s %-5s %s   ↑동점폭' % ('', '',
                   ''.join(('%9.3f' % (h - l)) if (h - l) > 0.02 else '%9s' % '·'
                           for l, h, _ in tw)))

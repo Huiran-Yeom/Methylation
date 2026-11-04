@@ -1,22 +1,18 @@
 # -*- coding: utf-8 -*-
-"""S0d JSD 귀무분포: 문턱 t 를 정하기 위한 순열 검정.
+"""JSD 귀무 분포 (순열 검정, 문턱 정하기용)
+라벨을 섞어 무작위 단위를 암으로 지정하고 JSD 다시 계산, NPERM 번 반복
+섞는 단위는 사람 또는 세포주 (복제본은 함께 움직임), 집단 크기는 유지
 
-암/정상 딱지를 떼고 30개 독립단위 중 10개를 무작위로 '암'으로 지정해
-JSD 를 다시 잰다. 이걸 여러 번 반복해 '우연이면 이만큼은 나온다'를 얻는다.
-
-  섞는 단위는 독립단위다 (세포주 복제본 3개는 함께 움직인다)
-  집단 크기 20:10 을 유지한다
+사용: python 04b_jsdnull.py [--dir ..] [--cand ..] [--out ..] [--k K] [--minr N] [--frac F]
+                            [--need N] [--needg N] [--nperm N]
 """
 
-# 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돌아
-# 실제 자료를 덮어쓴다. 실행은 `python <파일>` 로만 한다.
+# 스크립트 전용. import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
 import os as _os, sys as _sys
-# 0_setup 을 찾는다. 이 파일이 「복사되어」 정리본 밖에서 돌 수도 있으므로
-#   ① 자기 위에서 위로 올라가며 찾고 ② 환경변수 METH_CONF_DIR ③ 그래도 없으면
-#   meth_config 없이 돌 수 있게 기본값으로 간다(검증이 검체 폴더로 복사해 쓰는 경로다).
+# 0_setup 찾기: 위로 올라가며 찾고, 없으면 METH_CONF_DIR 사용
 _h = _os.path.dirname(_os.path.abspath(__file__))
 for _ in range(5):
     _c = _os.path.join(_h, '0_setup')
@@ -40,7 +36,7 @@ except ImportError:
 import os, sys, math
 import numpy as np, pandas as pd
 
-# 산출 폴더는 GEN(패널 세대)을 따른다. 비우면 세대 없는 옛 폴더를 가리킨다.
+# 산출 폴더 이름에 GEN(패널 세대) 붙임. 못 읽으면 중단
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:
     try:
@@ -48,17 +44,13 @@ if not _GEN:
     except Exception:
         raise SystemExit('GEN(패널 세대)을 못 읽었습니다 — config.conf 의 GEN 을 채우거나 '
                          '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
-# ── 이 단계가 쓰는 경로 ──
-#   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
-#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
-#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
+# 이 단계 경로. 폴더 구조 다르면 여기만 수정 (인자로 덮어쓰기 가능)
 D    = _M + '/results/dmr/j_jsdcount' + _GEN
 CAND = _M + '/results/dmr/j_candidates' + _GEN
 OUT  = _M + '/results/dmr/j_jsd' + _GEN
-# 06b 가 설정의 MIN_READS_PER_WINDOW(=6)로 파일을 찾는다. 기본값을 설정에서
-#   읽어 세 자리(04·04b·04c)가 같은 값을 쓰게 한다. --minr 로 덮을 수 있다.
+# K, MINR 은 설정에서 읽음 (04, 04c 와 같은 값, 06b 가 이 값으로 파일 찾음). 인자가 우선
 K, MINR, NEED_N, NEED_G, MINREP, NPERM, SEED = 3, 6, 12, 6, 2, 100, 42
-try:   # SEED 는 config.conf 에서 읽는다.
+try:   # SEED 는 config.conf 에서 읽음
     SEED = int(_cfg.SEED)
 except Exception:
     pass
@@ -72,8 +64,8 @@ FRAC = 0.60          # 후보 풀과 같은 커버 기준
 a = sys.argv
 if '--k'     in a: K     = int(a[a.index('--k')+1])
 if '--frac' in a: FRAC = float(a[a.index('--frac')+1])
-if '--need'  in a: NEED_N = int(a[a.index('--need')+1])  # 정상 커버 기준을 CLI 로
-# '--needg' 는 값까지 읽는다. 「있는지」 만 보면 자동계산만 꺼지고 기본값 6 이 남는다.
+if '--need'  in a: NEED_N = int(a[a.index('--need')+1])  # 정상 커버 기준 직접 지정
+# 암 커버 기준 직접 지정
 if '--needg' in a: NEED_G = int(a[a.index('--needg')+1])
 if '--minr'  in a: MINR  = int(a[a.index('--minr')+1])
 if '--nperm' in a: NPERM = int(a[a.index('--nperm')+1])
@@ -88,8 +80,7 @@ grp = dict(zip(M['sample'], M['group'])); typ = dict(zip(M['sample'], M['type'])
 norm  = sorted(s for s in typ if typ[s] == 'Normal')
 lines = {}
 for s in sorted(t for t in typ if typ[t] == _CANCER): lines.setdefault(grp[s], []).append(s)
-# CANCER_LABEL 과 samples.csv 의 type 이 어긋나면 양성이 0개가 된다.
-#   그대로 두면 AUC 가 nan 이 되거나 전부 음성으로 학습한다. 여기서 멈춘다.
+# CANCER_LABEL 과 samples.csv type 이 안 맞으면 암 0개 → 중단
 if int(len(lines)) == 0:
     sys.exit('samples.csv 에 type=%s 인 검체가 없습니다. CANCER_LABEL 과 1단계가 쓴 값이'
              ' 어긋났습니다 (현재 CANCER_LABEL=%s).' % (_CANCER, _CANCER))
@@ -98,7 +89,7 @@ W  = pd.read_parquet(D + '/windows_K%d.parquet' % K)
 nw, m = len(W), 1 << K
 pc = ['p%d' % i for i in range(m)]
 NN, NG = len(norm), len(lines)
-# NEED 를 표본 수에서 자동 계산 (01_candidates.py:56-57 과 같은 규칙)
+# NEED 는 표본 수로 자동 계산 (01 과 같은 규칙)
 if '--need' not in a: NEED_N = int(math.ceil(FRAC * NN))
 if '--needg' not in a: NEED_G = int(math.ceil(FRAC * NG))
 print('커버 %.0f%% -> 정상 %d명 이상 · 암 %d종 이상' % (FRAC*100, NEED_N, NEED_G))

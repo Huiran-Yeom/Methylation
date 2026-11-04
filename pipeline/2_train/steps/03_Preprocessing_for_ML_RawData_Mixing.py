@@ -1,18 +1,11 @@
 #!/usr/bin/env python
 # coding: utf-8
-"""2_train/steps/03 (PE·SE 혼합판)
+"""2_train/steps/03: 섞은 BAM 에서 Bismark 메틸화 추출 (PE, SE 섞인 자료)
 
-m 판은 학습 자료가 전부 페어드엔드라 `--paired-end` 하나로 끝났다.
-j 판은 학습 정상 15명 중 2명이 단일말단이라 그 방법을 못 쓴다.
-
-  --single-end 로 통일하면 안 되는 이유
-    페어드엔드 짝이 겹친 구간(cfDNA 166bp 에 2x100 리드면 약 34bp)이 두 번 세어진다.
-    커버리지가 비균일하게 부풀어 커버리지 아티팩트가 하나 더 생긴다.
-
-  그래서 섞인 BAM 을 flag 로 나눠 두 번 돌리고 cov 를 자리별로 합친다.
+BAM 을 PE, SE 로 나눠 각각 추출하고 cov 를 자리별로 합침
+전부 --single-end 로 돌리면 짝이 겹친 구간이 두 번 세어짐
 """
-# 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돌아
-# 실제 자료를 덮어쓴다. 실행은 `python <파일>` 로만 한다.
+# 스크립트 전용 - import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
@@ -31,11 +24,9 @@ def sh(cmd):
 
 
 def split_pe_se(bam, tmp):
-    """이름순으로 정렬한 뒤 짝이 온전한 것만 PE 로 보낸다.
+    """이름순 정렬 후 짝이 온전한 것만 PE, 나머지는 SE 로 나눔
 
-    `samtools view -f 1` 만으로는 (가) 짝이 나란히 놓였는지 (나) 짝이 있기는 한지
-    둘 다 보장되지 않는다. bismark PE 모드는 두 줄을 순서대로 읽어 이름이 다르면
-    즉시 멈추므로, 여기서 직접 세어 나눈다.
+    bismark PE 모드는 두 줄 이름이 다르면 멈춰서 samtools -f 1 대신 직접 셈
     """
     _b = os.path.basename(bam)
     if _b.endswith('.bam'):
@@ -48,7 +39,7 @@ def split_pe_se(bam, tmp):
     pe = os.path.join(tmp, _b + '_pe.bam')
     se = os.path.join(tmp, _b + '_se.bam')
 
-    # 페어드 관련 비트: paired · proper · mate_unmapped · mate_reverse · read1 · read2
+    # 페어드 관련 비트: paired, proper, mate_unmapped, mate_reverse, read1, read2
     PAIRBITS = 0x1 | 0x2 | 0x8 | 0x20 | 0x40 | 0x80
 
     n_pe = n_se = 0
@@ -58,7 +49,7 @@ def split_pe_se(bam, tmp):
     fs = open(se_sam, 'w')
 
     def to_single(cols):
-        """페어드 비트를 끄고 mate 정보를 지운다."""
+        """페어드 비트 끄고 mate 정보 지움"""
         f = int(cols[1]) & ~PAIRBITS
         cols[1] = str(f)
         cols[6] = '*'   # RNEXT
@@ -104,7 +95,7 @@ def split_pe_se(bam, tmp):
     rc = p.wait()
     fp.close()
     fs.close()
-    if rc != 0:     # 읽다 끊긴 BAM 을 «짝 나눔 끝» 으로 넘기지 않는다
+    if rc != 0:     # samtools 가 중간에 실패하면 중단
         raise subprocess.CalledProcessError(rc, 'samtools view ' + ns)
 
     sh(['samtools', 'view', '-b', '-o', pe, pe_sam])
@@ -142,14 +133,14 @@ def read_cov(path):
 
 
 def merge_cov(pe_cov, se_cov, out_cov, out_bg):
-    """두 cov 를 자리별로 더한다. 메틸·비메틸 개수를 합치고 비율을 다시 계산한다."""
+    """두 cov 를 자리별로 더함 (메틸, 비메틸 개수 합치고 비율 다시 계산)"""
     d = read_cov(pe_cov)
     for k, v in read_cov(se_cov).items():
         a = d.get(k)
         if a is None: d[k] = list(v)
         else:         a[0] += v[0]; a[1] += v[1]
     keys = sorted(d, key=lambda k: (k[0], int(k[1])))
-    # 다 쓴 뒤 이름을 바꾼다. 쓰다 멈춘 파일이 «크기 > 0» 으로 다음 실행에서 건너뛰어지지 않게.
+    # 임시 파일에 다 쓰고 이름 바꿈 (쓰다 멈춘 파일을 다음 실행이 완성으로 보지 않게)
     tc, tb = out_cov + '.tmp', out_bg + '.tmp'
     with gzip.open(tc, 'wt') as fc, gzip.open(tb, 'wt') as fb:
         for k in keys:
@@ -169,7 +160,7 @@ def main():
     use_genome = os.path.isdir(C.GENOME_FOLDER)
     use_multicore = BISMARK_MULTICORE > 1
     t0, done, skip = time.time(), 0, 0
-    bad = []          # 추출이 실패했거나 산출이 빠진 검체
+    bad = []          # 추출 실패했거나 산출 빠진 샘플
 
     for p in C.MUT_READ_COUNTS:
         in_dir  = '%s/mut_%d_reads' % (C.MIX_OUT, p)
@@ -193,7 +184,7 @@ def main():
         parts = {}
         for i, bam in todo:
             parts[i] = split_pe_se(bam, tmp)
-        pes = [v[0] for v in parts.values() if v[2]]      # 리드가 있는 쪽만 bismark 에 넘긴다
+        pes = [v[0] for v in parts.values() if v[2]]      # 리드 있는 쪽만 bismark 에 넘김
         ses = [v[1] for v in parts.values() if v[3]]
         failed = set()
         print('  나눔: 페어드엔드 %d개 · 단일말단 %d개' % (len(pes), len(ses)))
@@ -212,7 +203,7 @@ def main():
         for i, _ in todo:
             pe, se, npe, nse = parts[i]
             cov = lambda f: (f[:-4] + '.bismark.cov.gz') if f else None
-            # 리드가 있던 쪽의 추출이 실패했거나 산출이 없으면 이 검체를 만들지 않는다(한쪽만 합치지 않는다).
+            # PE, SE 중 한쪽이라도 추출 실패하면 그 샘플은 안 만듦 (한쪽만 합치지 않음)
             _miss = [k for k, f, n in (('PE', pe, npe), ('SE', se, nse))
                      if n and (f in failed or not os.path.exists('%s/%s' % (tmp, os.path.basename(cov(f)))))]
             if _miss:

@@ -1,20 +1,7 @@
 #!/bin/bash
-# 패널 영역 풀: 학습 정상 15 · 암 30.
-#   세 풀(실제·귀무A·귀무B)의 차이는 「어느 패널 목록을 쓰는가」 하나뿐이어서
-#   인자로 받는다.
-#
-#   실제 패널 풀과 귀무 풀은 자리를 가른다. 귀무를 만들다 실제 풀을 덮으면
-#   학습을 처음부터 다시다.
-#
-#   풀을 갈라도 비교 가능성이 유지되는 것은 절반뿐이다.
-#     유지되는 쪽  이 단계(11_pool)의 「추출」. 같은 블록이면 같은 BAM 의 같은 영역을
-#                  읽으므로 어느 풀에 넣든 리드가 같다
-#     안 되는 쪽   다음 단계(2_train/02)의 「믹싱」. 거기서는 풀에서 뽑으므로
-#                  풀 구성이 다르면 뽑히는 리드가 달라진다
-#   실측: 같은 블록인데 rand1200 과 rand2200 의 mean 이 최대 0.569
-#   다르다. 판마다 01 이 그 판의 DMR 영역만 추출해 모집단이 달라지기 때문이다.
-#   그래서 「판이 다른 풀의 특징을 열 방향으로 이어 붙이면 안 된다」 — 한 검체 행이
-#   독립인 여러 혼합을 뒤섞은 것이 된다.
+# 패널 영역 풀 BAM 만들기 (정상, 암 각각)
+#   실제 패널, 귀무A, 귀무B 풀은 패널 목록만 다르고 산출 폴더도 따로 씀
+#   풀이 다르면 2단계 믹싱 리드가 달라짐 - 다른 풀의 특징을 열로 이어 붙이지 않음
 #
 #   사용
 #     bash run_pool.sh cellline     # 실제 패널 (panel_union3_cellline.csv -> j_pool<GEN>_cellline)
@@ -23,13 +10,8 @@
 set -eu
 
 _HERE=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)
-# 환경변수로 주는 값이 이긴다. meth_config.py 의 값() 과 같은 순서로 맞춘다.
-#   conf 를 그냥 source 하면 환경변수를 덮어써서, 환경변수로 격리한 실행이
-#   조용히 실 경로로 넘어간다. 미리 보관하고 되돌린다.
-#   값은 eval 에 태우지 않는다. 이름만 고정 목록으로 돈다.
-# 보관 대상을 손으로 들고 있으면 목록에 없는 키는 conf 가 환경변수를
-#   덮는다. meth_config.py 의 「환경변수가 이긴다」와 반대가 된다. conf 에 적힌 키를
-#   「전부」 보관한다. 목록을 유지할 필요가 없어진다.
+# config.conf 읽기. 환경변수가 우선 (meth_config.py 와 같은 규칙)
+# conf 키를 미리 보관해 뒀다가 conf 읽은 뒤 되돌림
 _CONFFILE=""
 for _d in "$_HERE" "$_HERE/.." "$_HERE/../.." "$_HERE/../../.."; do
   [ -f "$_d/0_setup/config.conf" ] && { _CONFFILE="$_d/0_setup/config.conf"; break; }
@@ -47,9 +29,9 @@ for _k in $_PREKEYS; do
 done
 unset _v
 : "${METH_CONF_DIR:?config.conf 를 못 찾았다 — 트리 밖에서 돌리려면 METH_CONF_DIR 를 직접 주라}"
-# 수치 연산(BLAS) 스레드. 로지스틱 회귀 값이 스레드 수에 따라 달라진다.
-#   OMP_NUM_THREADS 등이 환경변수로 이미 있으면 그 값을 따른다. BLAS_THREADS=none 이면 고정하지 않는다.
-#   이 고정은 진입점(run_*.sh · make_report.sh)에만 있다. steps/ 의 파이썬을 직접 부르면 걸리지 않는다.
+# BLAS 스레드 고정 - 로지스틱 회귀 값이 스레드 수 따라 조금 달라짐
+# 환경변수에 이미 있으면 그 값 사용, BLAS_THREADS=none 이면 고정 안 함
+# 진입점(run_*.sh, make_report.sh)에서만 고정. steps/ 직접 실행하면 안 걸림
 _bt=${BLAS_THREADS:-1}
 case "$_bt" in
   [Nn][Oo][Nn][Ee]) ;;
@@ -58,22 +40,18 @@ case "$_bt" in
      [ "$OMP_NUM_THREADS" = "$OPENBLAS_NUM_THREADS" ] && [ "$OMP_NUM_THREADS" = "$MKL_NUM_THREADS" ]        || echo "주의: 스레드 값이 갈린다 · OMP=$OMP_NUM_THREADS OPENBLAS=$OPENBLAS_NUM_THREADS MKL=$MKL_NUM_THREADS" >&2 ;;
 esac
 : "${METH_ROOT:=/ssd_data/Methylation}"
-# 셸이 기본값을 채우면 conf 를 비웠을 때 관문이 못 잔다.
-#   정본은 config.conf 와 meth_config.py 둘이다. 셸은 값을 만들지 않는다.
+# GEN 은 기본값 없음. conf 에 없으면 중단
 : "${GEN:?GEN 이 없습니다 — 0_setup/config.conf 의 GEN 을 채우십시오}"
 : "${DMR_OUT:=$METH_ROOT/results/dmr}"
-# 목록 이름은 GEN 을 따른다. 세대를 박아 두면 GEN=16 일 때 16세대 풀을
-#   15세대 목록으로 만든다. 세대가 섞이는데 아무 말도 안 난다.
+# 검체 목록 이름에 GEN 붙임 (세대 섞임 방지)
 : "${USE_NORMAL:=$HOME/tmp/use${GEN}_normal.txt}"   # 쓸 정상 BAM 목록
 : "${USE_GBM:=$HOME/tmp/use${GEN}_gbm.txt}"         # 쓸 암 BAM 목록
 
-# 패널 목록 경로는 PANEL_CSV 에 둔다. PANEL 은 config.conf 를 set -a 로 읽어 내보낸 판 이름이라,
-#   덮어쓰면 11_pool.py 가 부르는 meth_config 의 VERSION · PANEL 가드가 경로를 판 이름으로 읽고 멈춘다(2026-10-22).
+# 패널 목록 경로는 PANEL_CSV 에. PANEL 은 conf 의 판 이름이라 덮어쓰면 meth_config 가드가 멈춤
 WHICH=${1:-}
 case "$WHICH" in
   cellline) PANEL_CSV=$DMR_OUT/j_panel$GEN/panel_union3_cellline.csv
-            # 옛 트리에서는 이 이름이 panel_union3_세포주.csv 다. 옛 트리를
-            #   그대로 쓸 수 있게 새 이름이 없으면 옛 이름을 본다.
+            # 새 이름 없으면 옛 트리 이름(panel_union3_세포주.csv) 읽음
             [ -f "$PANEL_CSV" ] || PANEL_CSV=$DMR_OUT/j_panel$GEN/panel_union3_세포주.csv ;;
   rand)   PANEL_CSV=$DMR_OUT/j_panel$GEN/panel_union_rand3.csv ;;
   randb)  PANEL_CSV=$DMR_OUT/j_panel$GEN/panel_union_randb3.csv ;;

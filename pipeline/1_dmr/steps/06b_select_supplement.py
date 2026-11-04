@@ -1,18 +1,15 @@
 # -*- coding: utf-8 -*-
-"""보완판 JSD 패널
-  필터  JSD > t_null   (귀무 백분위 · 규칙: 99.9% 기본 · 200 미달이면 99.5% · 그래도 미달이면 99%)
-  정렬  freq 내림  ->  JSD 내림          (freq = 복원추출 100회 중 JSD 상위 TOPN 에 든 횟수)
-  컷    상위 N
-  규칙은 결과를 보기 전에 정했다. q·dbeta 는 보고용으로만 계산한다.
+"""보완판 JSD 패널 (j_panel<GEN>_supplement)
+  필터: JSD > 귀무 백분위 문턱 (99.9%, N 못 채우면 99.5%, 그래도 안 되면 99%)
+  정렬: freq 내림 → JSD 내림 (freq = 부트스트랩 100회 중 JSD 상위에 든 횟수), 상위 N
+  q, dbeta 는 보고용으로만 계산
 """
 
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
 import os as _os, sys as _sys
-# 0_setup 을 찾는다. 이 파일이 「복사되어」 정리본 밖에서 돌 수도 있으므로
-#   ① 자기 위에서 위로 올라가며 찾고 ② 환경변수 METH_CONF_DIR ③ 그래도 없으면
-#   설정 없이 돌 수 있게 기본값으로 간다(검증이 검체 폴더로 복사해 쓰는 경로다).
+# 0_setup 찾기: 위로 올라가며 찾고, 없으면 METH_CONF_DIR 사용
 _h = _os.path.dirname(_os.path.abspath(__file__))
 for _ in range(5):
     _c = _os.path.join(_h, '0_setup')
@@ -36,7 +33,7 @@ except ImportError:
 import os, sys
 import numpy as np, pandas as pd
 
-# 산출 폴더는 GEN(패널 세대)을 따른다. 비우면 세대 없는 옛 폴더를 가리킨다.
+# 산출 폴더 이름에 GEN(패널 세대) 붙임. 못 읽으면 중단
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:
     try:
@@ -44,14 +41,10 @@ if not _GEN:
     except Exception:
         raise SystemExit('GEN(패널 세대)을 못 읽었습니다 — config.conf 의 GEN 을 채우거나 '
                          '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
-# 이 파일은 j_panel<GEN>_supplement 에 쓴다. 경로·상수는 아래 한 곳에서만 정한다.
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # moderated_t 는 형제다
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # moderated_t 는 같은 폴더
 from moderated_t import moderated_ttest, bh
-# ── 이 단계가 쓰는 경로 ──
-#   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
-#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
-#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
+# 이 단계 경로. 폴더 구조 다르면 여기만 수정 (인자로 덮어쓰기 가능)
 R = _M + "/results/dmr"
 CAND = R + "/j_candidates" + _GEN
 K    = int(_os.environ.get("PATTERN_K", 0) or _cfg.PATTERN_K)
@@ -74,14 +67,13 @@ print("=> 채택 문턱 귀무 %.1f%% · t=%.4f" % (used_pct, used_t))
 Z = boot[boot.jsd_obs > used_t].copy()
 Z = Z.sort_values(["freq", "jsd_obs"], ascending=[False, False]).reset_index(drop=True)
 P = Z.head(N).copy()
-# 보고용 q · dbeta (선정에 안 씀)
+# 보고용 q, dbeta (선정에 안 씀)
 B = pd.read_parquet(CAND + "/beta_matrix.parquet"); M = pd.read_csv(CAND + "/samples.csv")
 X = B.T.reindex(M["sample"]).values.astype(np.float32)
 _CANCER = getattr(_cfg, 'CANCER_LABEL', 'GBM')   # samples.csv 의 type 값
 
 y = (M["type"] == _CANCER).astype(int).values
-# CANCER_LABEL 과 samples.csv 의 type 이 어긋나면 양성이 0개가 된다.
-#   그대로 두면 AUC 가 nan 이 되거나 전부 음성으로 학습한다. 여기서 멈춘다.
+# CANCER_LABEL 과 samples.csv type 이 안 맞으면 암 0개 → 중단
 if int(y.sum()) == 0:
     sys.exit('samples.csv 에 type=%s 인 검체가 없습니다. CANCER_LABEL 과 1단계가 쓴 값이'
              ' 어긋났습니다 (현재 CANCER_LABEL=%s).' % (_CANCER, _CANCER))

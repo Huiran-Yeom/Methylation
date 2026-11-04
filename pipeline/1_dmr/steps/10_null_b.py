@@ -1,25 +1,16 @@
 # -*- coding: utf-8 -*-
-"""귀무B 세 판: bl200 의 CpG 수 분포에 맞춰 층화 추출
-
-귀무A 만 두면 bl200 이 못 넘겼을 때 「bl200 블록이 쓸모없다」와
-「bl200 은 칸이 절반이다」를 구별할 수 없다. 귀무B 는 bl200 의 칸 수 불리함을
-그대로 진다: 그래서 bl200 의 잣대다. jsd/jsdb 의 잣대는 귀무A.
-
-모집단은 `blocks_frac060.csv` 23,532칸: Baseline 이 고르는 그 모집단이다.
-CpG 수로 버킷을 만들고(8 이상은 한 칸으로 묶음) bl200 의 분포를 그대로 따라 뽑는다.
-실측으로 세 씨앗 모두 창 서는 칸 104 · CpG<3 인 칸 96 — bl200 과 정확히 일치한다.
-
-씨앗은 `20260914 + 100 + i` 다. 귀무A(`20260914 + i`)와 겹치지 않게 100 을 띄웠다.
-
-처음 돌린 코드를 그대로 옮긴 것이다.
+"""귀무B 세 판 (randb1-3): bl200 의 CpG 수 분포에 맞춰 층화 추출
+bl200 비교용 (창 안 서는 칸 비율까지 bl200 과 같게). jsd 계열은 귀무A
+모집단 blocks_frac060.csv (Baseline 과 같은 모집단), CpG 8개 이상은 한 버킷
+씨앗 20260914 + 100 + i 고정 (귀무A 와 안 겹치게)
 
   사용
-    python 10_null_b.py                  # 실제 자리에 쓴다
+    python 10_null_b.py                  # 실제 자리에 씀
     python 10_null_b.py --out /tmp/test   # 다른 자리에 써서 대조만
+    python 10_null_b.py --cand <후보폴더>
 """
 
-# 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돌아
-# 실제 자료를 덮어쓴다. 실행은 `python <파일>` 로만 한다.
+# 스크립트 전용. import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
@@ -50,8 +41,7 @@ import sys
 import numpy as np
 import pandas as pd
 
-# 세대를 박아 두면 GEN 을 바꿨을 때 「이전 세대」 후보로 귀무를 만든다.
-#   그러면 실제 패널과 귀무 패널의 세대가 갈리는데, 여기가 대조의 기준선이다.
+# 폴더 이름에 GEN(패널 세대) 붙임. 박아 두면 GEN 바꿔도 옛 세대 후보로 귀무를 만듦
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:
     try:
@@ -59,15 +49,12 @@ if not _GEN:
     except Exception:
         raise SystemExit('GEN(패널 세대)을 못 읽었습니다 — config.conf 의 GEN 을 채우거나 '
                          '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
-# ── 이 단계가 쓰는 경로 ──
-#   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
-#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
-#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
+# 이 단계 경로. 폴더 구조 다르면 여기만 수정 (인자로 덮어쓰기 가능)
 R = _M + '/results/dmr'
 OUT = R + '/j_panel_dmr' + _GEN + '_panels'
 CAND = R + '/j_candidates' + _GEN
-SEED0 = 20260914 + 100    # 씨앗 i 는 SEED0 + i. 고정값이다
-CAP = 8                   # CpG 수 8 이상은 한 버킷으로 묶는다
+SEED0 = 20260914 + 100    # 씨앗 i = SEED0 + i (고정)
+CAP = 8                   # CpG 8개 이상은 한 버킷
 a = sys.argv
 if '--cand' in a:
     CAND = a[a.index('--cand') + 1].rstrip('/')
@@ -81,8 +68,7 @@ cnt = collections.Counter()
 for (c, b), n in B.groupby(['chr', 'blk']).size().items():
     cnt[(str(c), int(b))] = int(n)
 
-# bl200 의 CpG 수 분포를 그대로 베낀다. 그래야 칸 수 불리함이 같아진다.
-#   그 파일이 없으면 「누가 만드는지」 를 말하고 멈춘다.
+# bl200 의 CpG 수 분포를 그대로 따름. bl200 파일 없으면 중단
 _bl = '%s/bl200/DMR_confirmed_bl200.csv' % OUT
 if not os.path.isfile(_bl):
     raise SystemExit(
@@ -93,7 +79,7 @@ bl = pd.read_csv(_bl)
 blk = [(x.split('_')[0], int(x.split('_')[1])) for x in bl['Feature']]
 hist = collections.Counter(min(cnt.get(k, 0), CAP) for k in blk)
 print('bl200 CpG 수 분포(8+ 묶음):', dict(sorted(hist.items())))
-NPICK = len(blk)          # 귀무B 는 bl200 의 잣대다 — 칸 수도 bl200 에 맞춘다(보통 200 · 교집합 패널(12)이면 그 크기)
+NPICK = len(blk)          # 칸 수도 bl200 에 맞춤 (보통 200, 교집합 패널이면 그 크기)
 
 bucket = collections.defaultdict(list)
 for k in U:
@@ -107,7 +93,7 @@ for i in (1, 2, 3):
         pool = bucket[c]
         idx = rs.choice(len(pool), min(n, len(pool)), replace=False)
         pick += [pool[j] for j in idx]
-    # 버킷이 모자라 bl200 칸 수를 못 채우면 분포가 어긋난 것이다. 멈춘다.
+    # 버킷이 모자라 칸 수 못 채우면 중단
     assert len(pick) == NPICK, (len(pick), NPICK)
     d = pd.DataFrame({'Feature': ['%s_%d' % (c, b) for c, b in pick],
                       'dbeta': [0.0] * NPICK, 'q': [1.0] * NPICK})

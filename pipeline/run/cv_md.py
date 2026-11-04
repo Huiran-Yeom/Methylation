@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-"""학습 교차검증 전체 표(cv_all.csv)를 GitHub 에서 읽기 좋은 Markdown 으로 옮긴다.
+"""학습 CV 표(cv_all.csv)를 Markdown 으로 옮김 (보기용, 원본은 CSV)
 
-쓰는 법: python cv_md.py <cv_all.csv> [> cv_all.md]
-  - 패널 · 깊이마다 표 하나: 행 = 31조합, 열 = 혼합 비율, 칸 = 그 조합의 모델 넷 중 최고 cv_auc(괄호 안 모델 첫 글자).
-  - CSV 가 원본이다. 이 표는 보기용이고 값은 CSV 에서 그대로 옮긴다(넷째 자리).
-  - 끝에서 표의 모든 칸을 CSV 에서 다시 계산해 맞대고, 다르면 멈춘다(assert).
+사용법: python cv_md.py <cv_all.csv> [> cv_all.md]
+  - 패널, 깊이마다 표 하나: 행 = 31조합, 열 = 비율, 칸 = 모델 넷 중 최고 cv_auc (괄호는 모델 첫 글자)
+  - 끝에서 모든 칸을 CSV 와 다시 맞대 보고 다르면 중단 (assert)
 """
 import io, sys
 import pandas as pd
@@ -47,7 +46,7 @@ def build(d):
 
 
 def parse(md):
-    """만든 Markdown 을 다시 읽어 (판, 깊이, 비율, 조합) → 표시값(문자열) 을 돌려준다(출력식까지 검사)."""
+    """만든 Markdown 다시 읽어 (판, 깊이, 비율, 조합) → 표시 문자열"""
     got, key, fr = {}, None, None
     for l in md.splitlines():
         if l.startswith('## '):

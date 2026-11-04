@@ -1,22 +1,17 @@
 # -*- coding: utf-8 -*-
-"""11단계 풀 BAM 이 쓰는 입력 다섯을 만든다.
+"""11단계 풀 BAM 입력 다섯 개를 판 파일과 samples.csv 에서 만듦
 
-  panel_union3_cellline.csv   bl200 · jsd200 · jsdb200 의 합집합
-  panel_union_rand3.csv       rand1-3 의 합집합
-  panel_union_randb3.csv      randb1-3 의 합집합
+  panel_union3_cellline.csv   bl200, jsd200, jsdb200 합집합
+  panel_union_rand3.csv       rand1-3 합집합
+  panel_union_randb3.csv      randb1-3 합집합
   use<GEN>_normal.txt         풀에 넣을 정상 검체 이름
   use<GEN>_gbm.txt            풀에 넣을 암 검체 이름
 
-판 파일과 samples.csv 에서 전부 계산되는 값이므로 여기서 만든다. 없으면
-11단계가 「패널 목록이 없다」 로 멈춘다.
-
-합집합은 판의 Feature(<chr>_<blk>)를 chr·blk 로 쪼개 중복을 없앤 것이다.
-정렬은 chr 를 글자로, blk 를 수로 본다. 줄 끝은 LF 다 — 손으로 만든 기존
-다섯 파일과 바이트 단위로 같다.
+합집합은 Feature 를 chr, blk 로 나눠 중복 제거. 정렬은 chr 글자순, blk 숫자순, 줄 끝 LF
+  사용: python 10c_panel_union.py [--gen GEN] [--dmr <results/dmr>]
 """
 
-# 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돌아
-# 실제 자료를 덮어쓴다. 실행은 `python <파일>` 로만 한다.
+# 스크립트 전용. import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
@@ -61,8 +56,7 @@ PDIR = R + '/j_panel_dmr' + GEN + '_panels'
 OUT = R + '/j_panel' + GEN
 CAND = R + '/j_candidates' + GEN
 
-# 판을 풀 종류로 가른다. 2_train/steps/config.py 가 PANEL 로 풀을 고르는 규칙과 같다.
-#   어긋나면 귀무판이 실판 풀을 보고 200칸 중 몇 칸으로 조용히 돈다.
+# 판을 풀 종류로 나눔. 2_train/steps/config.py 의 풀 고르는 규칙과 같아야 함
 GROUPS = {'cellline': [], 'rand': [], 'randb': []}
 for _p in PANELS + NULLS:
     if _p.startswith('randb'):  GROUPS['randb'].append(_p)
@@ -109,7 +103,7 @@ for g in ('cellline', 'rand', 'randb'):
             seen.add((ch, bk)); uni.append((ch, bk))
     uni.sort(key=lambda t: (t[0], t[1]))
     f = OUT + '/' + NAME[g]
-    # csv 기본 종결자는 CRLF 다. 기존 파일은 LF 라 그냥 두면 전부 다르게 보인다.
+    # csv 기본 줄 끝이 CRLF 라 LF 로 지정
     with open(f, 'w', newline='', encoding='utf-8') as fh:
         w = csv.writer(fh, lineterminator=NL)
         w.writerow(['chr', 'blk'])
@@ -117,7 +111,7 @@ for g in ('cellline', 'rand', 'randb'):
             w.writerow([ch, bk])
     print('  %-24s %4d칸  <- %s' % (NAME[g], len(uni), ' '.join(ps)))
 
-# ── 풀에 넣을 검체 이름 ──
+# 풀에 넣을 검체 이름
 sc = CAND + '/samples.csv'
 if not os.path.exists(sc):
     sys.exit('samples.csv 가 없습니다 — 01 단계를 먼저 돌리십시오: ' + sc)
@@ -133,7 +127,7 @@ with open(sc, newline='', encoding='utf-8') as fh:
         if t == 'Normal':   norm.append(r['sample'])
         elif t == _CANCER:  canc.append(r['sample'])
         else:               _odd.add(t)
-    # 'Normal' 이 아닌 것을 전부 암으로 세면 CANCER_LABEL 이 어긋나도 조용히 돈다.
+    # Normal, CANCER_LABEL 말고 다른 type 있으면 중단
     if _odd:
         sys.exit('samples.csv 에 모르는 type 이 있습니다: %s (아는 것은 Normal · %s). '
                  'CANCER_LABEL 이 1단계가 쓴 값과 맞는지 보십시오: %s'

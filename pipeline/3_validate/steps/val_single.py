@@ -1,5 +1,5 @@
-# LAYOUT=single 코호트용: 검증 사본(val03_*.py)의 짝 요구를 없앤다.
-# 학습 스크립트는 건드리지 않는다.
+# LAYOUT=single 코호트용: 검증 사본(val03_*.py)의 짝 리드 요구 제거
+# 학습 스크립트는 안 건드림
 import io, os
 
 
@@ -24,7 +24,7 @@ def to_single(path):
             "target = C.TARGET_DEPTH_READS   # 단일: 1리드=1단위", "목표깊이")
         rep("total*2:,} reads", "total:,} reads", "보고1")
         rep("'total_reads': total*2", "'total_reads': total", "보고2")
-        # ── 균일 무작위판 (3·7·4) 전용
+        # 균일 무작위판 전용
         rep("    paired = {k: v for k, v in reads.items() if len(v) == 2}",
             "    paired = dict(reads)   # 단일 리드: 짝 요구 없음", "균일:len2필터제거")
         rep("        base = C.TARGET_DEPTH_READS // 2",
@@ -35,7 +35,7 @@ def to_single(path):
                 "균일:쌍검사_" + _k)
     elif b == 'val03_3.py':
         rep("        '--paired-end',\n", "        '-s',\n", "단일모드")
-    # 걸어야 할 자리 수. 하나라도 못 걸면 멈춘다.
+    # 고쳐야 할 자리 수. 하나라도 못 고치면 중단
     need = {'val03_1.py': 1, 'val03_2.py': 10, 'val03_3.py': 1}.get(b)
     if hits:
         io.open(path, 'w', encoding='utf-8').write(s)
@@ -56,8 +56,8 @@ def to_single(path):
 
 
 def detect_layout(*bams):
-    """종양·배경 중 하나라도 단일 리드면 'single'. 한 BAM 안에 두 방식이
-    섞이면 bismark_methylation_extractor 가 처리할 수 없기 때문이다."""
+    """종양, 배경 중 하나라도 단일 리드면 'single', 아니면 'paired'
+    (두 방식 섞이면 bismark_methylation_extractor 가 처리 못 함)"""
     import pysam
     for p in bams:
         if not p or not os.path.exists(p):

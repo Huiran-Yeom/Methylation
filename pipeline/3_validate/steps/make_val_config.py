@@ -1,20 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
-"""외부검증용 작업 폴더와 config.py 를 만든다 (코호트 무관).
+"""외부검증용 검체 작업 폴더와 config.py 만듦
 
-코호트 정의를 COHORT_DIR(기본 ~/cohorts)의 <이름>.conf 에서 읽으므로
-어느 데이터(EGAD 등)든 같은 코드로 돌릴 수 있다.
-
-버전의 config.py 를 그대로 읽어 뒤에 오버라이드 블록만 붙인다.
-깊이·믹싱 방식·엔트로피 계산은 손대지 않는다. 학습 때와 같아야 하기 때문이다.
-바꾸는 것은 입력 BAM 과 출력 경로뿐이다.
-
-경로는 {코호트}_val/{검체}/... 로 잡는다.
+학습 config.py 뒤에 덮어쓰기 블록만 붙임 (입력 BAM, 출력 경로만 바뀜)
+코호트 정의는 COHORT_DIR(기본 ~/cohorts)의 <코호트>.conf 에서 읽음
 
 사용: python make_val_config.py <코호트> <검체> <version> [반복수]
 """
-# 아무도 import 하지 않는다 (run_one_sample.sh 가 인자를 주고 부른다).
-#   가드 없는 스크립트를 import 하면 본체가 그대로 돈다.
+# import 금지 - 스크립트 본체가 그대로 돎 (run_one_sample.sh 가 부름)
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
@@ -25,29 +18,24 @@ import shutil
 _LAYOUT = [None]   # 코호트 리드 방식 자동 감지
 import sys
 
-# 버전 폴더를 찾는 규칙은 paths.py 한 곳에 있다.
+# 버전 폴더 찾는 규칙은 paths.py 에만
 from paths import (script_dir, script_dir_abs, VERSION_CONF, WORK_ROOT_CONF,
                    COHORT_DIR_CONF)
 
 
-# 본 실행과 이름을 다르게 복사한다. 러너들이 pgrep 으로 프로세스를 세어
-# 동시 실행을 제한하는데, 이름이 같으면 검증이 본 실행의 자리를 빼앗는다.
-# STEPS 를 config.conf 의 STEP_MAP 에서 만든다. 두 정본이면 어긋난다.
-#   STEP_MAP 형식:  <검체폴더에 놓일 이름>:<원본 파일명>;...
-#   못 읽으면 아래 기본값으로 간다.
+# 학습 스크립트를 다른 이름(val*)으로 복사 - pgrep 으로 세는 학습 실행과 안 겹치게
+# STEPS 는 config.conf 의 STEP_MAP 에서 만듦 (형식 <검체폴더 이름>:<원본 파일명>;...)
+# STEP_MAP 없으면 아래 기본값 사용
 _STEPS_DEFAULT = {'01_Preprocessing_for_ML_RawData_Mixing.py': 'val03_1.py',
          '02_Preprocessing_for_ML_RawData_Mixing.py': 'val03_2.py',
          '03_Preprocessing_for_ML_RawData_Mixing.py': 'val03_3.py',
          '04_coverage_check.py': 'val04_0.py',
          '05_Feature_Matrix.py': 'val04_1.py',
-         # readent·mhl 은 쓰지 않으므로 복사하지 않는다.
-         #   되살리려면 그 파일을 2_train/steps/ 에 먼저 두어야 한다 — 이 저장소에는 없다.
+         # readent, mhl 은 안 씀 (파일도 이 저장소에 없음)
          # 'step04_1b_readfeat.py': 'val04_1b.py',
-         # JSD 피처. 이 목록에 없으면 검증에서 JSD-2 를 못 잰다.
-         #   파일은 판 폴더가 아니라 한 단계 위에 있다.
+         # JSD 피처
          '06_jsdfeat.py': 'val04_1c.py',
-         # LLR 피처. 이 목록에 없으면 검증이 llr 을 안 만들어
-         #   1차 조합 mean|entropy|jsd|llr|pdr 을 계산할 수 없다.
+         # LLR 피처 - 없으면 1차 조합 mean|entropy|jsd|llr|pdr 계산 못 함
          '07_llrfeat.py': 'val04_1d.py'}
 
 try:
@@ -207,11 +195,8 @@ except OSError:
 
 
 def load_conf(cohort):
-    """COHORT_DIR 의 <이름>.conf 를 읽는다 (기본은 홈의 cohorts). KEY=값 한 줄씩, # 은 주석."""
-    # 조회 순서는 run_validate.sh 와 같다 —
-    #   ~/cohorts 먼저(기관 자료), 없으면 저장소의 cohorts/ (예시·동봉본).
-    # COHORT_CONF 로 못 박을 수 있다. ~/cohorts 가 있으면 저장소의 예시는
-    #   읽히지 않으므로, 예시를 시험할 때는 이것으로 가리킨다.
+    """코호트 정의 <이름>.conf 읽음 (KEY=값 한 줄씩, # 은 주석)"""
+    # 찾는 순서는 run_validate.sh 와 같음: COHORT_CONF, COHORT_DIR, 저장소 cohorts/
     _env = os.environ.get('COHORT_CONF')
     if _env:
         if not os.path.exists(_env):
@@ -224,7 +209,7 @@ def load_conf(cohort):
         p = next((c for c in _cands if os.path.exists(c)), None)
     if p is None:
         sys.exit('코호트 정의 없음: ' + ' 또는 '.join(_cands))
-    # 어느 파일을 읽었는지 「절대경로로」 남긴다. 둘 중 어디였나가 나중에 문제가 된다.
+    # 읽은 파일을 절대경로로 출력
     print('  코호트 정의  %s' % os.path.abspath(p))
     d = {}
     for ln in io.open(p, encoding='utf-8'):
@@ -244,9 +229,8 @@ def main():
         sys.exit(__doc__)
     cohort, sample, v = sys.argv[1], sys.argv[2], sys.argv[3]
     conf = load_conf(cohort)
-    # 깊이마다 배경 목록과 반복 수가 다르다. 판 이름에서 깊이를 읽는다.
-    #   얕은 공여자는 깊은 판을 혼자 못 채운다. 섞으면 '사람' 과 '병합본' 이 한 표에 섞인다.
-    # 이름에 박힌 깊이를 뽑는다. DEPTHS 에 있는 것을 먼저 보고, 없으면 _<숫자>k_ 로 찾는다.
+    # 판 이름에서 깊이 읽어 깊이별 배경 목록, 반복 수 고름 (NORMALS_5K, NREP_5K 등)
+    # DEPTHS 에 있는 값 먼저, 없으면 _<숫자>k_ 로 찾음
     _cand = (os.environ.get('DEPTHS') or '5k 15k 50k 100k').split()
     _dep = next((x for x in _cand if ('_%s_' % x) in v), '')
     if not _dep:
@@ -261,19 +245,12 @@ def main():
     if sample not in conf['SAMPLES'].split():
         sys.exit('%s 코호트에 없는 검체: %s' % (cohort, sample))
 
-    # WORK_ROOT 를 따른다 (config.conf 가 「검체 작업 폴더의 부모」 로
-    #   안내하는 값이다). 여기만 ~ 를 박아 두면 run_validate.sh 의 채점 루프가
-    #   다른 자리를 보고 전 검체를 조용히 건너뛴다.
+    # 검체 작업 폴더의 부모. run_validate.sh 채점 루프와 같은 자리여야 함
     home = os.environ.get('WORK_ROOT') or WORK_ROOT_CONF or os.path.expanduser('~')
-    # ~/Methylation_rev1 로 되짚지 않는다 — paths 가 이미 절대경로를 안다.
-    #   되짚으면 TRAIN_SRC 를 딴 데로 옮겼을 때 조용히 옛 코드를 복사한다.
+    # 학습 스크립트 폴더 (절대경로, paths.py 가 찾음)
     src = script_dir_abs(v)
-    # ── 판이름 ↔ VERSION ──
-    #   평평 배치(steps/ 에 config.py 하나)에서는 어떤 v 를 줘도 같은 config.py 를
-    #   복사한다. 그 config.py 의 VERSION·깊이는 config.conf 에서 온다.
-    #   작업 폴더는 v 로 만들고 산출 자리는 VERSION 으로 만들기 때문에, 둘이
-    #   어긋나면 「50k 폴더에서 5k 깊이로 섞어 5k 자리에 쓰는」 일이 조용히 일어난다.
-    #   meth_config.py 의 깊이 가드는 conf 안의 VERSION↔깊이만 보므로 이걸 못 잡는다.
+    # 평평 배치(config.py 하나)면 판이름과 config.conf 의 VERSION 이 같아야 함
+    #   다르면 작업 폴더는 v, 깊이와 산출 자리는 VERSION 을 따라 어긋남 → 중단
     _flat = os.path.isfile(os.path.join(src, 'config.py'))
     if _flat and v != VERSION_CONF:
         sys.exit('중단: 판이름과 설정의 VERSION 이 다릅니다.'
@@ -287,15 +264,13 @@ def main():
         s, d = os.path.join(src, f), os.path.join(work, newname)
         if os.path.islink(d) or os.path.exists(d):
             os.remove(d)
-        # 없는 파일을 조용히 넘기면 그 피처만 빠진 채 끝까지 돌고,
-        #   채점이 결측을 평균으로 메워 AUC 0.500 이 된다.
-        #   피처를 빼는 것은 STEPS 항목을 지워서 한다. 여기 있는데 파일이 없으면 항상 설정 오류다.
+        # 원본 없으면 중단 - 넘기면 그 피처만 빠진 채 돌아 AUC 0.500
+        #   피처를 빼려면 STEPS 항목을 지움
         if not os.path.exists(s):
             sys.exit('복사할 파일이 없다: %s — STEPS 에는 있는데 TRAIN_SRC 에 없다. '
                      '이름을 바꿨거나 TRAIN_SRC 가 딴 데를 가리킨다.' % s)
         if True:
-            # 복사한다. 심볼릭 링크면 파이썬이 링크를 따라간 원본 폴더를
-            # sys.path[0] 으로 잡아 원본 config.py 를 읽어버린다.
+            # 링크 말고 복사 - 링크면 원본 폴더의 config.py 를 읽음
             shutil.copy2(s, d)
             if _LAYOUT[0] is None:
                 from val_single import detect_layout
@@ -306,9 +281,8 @@ def main():
                 _LAYOUT[0] = str(conf.get('LAYOUT') or
                                  detect_layout(conf.get('NORMAL', ''), _cn))
                 print('  리드 방식: %s' % _LAYOUT[0])
-            # 단일말단도 지금 섞기 · 추출 코드(2단계 02 · 03 의 PE · SE 혼합 경로)가 그대로 처리한다.
-            #   옛 단일말단 패치(val_single.to_single)는 지금 코드에 패치할 줄이 없어 쓰지 않는다.
-            #   감지 결과는 기록만 한다.
+            # 리드 방식은 기록만 함 (섞기, 추출 코드가 PE, SE 둘 다 처리)
+            #   val_single.to_single 패치는 안 씀
 
     base = io.open(os.path.join(src, 'config.py'), encoding='utf-8').read()
     _rt = str(conf.get('RATIOS', '')).strip()

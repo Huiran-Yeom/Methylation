@@ -1,28 +1,27 @@
 #!/bin/bash
-# ── 2단계 · 학습 ──
+# 2단계: 학습
 #
-#   패널 영역에서 암·정상 조각을 비율마다 섞고(in-silico mixing), 피처 다섯을
-#   만들고, 조합마다 모델 넷을 교차검증해 가장 좋은 것을 굳힌다.
+#   패널 영역에서 암, 정상 리드를 비율마다 섞고 피처 5개 만듦
+#   피처 조합마다 모델 4개 교차검증해서 가장 좋은 것 저장
 #
-#   피처 다섯   mean · entropy · jsd · pdr · llr
-#   비율        config.conf 의 MUT_RATIOS (0 ~ 5%)
-#   모델        Logistic Regression · Random Forest · XGBoost · SVM
+#   피처   mean, entropy, jsd, pdr, llr
+#   비율   config.conf 의 MUT_RATIOS (0 ~ 5%)
+#   모델   Logistic Regression, Random Forest, XGBoost, SVM
 #
-#   판 하나(VERSION)에 대해 돈다. 여러 판을 돌리려면 VERSION 을 바꿔 다시 부른다:
+#   VERSION 하나씩 돎. 다른 판은 VERSION 바꿔서 다시 실행
 #     VERSION=j15jsd200_5k_uni PANEL=jsd200 bash run_train.sh
 #
-#   사용
+#   사용법
 #     bash run_train.sh            # 전 단계
-#     bash run_train.sh 05         # 그 단계만
+#     bash run_train.sh 05         # 한 단계만
 set -u
 
 _HERE=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)
 S=$_HERE/steps
 ONE=${1:-}
 
-# 보관 대상을 손으로 들고 있으면 목록에 없는 키는 conf 가 환경변수를
-#   덮는다. meth_config.py 의 「환경변수가 이긴다」와 반대가 된다. conf 에 적힌 키를
-#   「전부」 보관한다. 목록을 유지할 필요가 없어진다.
+# config.conf 읽기. 환경변수가 우선 (meth_config.py 와 같은 규칙)
+# conf 키를 미리 보관해 뒀다가 conf 읽은 뒤 되돌림
 _CONFFILE=""
 for _d in "$_HERE" "$_HERE/.." "$_HERE/../.." "$_HERE/../../.."; do
   [ -f "$_d/0_setup/config.conf" ] && { _CONFFILE="$_d/0_setup/config.conf"; break; }
@@ -40,9 +39,9 @@ for _k in $_PREKEYS; do
 done
 unset _v
 : "${METH_CONF_DIR:?0_setup/config.conf 를 못 찾았다}"
-# 수치 연산(BLAS) 스레드. 로지스틱 회귀 값이 스레드 수에 따라 달라진다.
-#   OMP_NUM_THREADS 등이 환경변수로 이미 있으면 그 값을 따른다. BLAS_THREADS=none 이면 고정하지 않는다.
-#   이 고정은 진입점(run_*.sh · make_report.sh)에만 있다. steps/ 의 파이썬을 직접 부르면 걸리지 않는다.
+# BLAS 스레드 고정 - 로지스틱 회귀 값이 스레드 수 따라 조금 달라짐
+# 환경변수에 이미 있으면 그 값 사용, BLAS_THREADS=none 이면 고정 안 함
+# 진입점(run_*.sh, make_report.sh)에서만 고정. steps/ 직접 실행하면 안 걸림
 _bt=${BLAS_THREADS:-1}
 case "$_bt" in
   [Nn][Oo][Nn][Ee]) ;;
@@ -53,27 +52,22 @@ esac
 
 say(){ echo "[$(date +%H:%M:%S)] $*"; }
 step(){  # step <번호> <제목> <파일> [인자...]
-  # $3 만 쓰면 뒤에 붙인 플래그(09 의 --allcombos --pooled 등)가
-  #   「조용히 버려진다」. 전부 넘긴다.
+  # 파일 뒤 인자(09 의 --allcombos --pooled 등)까지 전부 넘김
   local no=$1 title=$2; shift 2
   if [ -n "$ONE" ] && [ "$ONE" != "$no" ]; then return 0; fi
   say "── $no  $title"
   ( cd "$S" && python -u "$@" ) || { say "!! 실패 $no"; exit 1; }
 }
 
-# 아래 export 가 GEN·METH_ROOT 를 처음 읽는 자리다. 없으면 set -u 로
-#   맨 「unbound variable」 이 난다. 다른 드라이버처럼 뜻이 있는 말로 멈춘다.
+# GEN 은 기본값 없음. conf 에 없으면 중단
 : "${GEN:?GEN 이 없습니다 — 0_setup/config.conf 의 GEN 을 채우십시오}"
-# VERSION·PANEL 은 09 에서 처음 쓰인다. 거기까지 가는 데 몇 시간이 걸리므로
-#   여기서 먼저 막는다. set -u 아래에서는 09 에 가서야 unbound variable 이 난다.
+# VERSION, PANEL 은 09 에서 처음 쓰지만 몇 시간 뒤라 여기서 먼저 확인
 : "${VERSION:?VERSION 이 없습니다 — config.conf 에 넣거나 VERSION=j15bl200_5k_uni 로 주십시오}"
 : "${PANEL:?PANEL 이 없습니다 — config.conf 에 넣거나 PANEL=bl200 으로 주십시오}"
 : "${METH_ROOT:=/ssd_data/Methylation}"
 
-# 06·07 이 보는 후보·참조 경로를 「여기서」 내보낸다.
-#   내보내지 않으면 둘이 자기 기본값(세대 없는 j_candidates 등)으로 내려가
-#   세대 관문에서 바로 멈춘다.
-#   검증 러너(3_validate/steps/run_one_sample.sh)와 「같은 값」 이어야 한다.
+# 06, 07 이 읽는 후보, 참조 경로 (안 넘기면 세대 없는 기본 경로 보고 중단)
+# 3_validate/steps/run_one_sample.sh 와 같은 값이어야 함
 export LLR_REF=${LLR_REF:-$METH_ROOT/results/dmr/j_llrref${GEN}/llrref_K${PATTERN_K:-3}_minr${MIN_READS_PER_WINDOW:-6}.parquet}
 export LLR_CAND=${LLR_CAND:-$METH_ROOT/results/dmr/j_candidates${GEN}}
 export JSD_CAND=${JSD_CAND:-$METH_ROOT/results/dmr/j_candidates${GEN}}
@@ -90,11 +84,8 @@ step 05 "mean · entropy 행렬"        05_Feature_Matrix.py
 step 06 "jsd · pdr 행렬"             06_jsdfeat.py
 step 07 "llr 행렬 (theta 별 · LLR_max)" 07_llrfeat.py
 step 08 "조합별 모델 넷 교차검증"    08_ML_classifier.py
-# 인자 없이 부르면 09 는 조합 「둘」(mean|entropy, +jsd)만 굳히고,
-#   판 목록을 results/panels/* 에서 「모든 세대에 걸쳐」 훑어 덮어쓴다.
-#   그러면 1차 조합 mean|entropy|jsd|llr|pdr 이 아예 안 만들어져
-#   4단계가 「조합이 없음」 으로 죽는다. 실제 실행은 --allcombos --pooled 였다
-#   (서버 산출물에 조합 31개·pooled 만 있는 것으로 확인).
+# 09 는 --allcombos --pooled 필수 - 빼면 조합 2개만 저장, 다른 세대 판까지 덮어씀
+# (4단계가 쓰는 mean|entropy|jsd|llr|pdr 조합이 안 생김)
 step 09 "조합마다 BEST 굳히기"       09_save_best_j.py --allcombos --pooled "$VERSION"
 
 say "학습 끝: <뿌리>/results/panels/<앞머리>/<판>/step04_ML_classifier/"

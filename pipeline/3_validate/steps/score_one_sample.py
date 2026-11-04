@@ -1,28 +1,21 @@
 # -*- coding: utf-8 -*-
-"""학습에서 저장한 모델을 환자 검체에 적용: j 판용.
+"""학습에서 굳힌 모델로 검체 채점 (j 판용, 재학습 없음)
 
-  모델 자리: models/<조합>/pooled/BEST.joblib   (09_save_best_j.py 가 만든다)
-  검체에 없는 행렬이 든 조합은 건너뛰고 더 짧은 조합으로 내려간다 (pick()).
-
-  다시 학습하지 않는다. joblib 의 모델·특징순서·문턱·학습셋평균을 그대로 쓴다.
-  모델은 비율을 합쳐 학습한 것이라 하나뿐이다. 검체의 암 비율을 몰라도 쓸 수 있다.
-
-  없는 블록은 joblib 의 train_mean 으로 채우고, 채운 비율을 기록한다.
+  모델: models/<조합>/pooled/BEST.joblib (09_save_best_j.py 가 만듦)
+  검체에 없는 행렬이 든 조합은 건너뛰고 더 짧은 조합 사용 (pick())
+  없는 블록은 train_mean 으로 채우고 채운 비율 기록
 
   사용: python score_one_sample.py                (검체 폴더 안에서)
         python score_one_sample.py --model 'mean|entropy|jsd'
         python score_one_sample.py --allmodels    (굳힌 조합 전부)
 """
 
-# 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돌아
-# 실제 자료를 덮어쓴다. 실행은 `python <파일>` 로만 한다.
+# import 금지 - 스크립트 본체가 그대로 돎
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
 import os as _os, sys as _sys
-# 0_setup 을 찾는다. 이 파일이 「복사되어」 정리본 밖에서 돌 수도 있으므로
-#   ① 자기 위에서 위로 올라가며 찾고 ② 환경변수 METH_CONF_DIR ③ 그래도 없으면
-#   설정 없이 돌 수 있게 기본값으로 간다(검증이 검체 폴더로 복사해 쓰는 경로다).
+# 0_setup 찾기: 위 폴더로 올라가며 찾고, 없으면 METH_CONF_DIR, 그래도 없으면 중단
 _h = _os.path.dirname(_os.path.abspath(__file__))
 for _ in range(5):
     _c = _os.path.join(_h, '0_setup')
@@ -52,12 +45,12 @@ import config as C
 
 a = sys.argv
 WANT = a[a.index('--model') + 1] if '--model' in a else None
-# 모든 조합을 한 번에 채점한다. 검체 피처는 한 번만 읽는다.
+# 굳힌 조합 전부 한 번에 채점 (검체 피처는 한 번만 읽음)
 ALL = '--allmodels' in a
 import glob as _glob
 
 def _md5f(p):
-    """채점 행에 모델 파일 지문을 남긴다. 어느 모델이 이 점수를 냈는지."""
+    """모델 파일 md5 앞 8자리 (채점 행에 남김)"""
     import hashlib
     h = hashlib.md5()
     with open(p, 'rb') as _fh:
@@ -66,38 +59,35 @@ def _md5f(p):
     return h.hexdigest()[:8]
 V, ML = C.VERSION, C.ML_OUT
 TRAIN = _M + '/results/panels/%s/%s/step04_ML_classifier/models' % (V.split('_')[0], V)
-# 모델만 다른 트리에서 읽어야 할 때가 있다 — 같은 검체 피처에 새로 굳힌 모델을
-#   적용해 보는 경우다. 검체 자료와 산출 자리는 그대로 두고 모델 자리만 옮긴다.
+# MODELS_DIR 주면 모델 자리만 바꿈 (검체 자료, 산출 자리는 그대로)
 TRAIN = os.environ.get('MODELS_DIR') or TRAIN
 SM = os.path.basename(os.getcwd())
 RATIOS = [r for r in C.MUT_RATIOS if r > 0]
 if not RATIOS:
-    # 검체 리드가 모자라 모든 비율이 «풀 부족으로 건너뜀» 이 된 경우(예: 100k 깊이). 채점할 칸이 없다.
+    # 리드 부족으로 모든 비율이 건너뛰어진 경우 (채점할 칸 없음)
     sys.exit('%s: 풀 부족으로 채점할 비율이 없다 — 이 깊이에서는 채점 안 함' % SM)
-_SKIP = []        # (조합, 비율) — 특징을 못 읽어 건너뛴 칸
+_SKIP = []        # (조합, 비율), 특징 못 읽어 건너뛴 칸
 
-# ── 이미 된 일 관문 ──
-#   잎에 한 번 두어 런처마다 기억하지 않는다. 끝난 검체를 다시 채점하면 몇 시간을 버린다.
-#   "파일 있으면 건너뛰기" 가 아니라 지문이 현재 모델과 같으면 건너뛴다.
-#   모델을 다시 굳히면 지문이 달라져 스스로 다시 채점한다.
+# 이미 채점된 검체 건너뛰기 - 표의 모델 지문(md5)이 현재 모델과 같을 때만
+#   모델 다시 굳히면 지문이 달라져 다시 채점
 def _already_done():
     if not ALL:
-        return False                      # 조합 하나만 채점할 때는 건너뛰지 않는다
+        return False                      # 조합 하나만 채점할 때는 안 건너뜀
     p = '%s/y_prob_all_%s_all_combos.csv' % (ML, V)
     if not os.path.exists(p) or os.path.getsize(p) == 0:
         return False
     try:
         _t = pd.read_csv(p, usecols=['model_file', 'model_md5'])
     except Exception:
-        return False                      # 지문 열이 없는 옛 표 → 다시 한다
+        return False                      # 지문 열 없는 표 → 다시 채점
     if _cfg.SCORE_UNIT == 'consistent' and 'y_df' not in pd.read_csv(p, nrows=0).columns:
-        return False                      # y_df 없이 채점된 표 → consistent 로 다시 한다
-    # 특징이 점수보다 새것이면(VALREDO 등으로 다시 만들었으면) 지문이 같아도 다시 채점한다.
+        return False                      # y_df 없는 표 → 다시 채점
+    # 특징이 점수 파일보다 새것이면 다시 채점
     _feat = [f for f in _glob.glob('%s/[0-9]*_*_%s.csv' % (ML, V))
              if not os.path.basename(f).startswith('y_prob')]
     if any(os.path.getmtime(f) > os.path.getmtime(p) for f in _feat):
         return False
-    # 조합마다 기대한 비율이 다 있어야 완료다(한 비율을 못 읽고 넘어간 표를 완료로 보지 않는다).
+    # 조합마다 모든 비율이 있어야 완료
     _want = {round(x, 6) for x in RATIOS}
     _r = pd.read_csv(p, usecols=['model_file', 'ratio'])
     for _mf, _g in _r.groupby('model_file'):
@@ -121,10 +111,8 @@ def have(key, p):
     return os.path.exists('%s/%d_%s_%s.csv' % (ML, p, key, V))
 
 def pick():
-    """검체에 있는 행렬만으로 쓸 수 있는 모델을 고른다."""
-    # j 판은 조합마다 폴더가 따로다. jsd 가 든 것을 먼저 본다.
-    # 기본 후보에 1차 조합(mean|entropy|jsd|llr|pdr)을 넣고 긴 것부터 본다.
-    #   빠지면 --model 을 안 줄 때 1차 지표가 통째로 안 나온다.
+    """검체에 있는 행렬만으로 쓸 수 있는 모델 고름"""
+    # 기본 후보는 1차 조합(mean|entropy|jsd|llr|pdr)부터 긴 순서로
     cands = [WANT] if WANT else ['mean|entropy|jsd|llr|pdr',
                                  'mean|entropy|jsd|llr',
                                  'mean|entropy|jsd',
@@ -145,7 +133,7 @@ def pick():
 
 name, B, keys = (None, None, None) if ALL else pick()
 if B is None and not ALL:
-    # cands 는 pick() 의 지역변수라 여기서 못 쓴다. 목록을 밖에 다시 둔다.
+    # 모델이 없는 건지 검체 특징이 없는 건지 구분 (후보 목록은 pick() 과 같음)
     _cands = [WANT] if WANT else ['mean|entropy|jsd|llr|pdr', 'mean|entropy|jsd|llr',
                                   'mean|entropy|jsd', 'mean|entropy']
     _has = any(os.path.exists('%s/%s/pooled/BEST.joblib' % (TRAIN, n)) for n in _cands)
@@ -158,7 +146,7 @@ _cache = {}
 
 
 def _load(p, k):
-    """같은 (비율, 피처) CSV 를 조합마다 다시 읽지 않는다."""
+    """(비율, 피처) CSV 캐시해서 읽음"""
     if (p, k) not in _cache:
         _cache[(p, k)] = pd.read_csv('%s/%d_%s_%s.csv' % (ML, p, k, V), index_col=0)
     return _cache[(p, k)]
@@ -192,36 +180,23 @@ def run_model(name, B, keys, rows):
         X = X0.reindex(columns=feats).fillna(tm).fillna(0.0)
         miss = 100.0 * (len(feats) - have_n) / len(feats)
 
-        # [포화 우회] predict_proba 가 float64 한계로 1.0 에 붙으면
-        #   검체마다 값이 같아져 AUC 가 정확히 0.500 이 된다(순위 소멸).
-        #   원인: LLR 원값이 리드 수에 비례해 깊은 판에서 decision_function 이 60~106 까지 간다.
-        #   z>36 이면 1/(1+e^-z) 는 1.0 과 구별되지 않는다.
-        #   실측: bl200 50k z=106 · jsd200 100k z=60 → 전 검체 proba 1.0 → AUC 0.500
-        #              bl200 5k z=8 → 0.9997 (정상) · jsd200 50k z=29 → 0.992 (아슬아슬)
-        #   AUC 는 순위만 보므로 뭉친 것이 확인되면 decision_function 으로 바꾼다.
-        #   모델은 그대로다. 같은 z 를 다른 방식으로 읽을 뿐이라 판정 규칙을 안 바꾼다.
+        # 포화 우회: 깊은 판에서 predict_proba 가 전부 1.0 에 붙으면 순위가 사라져 AUC 0.500
+        #   그때만 decision_function 값으로 바꿈 (모델은 그대로, 같은 z 를 다르게 읽을 뿐)
         _sat = ''
-        _thr_z = None      # 포화로 df 를 쓸 때의 문턱 (z 공간)
-        # consistent: 전환 여부와 상관없이 decision_function 을 같이 적는다(표에서 단위를 맞춘다).
+        _thr_z = None      # 포화로 df 쓸 때의 문턱 (z 공간)
+        # consistent: 전환과 상관없이 decision_function 도 같이 기록
         _ydf = None
         if _cfg.SCORE_UNIT == 'consistent':
             _ydf = m.decision_function(X) if hasattr(m, 'decision_function') else np.full(len(X), np.nan)
         if st == 'predict_proba' and hasattr(m, 'predict_proba'):
             sc = m.predict_proba(X)[:, 1]
-            # 「고유값 2개 미만」 만으로는 부족하다.
-            #   1차 조합에서 고유값 76개인데 범위가 1.000~1.000 인 경우를 봤다 —
-            #   순위가 부동소수점 끝자리에만 남아 위태롭다. 폭으로 판정한다.
-            #   폭(max-min)이 1e-6 미만이면 사실상 뭉친 것으로 본다.
+            # 폭(max-min)이 1e-6 미만이면 뭉친 것으로 봄 (고유값 개수로는 부족)
             _rng = float(np.max(sc) - np.min(sc)) if len(sc) else 0.0
             if len(X) > 1 and _rng < 1e-6 and hasattr(m, 'decision_function'):
                 sc = m.decision_function(X)
                 _sat = '+df(포화)'
-                # [문턱도 옮긴다] proba 문턱을 그냥 버리면 y_pred 가 공백이 되고,
-                #   특이도·위양성을 그 칸에서 못 낸다.
-                #   로지스틱은 predict_proba = sigmoid(decision_function) 이므로
-                #   logit(thr) 이 정확히 같은 지점이다. 재학습도 재보정도 필요 없다.
-                #   (모델이 바뀌면 이 등식이 안 맞을 수 있어 아래에서 런타임에
-                #    type 을 확인한다. 다른 모형은 이 등식이 안 서므로 그대로 공백으로 둔다.)
+                # 문턱도 z 공간으로 옮김: 로지스틱이면 logit(thr) 이 같은 지점
+                #   LogisticRegression 일 때만, 다른 모형은 y_pred 를 -1 로 둠
                 _e = m
                 if hasattr(_e, 'named_steps'):
                     _e = list(_e.named_steps.values())[-1]
@@ -246,9 +221,7 @@ def run_model(name, B, keys, rows):
                          **({} if _ydf is None else {'y_df': float(_ydf[i])})})
     return rows
 
-# ---- 어느 모델들을 채점할지 ----
-# --allmodels 면 굳혀 둔 조합을 전부 채점한다.
-#   검체 피처 CSV 는 _load 가 캐시하므로 조합이 늘어도 파일을 다시 읽지 않는다.
+# 채점할 모델 고르기. --allmodels 면 굳힌 조합 전부 (피처 CSV 는 _load 캐시)
 _models = []
 if ALL:
     _p0 = int(RATIOS[0] * C.TARGET_DEPTH_READS)
@@ -279,11 +252,11 @@ if not rows:
     print('%s: 채점할 것이 없습니다 — val04_1 이 행렬을 만들었는지 확인' % SM); sys.exit(1)
 T = pd.DataFrame(rows)
 os.makedirs(ML, exist_ok=True)
-# --model 을 주면 파일명에 넣어 나눈다. 안 그러면 +JSD 결과를 덮어쓴다.
+# --model 주면 조합 이름을 파일명에 넣음 (다른 결과 덮어쓰기 방지)
 _tag = '_all_combos' if ALL else (('_' + name.replace('|', '-')) if WANT else '')
 out = '%s/y_prob_all_%s%s.csv' % (ML, V, _tag)
-# 원자적 쓰기. 중간에 죽으면 머리줄만 남은 표가 생겨 완료로 오인될 수 있다.
-_tmp = out + '.writing'   # 산출 이름은 ASCII 로 (한글 파일명 금지)
+# 임시 파일에 쓰고 이름 바꿈 (중간에 죽어도 반쪽 표가 안 남음)
+_tmp = out + '.writing'   # 산출 이름은 ASCII 만
 T.to_csv(_tmp, index=False)
 os.replace(_tmp, out)
 pos = T[T.y_true == 1]
@@ -300,7 +273,7 @@ print('  AUC    %s' % ' · '.join('%g%%:%.3f' % (r * 100, _auc(r))
                                  for r in sorted(pos.ratio.unique())))
 print('  정상 오탐 %.2f (문턱 %.4f)' % (neg.y_pred.mean(), thr))
 if _SKIP:
-    # 표는 남기되 실패로 끝낸다. 다음 실행은 위 관문이 빠진 비율을 보고 다시 채점한다.
+    # 표는 남기고 실패로 끝냄 (다음 실행에서 빠진 비율 보고 다시 채점)
     print('!! 특징을 못 읽어 건너뛴 칸 %d개: %s' % (len(_SKIP), ' · '.join('%s %g%%' % (n, r * 100) for n, r in _SKIP[:10])))
     sys.exit(1)
 print('  저장 %s' % out)

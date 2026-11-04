@@ -1,14 +1,13 @@
 #!/bin/bash
-# ── 4단계 · 결과 정리 ──
+# 4단계: 결과 표 정리
 #
-#   검증 채점 결과를 읽어 논문에 실을 표를 만든다. 읽기만 한다. 아무것도 안 쓴다.
+#   검증 채점 결과 읽어서 표만 출력 (파일 안 씀)
 #
-#   make_tables.py    판마다 「피처 조합 × 비율」 AUC 표. 검체 단위와 사람 단위를 같이 낸다.
-#   primary_metric.py   1차 지표: 짝지은 부트스트랩으로 판 사이 차이의 구간.
-#                음성을 고정하므로 구간에 「음성 축 불확실성이 0 으로」 들어간다.
-#                각주로 표에 같이 박는다.
+#   make_tables.py      판마다 피처 조합 x 비율 AUC 표 (검체 단위, 사람 단위)
+#   primary_metric.py   1차 지표: 짝지은 부트스트랩으로 판 사이 차이 구간
+#                       음성 고정이라 음성 쪽 불확실성은 구간에 없음 (표에 각주)
 #
-#   사용
+#   사용법
 #     bash make_report.sh                      # 실판 3 + 귀무 6, 5k
 #     DEPTH=100k bash make_report.sh           # 깊이를 바꿔서
 #     bash make_report.sh j15bl200             # 한 판만
@@ -17,9 +16,8 @@ set -u
 _HERE=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)
 S=$_HERE/steps
 
-# 보관 대상을 손으로 들고 있으면 목록에 없는 키는 conf 가 환경변수를
-#   덮는다. meth_config.py 의 「환경변수가 이긴다」와 반대가 된다. conf 에 적힌 키를
-#   「전부」 보관한다. 목록을 유지할 필요가 없어진다.
+# config.conf 읽기. 환경변수가 우선 (meth_config.py 와 같은 규칙)
+# conf 키를 미리 보관해 뒀다가 conf 읽은 뒤 되돌림
 _CONFFILE=""
 for _d in "$_HERE" "$_HERE/.." "$_HERE/../.." "$_HERE/../../.."; do
   [ -f "$_d/0_setup/config.conf" ] && { _CONFFILE="$_d/0_setup/config.conf"; break; }
@@ -37,9 +35,9 @@ for _k in $_PREKEYS; do
 done
 unset _v
 : "${METH_CONF_DIR:?0_setup/config.conf 를 못 찾았다}"
-# 수치 연산(BLAS) 스레드. 로지스틱 회귀 값이 스레드 수에 따라 달라진다.
-#   OMP_NUM_THREADS 등이 환경변수로 이미 있으면 그 값을 따른다. BLAS_THREADS=none 이면 고정하지 않는다.
-#   이 고정은 진입점(run_*.sh · make_report.sh)에만 있다. steps/ 의 파이썬을 직접 부르면 걸리지 않는다.
+# BLAS 스레드 고정 - 로지스틱 회귀 값이 스레드 수 따라 조금 달라짐
+# 환경변수에 이미 있으면 그 값 사용, BLAS_THREADS=none 이면 고정 안 함
+# 진입점(run_*.sh, make_report.sh)에서만 고정. steps/ 직접 실행하면 안 걸림
 _bt=${BLAS_THREADS:-1}
 case "$_bt" in
   [Nn][Oo][Nn][Ee]) ;;
@@ -47,15 +45,11 @@ case "$_bt" in
   *) export OMP_NUM_THREADS=${OMP_NUM_THREADS:-$_bt} OPENBLAS_NUM_THREADS=${OPENBLAS_NUM_THREADS:-$_bt} MKL_NUM_THREADS=${MKL_NUM_THREADS:-$_bt}
      [ "$OMP_NUM_THREADS" = "$OPENBLAS_NUM_THREADS" ] && [ "$OMP_NUM_THREADS" = "$MKL_NUM_THREADS" ]        || echo "주의: 스레드 값이 갈린다 · OMP=$OMP_NUM_THREADS OPENBLAS=$OPENBLAS_NUM_THREADS MKL=$MKL_NUM_THREADS" >&2 ;;
 esac
-# 셸이 기본값을 채우면 conf 를 비웠을 때 관문이 못 잔다.
-#   정본은 config.conf 와 meth_config.py 둘이다. 셸은 값을 만들지 않는다.
+# GEN 은 기본값 없음. conf 에 없으면 중단
 : "${GEN:?GEN 이 없습니다 — 0_setup/config.conf 의 GEN 을 채우십시오}"
-# 코호트 기본값을 우리 내부 이름으로 박지 않는다. 박아 두면 남이 받아서
-#   COHORT 를 안 줄 때 조용히 「없는 코호트」 를 읽고 표 아홉 개가 다 빈 채
-#   exit 0 으로 끝난다. 주지 않으면 멈춘다.
+# COHORT 기본값 없음 - 없는 코호트 읽으면 빈 표로 정상 종료돼서
 : "${COHORT:?COHORT 를 주십시오 — 3단계에서 쓴 것과 같아야 합니다 (예: COHORT=<your_cohort>)}"
-# 3단계와 같은 관문을 여기에도 둔다. 코호트를 「고르는 자리」 가 둘이면 관문도 둘이어야
-#   한다. 3단계만 막으면 오타난 코호트로 표를 뽑는 길이 열린 채 남는다.
+# COHORT 가 VAL_COHORTS 에 있는지 확인 (3단계와 같은 검사)
 if [ -n "${VAL_COHORTS:-}" ]; then
   _VC=$(printf %s "$VAL_COHORTS" | tr -d " \t")
   case ",${_VC}," in
@@ -64,9 +58,8 @@ if [ -n "${VAL_COHORTS:-}" ]; then
   esac
 fi
 export COHORT
-# 혈장 코호트(NEG_SAMPLES 가 있는 설정)는 비악성 대조가 검체 자리에 있어 아래 표가 뜻이 없다.
-#   그 코호트는 steps/plasma_metric.py 로만 판정한다.
-# 찾는 순서는 3단계(run_validate.sh)와 같다: COHORT_CONF → COHORT_DIR(기본 ~/cohorts) → 저장소 예시.
+# 혈장 코호트(NEG_SAMPLES 있음)는 이 표 대신 steps/plasma_metric.py 사용
+# 코호트 설정 찾는 순서: COHORT_CONF → COHORT_DIR(기본 ~/cohorts) → 저장소 예시
 for _c in "${COHORT_CONF:-}" "${COHORT_DIR:-$HOME/cohorts}/$COHORT.conf" "$_HERE/../3_validate/steps/cohorts/$COHORT.conf"; do
   [ -n "$_c" ] && [ -f "$_c" ] || continue
   if grep -qE '^[[:space:]]*NEG_SAMPLES=[[:space:]]*[^[:space:]]' "$_c"; then
@@ -75,9 +68,7 @@ for _c in "${COHORT_CONF:-}" "${COHORT_DIR:-$HOME/cohorts}/$COHORT.conf" "$_HERE
   fi
   break
 done
-# DEPTH 는 primary_metric.py --depth 에만 간다. make_tables.py 는
-#   깊이를 스스로 돌기 때문에 이 값에 영향받지 않는다. 머리글이 「표가 바뀐다」로
-#   읽히지 않게 적어 둔다.
+# DEPTH 는 primary_metric.py 에만 적용 (make_tables.py 는 깊이 전부 돎)
 DEPTH=${DEPTH:-5k}
 
 ONE=${1:-}
@@ -94,7 +85,7 @@ _bad=0
 for p in $LIST; do
   echo
   echo "##### $p"
-  # 종료값을 버리면 표 아홉 중 하나가 죽어도 다른 여덟에 묻힌다.
+  # 실패한 판 기록 (끝에서 종료값으로 알림)
   ( cd "$S" && python -u make_tables.py "$p" ) || { echo "!! 표 실패 $p" >&2; _bad=1; }
 done
 
@@ -102,8 +93,7 @@ echo
 echo "=== 1차 지표: 짝지은 부트스트랩 (깊이 $DEPTH) ==="
 ( cd "$S" && python -u primary_metric.py --depth "$DEPTH" ) || _bad=1
 
-# 하나라도 실패했으면 0 이 아닌 값으로 끝낸다. 표 아홉 중 하나가
-#   죽어도 나머지 출력에 묻혀 「성공」 으로 보이지 않게 한다.
+# 하나라도 실패하면 rc 1
 if [ "$_bad" -ne 0 ]; then
   echo "!! 실패한 표가 있습니다. 위 !! 줄을 보십시오" >&2
   exit 1

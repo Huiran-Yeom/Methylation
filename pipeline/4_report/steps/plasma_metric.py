@@ -1,35 +1,32 @@
 # -*- coding: utf-8 -*-
-"""환자 혈장 코호트를 희석 없이 채점한 결과의 사람 단위 판정 (탐색 · 1차 지표 아님)
+"""혈장 코호트 희석 없이 채점한 결과의 사람 단위 판정 (탐색용, 1차 지표 아님)
 
-  혈장은 이미 몸 안에서 희석된 검체라, 다시 음성 배경에 0.1~5% 로 섞으면 종양 리드가
-  검출 한계 아래로 내려간다. 그래서 혈장 코호트는 RATIOS=0.0, 1.0 으로 돌려 사람마다
-  자기 리드만으로 채점하고, 같은 플랫폼의 비악성 대조도 같은 방식으로 채점해 음성으로 쓴다.
-  In silico(조직·세포주) 코호트는 지금처럼 섞는다. 설정은
-  3_validate/steps/cohorts/patient_plasma.conf.example 을 보십시오.
+  혈장은 이미 희석된 검체라 다시 섞으면 종양 리드가 검출 한계 아래로 내려감
+  → RATIOS=0.0, 1.0 으로 사람마다 자기 리드만 채점, 같은 플랫폼 비악성 대조를 음성으로 사용
+  설정 예시: 3_validate/steps/cohorts/patient_plasma.conf.example
 
-  판정 순서 (하나라도 아니면 「말하지 않는다」)
-    ① 위장 대조   음성 행(배경만) 점수로 같은 AUC 를 재서 순열 귀무 95% 안이어야 한다
-    ② AUC ≥ 0.70
-    ③ 라벨 순열 p ≤ .05 (한쪽)
-    ④ 기준선 둘(사람별 총 리드 수 · 전역 평균 메틸화)의 양쪽 AUC 순열 p ≤ .05 이면 교란.
-       교란이 아니면 패널 − 기준선 짝 차이 p ≤ .05 여야 한다
-  관문 (판정 전에 멈추거나 그 판을 읽지 않음)
-    사람 수가 코호트 설정(SAMPLES · NEG_SAMPLES)과 다름 · 사람마다 반복 수가 NREP 와 다름
-    · 점수 단위 혼합(포화 전환 decision_function 이 일부 검체에만)
+  판정 순서 (하나라도 안 되면 '말하지 않는다')
+    1) 위장 대조: 음성 행(배경만) 점수 AUC 가 순열 귀무 95% 안
+    2) AUC >= 0.70
+    3) 라벨 순열 p <= .05 (한쪽)
+    4) 기준선 둘(총 리드 수, 전역 평균 메틸화) 양쪽 AUC 순열 p <= .05 이면 교란
+       교란 아니면 패널 - 기준선 짝 차이 p <= .05
+  판정 전 중단, 또는 그 판 건너뜀
+    사람 수가 SAMPLES, NEG_SAMPLES 와 다름, 반복 수가 NREP 와 다름, 점수 단위 혼합
 
-  보고만 하는 것 (판정에 쓰지 않음): llr 뺀 조합 AUC · 병기별 AUC · 음성 한 명 빼기 범위
+  보고만 함 (판정에 안 씀): llr 뺀 조합 AUC, 병기별 AUC, 음성 한 명 빼기 범위
 
-  읽는 것
+  읽는 파일
     <METH_ROOT>/<COHORT>_val/<사람>/results/<판>_<깊이>_uni/step04_ML_classifier/
-        y_prob_all_<판>_<깊이>_uni_all_combos.csv       (ratio 1.0 · rep GBM* 행)
-    --baseline  csv: sample, reads, gmeth   (plasma_baseline.py 가 만든다)
-    --stage     csv: sample, stage          (선택 · 'Stage I'/'Stage II' 를 조기로 본다)
+        y_prob_all_<판>_<깊이>_uni_all_combos.csv       (ratio 1.0, rep GBM* 행)
+    --baseline  csv: sample, reads, gmeth   (plasma_baseline.py 출력)
+    --stage     csv: sample, stage          (선택, 'Stage I'/'Stage II' 를 조기로)
 
-사용:  COHORT=<혈장코호트> python plasma_metric.py --baseline b.csv [--stage s.csv]
+사용법:  COHORT=<혈장코호트> python plasma_metric.py --baseline b.csv [--stage s.csv]
             [--depth 5k] [--nperm 10000] [--seed 80] j16bl200 j16jsd200 j16jsdb200
-       판 순서가 순열 난수 순서다. 같은 수를 다시 내려면 같은 순서로 준다.
+       판 순서 = 순열 난수 순서 (같은 값 다시 내려면 같은 순서로)
 """
-# 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돈다.
+# 스크립트 전용, import 하면 본체가 돎
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
@@ -73,7 +70,7 @@ R = '%s/%s_val' % (_cfg.METH_ROOT, COHORT)
 
 
 def load_conf():
-    # 찾는 순서는 3단계와 같다: --conf → COHORT_CONF → COHORT_DIR(기본 ~/cohorts) → 저장소 예시.
+    # 코호트 설정 찾는 순서: --conf → COHORT_CONF → COHORT_DIR(기본 ~/cohorts) → 저장소 예시
     _env = os.environ.get('COHORT_CONF')
     cands = [a.conf] if a.conf else ([_env] if _env else []) + [os.path.join(os.environ.get('COHORT_DIR') or os.path.expanduser('~/cohorts'), '%s.conf' % COHORT),
                                      os.path.join(_h, '3_validate', 'steps', 'cohorts', '%s.conf' % COHORT)]
@@ -113,7 +110,7 @@ def bounds(s, y):
 
 
 def scores(v, combo, rows):
-    # 단위 맞추기(SCORE_UNIT=consistent)는 코호트 전체에서 정해야 해서 검체 파일을 한꺼번에 읽는다.
+    # 점수 단위 맞추기는 코호트 전체 기준이라 검체 파일 한꺼번에 읽음
     fs = glob.glob('%s/*/results/%s/step04_ML_classifier/y_prob_all_%s_all_combos.csv' % (R, v, v))
     if not fs:
         return {}
@@ -124,7 +121,7 @@ def scores(v, combo, rows):
         print('  [점수 단위] %s · 확률과 decision_function 이 섞인 조합 %d개를 decision_function 으로 맞췄다'
               ' (아래 «df 전환 검체» 는 맞춘 뒤라 0 이고, ≥.999 줄은 이 단위에서 뜻이 없다)' % (v, nu))
     out = {}
-    for s in names:                       # 파일마다 한 칸 — 머리줄만 있는 파일도 빈 칸으로 남겨 반복 수 관문에 걸리게 한다
+    for s in names:                       # 파일마다 한 칸, 머리줄만 있는 파일도 남겨서 반복 수 검사에 걸리게
         d = D[D._s == s]
         d = d[(d.feature_set == combo) & (d.ratio.astype(float) == 1.0) & d.rep.astype(str).str.startswith(rows)]
         out[s] = (d.y_score.mean(), len(d), d.score_type.astype(str).str.contains('df').any())
@@ -137,7 +134,7 @@ for pan in a.panels:
     sc = scores(v, PR, 'GBM'); sh = scores(v, PR, 'Normal')
     miss = sorted(set(SAMPLES) - set(sc))
     if miss or set(sc) - set(SAMPLES):
-        # 리드가 모자란 사람은 섞기 단계에서 ratio 1.0 이 조용히 빠진다. 빠짐이 깊이와 엮이므로 멈춘다.
+        # 리드 모자란 사람은 ratio 1.0 이 조용히 빠짐 (깊이와 엮여서 중단)
         sys.exit('%s: 채점 파일 없는 사람 %d명 %s · 설정에 없는 사람 %s' % (v, len(miss), miss[:10], sorted(set(sc) - set(SAMPLES))[:10]))
     S = sorted(sc)
     y = np.array([0 if s in NEG else 1 for s in S])

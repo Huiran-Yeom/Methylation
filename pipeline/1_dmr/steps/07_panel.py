@@ -1,28 +1,24 @@
 # -*- coding: utf-8 -*-
-"""최종 DMR 패널: 74검체 전체로 1회
-
-  조각을 나누지 않는다. dmr_nested_cv.py 의 fold 안 절차와 같되
-  학습 자료가 74검체 전부다.
+"""최종 DMR 패널 (Baseline): 전체 검체로 한 번 선정
+  q<0.05, |dbeta|>=DBETA → 부트스트랩 빈도 순위 → 상위 TOPN
 
   산출
-    DMR_ranked_m.csv     q<0.05 & |dbeta|>=DBETA 인 블록 전부 · 순위 매김
-    DMR_confirmed_m.csv  위에서 TOPN 개              ← 이것이 패널
+    DMR_ranked_m.csv     조건 통과 블록 전부, 순위 포함
+    DMR_confirmed_m.csv  그중 상위 TOPN (패널)
     panel_summary.txt
 
   사용
-    python 07_panel.py                     # DBETA 30 · N 2000
-    python 07_panel.py --topn 1000         # 자르는 위치만 변경 (재선정 안 함)
+    python 07_panel.py --cand <후보폴더> --out <산출폴더>   # DBETA 30, N 2000
+    ... --topn 1000      # 자르는 위치만 변경
+    ... --dbeta X --boot B --topcap C
 """
 
-# 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돌아
-# 실제 자료를 덮어쓴다. 실행은 `python <파일>` 로만 한다.
+# 스크립트 전용. import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
 import os as _os, sys as _sys
-# 0_setup 을 찾는다. 이 파일이 「복사되어」 정리본 밖에서 돌 수도 있으므로
-#   ① 자기 위에서 위로 올라가며 찾고 ② 환경변수 METH_CONF_DIR ③ 그래도 없으면
-#   설정 없이 돌 수 있게 기본값으로 간다(검증이 검체 폴더로 복사해 쓰는 경로다).
+# 0_setup 찾기: 위로 올라가며 찾고, 없으면 METH_CONF_DIR 사용
 _h = _os.path.dirname(_os.path.abspath(__file__))
 for _ in range(5):
     _c = _os.path.join(_h, '0_setup')
@@ -51,20 +47,15 @@ import xgboost as xgb
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from moderated_t import moderated_ttest, bh, efp
 
-# ── 이 단계가 쓰는 경로 ──
-#   배치가 다르면 「여기만」 고친다. 0_setup/config.conf 에는 뿌리 둘
-#   (METH_ROOT=_M · DATASET_ROOT=_D)과 실험 설정만 둔다.
-#   환경변수나 명령줄 인자로 그때그때 덮어쓸 수 있다(아래 참조).
-# --cand · --out 은 필수다(드라이버에 없고 손으로 인자를 줘서 돌린다).
-#   m 판 후보 폴더 `m_candidates` 가 서버에 남아 있어, 기본값을 두면 인자 없이
-#   돌려도 죽지 않고 그 세대 후보로 새 패널을 조용히 만든다.
+# 이 단계 경로. 폴더 구조 다르면 여기만 수정 (인자로 덮어쓰기 가능)
+# --cand, --out 필수 - 기본값 두면 옛 세대 후보로 조용히 패널을 만들 수 있음
 CAND  = None
 OUT   = None
 DBETA = 30.0
 NBOOT = 100
 TOPN  = 2000
 NJOB  = 8
-TOPCAP = 1000   # 부트스트랩 빈도의 기준 «중요도 상위 TOPCAP». 패널 크기 N 을 바꿔 비교할 때는 --topcap N 으로 맞춘다(기본 1000 = 지금까지의 표)
+TOPCAP = 1000   # 빈도 셀 때 중요도 상위 몇 개까지 볼지. 기본 1000 = 발표한 표, 패널 크기 비교 땐 --topcap N
 a = sys.argv
 if '--topcap' in a: TOPCAP = int(a[a.index('--topcap') + 1])
 if '--dbeta' in a: DBETA = float(a[a.index('--dbeta') + 1])
@@ -77,9 +68,7 @@ if CAND is None or OUT is None:
              '  기본값을 두지 않는다. 옛 세대 후보로 조용히 새 패널을 만든 적이 있다.\n'
              '  09-14 에 쓴 값: --cand %s/results/dmr/j_candidates15\n'
              '                 --out  %s/results/dmr/j_panel_dmr15/bl200_d10_cellline' % (_M, _M))
-# 세대가 어긋나면 멈춘다. 07_llrfeat 이 쓰는 것과 같은 관문이다.
-# 06_jsdfeat·07_llrfeat 과 같은 꼴이다. 폴더 이름은 「포함」(in)이 아니라 같음으로
-#   본다 — 포함이면 j_candidates150 이 GEN=15 를 통과한다. GEN 이 비어도 관문을 끄지 않는다.
+# 세대 확인: --cand 폴더 이름이 j_candidates<GEN> 과 정확히 같아야 함
 _gen = _os.environ.get('GEN', '') or getattr(_cfg, 'GEN', '')
 _want_cand = 'j_candidates' + _gen
 if _os.path.basename(CAND.rstrip('/')) != _want_cand:
@@ -92,17 +81,11 @@ X0 = B.T.reindex(M['sample']).values.astype(np.float32)
 _CANCER = getattr(_cfg, 'CANCER_LABEL', 'GBM')   # samples.csv 의 type 값
 
 y0 = (M['type'] == _CANCER).astype(int).values
-# CANCER_LABEL 과 samples.csv 의 type 이 어긋나면 양성이 0개가 된다.
-#   그대로 두면 AUC 가 nan 이 되거나 전부 음성으로 학습한다. 여기서 멈춘다.
+# CANCER_LABEL 과 samples.csv type 이 안 맞으면 암 0개 → 중단
 if int(y0.sum()) == 0:
     sys.exit('samples.csv 에 type=%s 인 검체가 없습니다. CANCER_LABEL 과 1단계가 쓴 값이'
              ' 어긋났습니다 (현재 CANCER_LABEL=%s).' % (_CANCER, _CANCER))
-# 세포주 단위로 묶는다. SNU3-1·-2·-3 은 같은 세포주다 — 45파일을 독립으로 세면
-#   독립 단위가 부풀려진다(m 판이 부풀려진 원인이 「파일 단위로 세서」 였다).
-#   j판_DMR선정_20260820.md:441 "② 조정 t검정  정상 20 vs 암 10"
-#                          :442 "④ |Δβ|  세포주 평균끼리의 차이"
-#                          :449 "⑦ 부트스트랩 … (세포주 단위 재추출)"
-#   06_select.py (JSD 쪽)이 쓰는 것과 같은 묶음이다.
+# 세포주 단위로 평균 (같은 세포주 반복 파일을 독립으로 세지 않게)
 _c = [str(i) for i in range(X0.shape[1])]
 _D = pd.DataFrame(X0, columns=_c); _D['_g'] = M['group'].values; _D['_y'] = y0
 _A = _D.groupby('_g', sort=True).mean()
@@ -149,8 +132,7 @@ print('  효과크기 뒤 %d개 중 기대 위양성 %.0f개(%.1f%%) · 상한 %
       % (len(sig), e2, 100.0 * e2 / max(1, len(sig)), u2))
 if len(sig) < TOPN:
     print('! 유의 블록 %d 개가 N=%d 보다 적다. 전부 사용' % (len(sig), TOPN))
-# 0 이면 여기서 멈춘다. 그대로 가면 stability() 안의 sklearn 이
-#   'Found array with 0 feature(s)' 로 터져 「왜 0인지」 를 알 수 없다.
+# 유의 블록 0개면 중단 (안 그러면 sklearn 에러로 원인이 안 보임)
 if len(sig) == 0:
     raise SystemExit(
         '유의 블록이 0 입니다. q<0.05 이고 |dbeta|>=%.0f 인 블록이 없습니다. '

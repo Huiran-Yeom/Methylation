@@ -1,35 +1,20 @@
 # -*- coding: utf-8 -*-
-"""검증에 넘길 모델과 문턱을 굳힌다. j 판용.
+"""검증에 넘길 모델과 문턱 저장 (피처 조합마다 BEST.joblib)
 
-비율마다 교차검증으로 모델을 골라 저장하는 기본 방식에 셋을 더했다.
+조합마다 모델 4개 교차검증해서 1등 저장, 문턱은 정상 OOF 점수 95백분위
+  models/<조합>/pooled/BEST.joblib          비율 합친 것 (검증은 이것만 씀)
+  models/<조합>/mut_<p>_reads/BEST.joblib   비율마다 따로 (--pooled 면 안 만듦)
+합칠 때 정상은 한 번만 넣음 (비율마다 같은 0% 행이라), 암만 비율마다 모음
 
-  ① 특징 조합을 인자로 받는다      mean|entropy · mean|entropy|jsd
-  ② 비율을 합친 판(pooled)도 만든다  m 판에서 비율마다 AUC 가 전부 1.0 이라
-                                    비율별로는 모델을 못 골랐다
-  ③ 판을 여러 개 한 번에 돈다
-
-저장 위치
-  models/<조합>/pooled/BEST.joblib          비율을 합쳐 하나로
-  models/<조합>/mut_<p>_reads/BEST.joblib   비율마다 따로
-
-문턱은 정상(y=0)의 교차검증 점수 95백분위.
-
-합칠 때 정상을 한 번만 쓴다
-  파일마다 Normal 100판이 들어 있는데 전부 같은 0% 판이다. 그대로 쌓으면
-  같은 정상이 아홉 번 들어가 정상 쪽으로 치우친다. GBM 만 비율마다 모은다.
-
-명령줄:  09_save_best_j.py [판이름 ...] [--feat mean,entropy] [--feat mean,entropy,jsd]
+사용법: 09_save_best_j.py [판이름 ...] [--feat mean,entropy ...] [--allcombos] [--pooled]
 """
 
-# 이 파일은 스크립트다. 다른 코드가 import 하면 본체가 그대로 돌아
-# 실제 자료를 덮어쓴다. 실행은 `python <파일>` 로만 한다.
+# 스크립트 전용 - import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 
 import os as _os, sys as _sys
-# 0_setup 을 찾는다. 이 파일이 「복사되어」 정리본 밖에서 돌 수도 있으므로
-#   ① 자기 위에서 위로 올라가며 찾고 ② 환경변수 METH_CONF_DIR ③ 그래도 없으면
-#   설정 없이 돌 수 있게 기본값으로 간다(검증이 검체 폴더로 복사해 쓰는 경로다).
+# 0_setup 찾기: 위 폴더로 올라가며 → METH_CONF_DIR (못 찾으면 중단)
 _h = _os.path.dirname(_os.path.abspath(__file__))
 for _ in range(5):
     _c = _os.path.join(_h, '0_setup')
@@ -69,11 +54,11 @@ from sklearn.base import clone
 
 R = _M + '/results'
 SEED, NF = 42, 5
-try:   # SEED 는 config.conf 의 값을 따른다.
+try:   # SEED 는 config.conf 값 사용
     SEED = int(_cfg.SEED)
 except Exception:
     pass
-FIXED = str(getattr(_cfg, 'FIXED_MODEL', '') or '').strip()   # 비면 모델 넷을 겨룬다
+FIXED = str(getattr(_cfg, 'FIXED_MODEL', '') or '').strip()   # 비면 모델 4개 비교
 
 _a = sys.argv[1:]
 FEATS = []
@@ -81,11 +66,8 @@ while '--feat' in _a:
     i = _a.index('--feat')
     FEATS.append([x.strip() for x in _a[i + 1].split(',') if x.strip()])
     del _a[i:i + 2]
-# --allcombos 면 있는 피처의 공집합 아닌 부분집합을 전부 굳힌다.
-#   2_train/steps/08 의 조합 목록과 같은 규칙이다. 손으로 적지 않는다.
-#   --pooled 면 비율별 적합을 건너뛴다. 검증은 pooled 모델만 쓴다
-#   (score_one_sample.py:46  models/<조합>/pooled/BEST.joblib).
-#   특징 5종이면 31조합 x 10비율 x 4모델 = 1,240 적합이 31 x 4 = 124 로 줄어든다.
+# --allcombos: 있는 피처의 모든 조합 (08 과 같은 규칙)
+# --pooled: 비율별 모델 건너뜀 (검증은 pooled 만 씀)
 ALLC = '--allcombos' in _a
 POOLED_ONLY = '--pooled' in _a
 _a = [x for x in _a if x not in ('--allcombos', '--pooled')]
@@ -102,7 +84,7 @@ def models():
             'Random Forest': RandomForestClassifier(random_state=SEED, n_jobs=1),
             'XGBoost': XGBClassifier(random_state=SEED, eval_metric='logloss', n_jobs=1),
             'SVM': SVC(random_state=SEED)}
-    # 모델을 미리 하나로 고정한다(config.conf FIXED_MODEL).
+    # FIXED_MODEL 로 모델 하나 고정
     if FIXED:
         if FIXED not in ms:
             raise SystemExit('FIXED_MODEL=%r 은 모델 이름이 아니다: %s' % (FIXED, ' · '.join(ms)))
@@ -111,7 +93,7 @@ def models():
 
 
 def load(D, V, p, feats):
-    """한 비율의 여러 특징을 옆으로 이어붙인다. 열 이름에 특징 이름을 붙인다."""
+    """한 비율의 피처들을 옆으로 붙임 (열 이름 앞에 피처 이름)"""
     Xs = None
     y = None
     for k in feats:
@@ -129,17 +111,12 @@ def load(D, V, p, feats):
 
 
 def fit_save(X, y, md, tag):
-    """모델 4종을 교차검증으로 겨뤄 1등을 저장한다."""
+    """모델 4개 교차검증해서 1등 저장"""
     mu = X.mean()
-    # 채우기는 접기 안에서 한다(접기마다 학습 접기 평균으로만).
-    #   아래 교차검증이 만드는 thr 이 pooled/BEST.joblib 에 실리고,
-    #   score_one_sample.py 가 그 thr_spec95 로 외부 검증 특이도를 판정한다.
-    #   전체 자료 평균으로 미리 채우면 그 문턱이 누출된 값이 된다.
-    #   (mu 는 train_mean 으로 저장되므로 계산은 남긴다.)
-    # pooled 는 같은 검체의 여러 비율판이 쌓여 있다.
-    #   StratifiedKFold 는 그것을 학습 접기와 검증 접기에 갈라 넣는다 — 누출이다.
-    #   인덱스가 "<검체>@r<n>" 이므로 @ 앞을 그룹으로 쓴다.
-    #   비율별 판(중복 없음)에서는 그룹이 전부 달라 StratifiedKFold 로 돈다.
+    # 빈칸은 fold 안에서 학습 fold 평균으로 채움 (이 문턱이 검증 판정에 쓰여서 누출 막음)
+    # mu 는 train_mean 으로 저장
+    # pooled 는 같은 샘플이 여러 비율로 들어있어 "<샘플>@r<n>" 의 @ 앞으로 그룹 나눔
+    # 그룹이 다 다르면(비율별) 그냥 StratifiedKFold
     _grp = [str(ix).split("@")[0] for ix in X.index]
     if len(set(_grp)) < len(_grp):
         cv = StratifiedGroupKFold(NF, shuffle=True, random_state=SEED)
@@ -173,10 +150,7 @@ def fit_save(X, y, md, tag):
     m.fit(X, y)
     yv = np.asarray(y)
     thr = float(np.percentile(o[yv == 0], 95))
-    # [진단] 문턱이 어디에 서 있는지 남긴다.
-    #   문턱은 OOF 음성의 95분위인데, 음성이 100개뿐이라 알갱이가 1% 다.
-    #   게다가 옛 판 실측 문턱이 5k 0.9871 · 15k 0.8610 으로 [0,1] 의 맨 끝이고
-    #   깊이마다 0.126 이나 다르다. 분포가 없으면 나중에 해석할 수 없다.
+    # OOF 정상, 암 점수 분포도 저장 (정상 수가 적어 문턱이 거칠어서 해석용)
     _neg = np.asarray(o[yv == 0], dtype=float)
     _pos = np.asarray(o[yv == 1], dtype=float)
     def _dist(a):
@@ -189,10 +163,7 @@ def fit_save(X, y, md, tag):
                 'max': float(np.max(a)), 'mean': float(np.mean(a)),
                 'sd': float(np.std(a, ddof=1)) if len(a) > 1 else 0.0}
     negdist, posdist = _dist(_neg), _dist(_pos)
-    # [문턱 오차] 분위수 하나로는 "그 문턱이 얼마나 흔들리나" 를 못 낸다.
-    #   음성 n=100 · p=0.95 일 때 95% 분위수의 95% 신뢰구간은 순서통계량으로 나온다
-    #: 정렬한 음성 점수의 90~100번째. Bin(100,0.95) 의 평균 95 · SD 2.18 에서 온다.
-    #   여유 있게 상위 20개를 남긴다. 이게 있어야 특이도 주장에 구간이 붙는다.
+    # 정상 점수 상위 20개 저장 (문턱 신뢰구간 계산용)
     negtop = sorted(float(x) for x in _neg)[-20:]
     os.makedirs(md, exist_ok=True)
     joblib.dump({'model': m, 'features': list(X.columns),
@@ -218,9 +189,9 @@ def fit_save(X, y, md, tag):
 
 
 made = 0
-made_by_V = {}      # 판마다 센다 (made 는 전체 누적이라 판별 부족을 못 잡는다)
-expect_by_V = {}    # 판마다 기대치
-failures = []   # print 만 하면 아무도 못 읽는다. 기록하고 끝에서 멈춘다.
+made_by_V = {}      # 판별 저장 수
+expect_by_V = {}    # 판별 기대 수
+failures = []   # 실패 기록, 끝에서 있으면 중단
 _conv = _cfg.count_convergence()
 for V in VERS:
     D = '%s/panels/%s/%s/step04_ML_classifier' % (R, V.split('_')[0], V)
@@ -264,9 +235,7 @@ for V in VERS:
             ya.append(y[y == 1])
         Xp = pd.concat(Xa, axis=0)
         yp = pd.concat(ya, axis=0)
-        # 검체 이름을 r0,r1,... 로 덮어쓰면 같은 검체의 다른 비율판이 학습 접기와
-        #   검증 접기에 갈라 들어가도 막을 수가 없다(GroupKFold 가 구조적으로 불가능해진다).
-        #   이름을 남긴다. 중복은 @r<번호> 를 붙여 구분하되 검체 부분을 보존한다.
+        # 행 이름은 <샘플>@r<번호> - 샘플 이름을 남겨야 fit_save 가 그룹으로 나눌 수 있음
         Xp.index = ['%s@r%d' % (str(ix), k)
                     for k, ix in enumerate(Xp.index)]
         yp.index = Xp.index
@@ -276,11 +245,7 @@ for V in VERS:
 
 print('')
 print('끝. 저장한 모델 %d개' % made)
-# 만들어야 할 수와 실제 만든 수를 대조한다.
-#   한 조합이 BEST 를 못 만들면 val04_2 의 pick() 이 조용히 다음 후보로 내려간다.
-# 판마다 센다(누적 made 를 판 하나 기준 기대치와 비교하면 범위가 다르다).
-#   방향(많음/적음)은 단정하지 않고 「어긋남」 으로만 알린다.
-#   관문이 거짓으로 울면 다음부터 안 읽힌다.
+# 판마다 기대 수와 저장 수 비교, 다르면 실패 처리
 for _V in sorted(made_by_V):
     _n = made_by_V[_V]
     _e = expect_by_V.get(_V)

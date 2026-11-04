@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
-"""plasma_metric.py 의 기준선 두 개를 사람마다 잰다 (패널 없이 원자료에서)
+"""plasma_metric.py 기준선 두 개를 사람마다 계산 (패널 없이 원자료에서)
 
-  reads  사람별 총 리드 수. 기본은 BAM 의 1차 정렬 리드 수(보조·2차 정렬 제외).
-         --reads-tsv 를 주면 그 값(sample, reads)을 쓴다. 예: 처리 로그의 「reads read」(정렬 전 원 리드 수).
-  gmeth  전역 평균 메틸화 = bismark cov 의 Σmeth / Σ(meth + unmeth).
+  reads  사람별 총 리드 수. 기본은 BAM 1차 정렬 리드 수 (보조, 2차 정렬 제외)
+         --reads-tsv 주면 그 값(sample, reads) 사용 (예: 정렬 전 원 리드 수)
+  gmeth  전역 평균 메틸화 = bismark cov 의 sum(meth) / sum(meth + unmeth)
 
-  기준선이 패널만큼 환자와 비악성 대조를 가르면, 패널 점수는 「암 신호」와 「플랫폼 · 깊이 ·
-  전역 메틸화 차이」를 가르지 못한다. 그래서 plasma_metric.py 는 이 둘을 같은 순열로 잰다.
-  입력은 검증의 CANCER 슬롯과 같은 사람의 자료여야 한다.
+  기준선도 패널만큼 가르면 암 신호와 플랫폼, 깊이 차이를 구별 못 함
+  입력은 검증 CANCER 슬롯과 같은 사람 자료여야 함
 
-사용:  COHORT=<혈장코호트> python plasma_baseline.py --cov '/환자/{sample}.bismark.cov.gz' '/대조/{sample}.bismark.cov.gz' \\
+사용법:  COHORT=<혈장코호트> python plasma_baseline.py --cov '/환자/{sample}.bismark.cov.gz' '/대조/{sample}.bismark.cov.gz' \\
             [--bam '/path/{sample}.bam' | --reads-tsv reads.tsv] [--conf x.conf] -o baseline.csv
 """
 if __name__ != '__main__':
@@ -23,7 +22,7 @@ import sys
 import pandas as pd
 
 ap = argparse.ArgumentParser()
-ap.add_argument('--cov', required=True, nargs='+')   # 여러 개면 앞에서부터 있는 것을 쓴다
+ap.add_argument('--cov', required=True, nargs='+')   # 여러 개면 앞에서부터 있는 것 사용
 g = ap.add_mutually_exclusive_group()
 g.add_argument('--bam')
 g.add_argument('--reads-tsv')
@@ -33,7 +32,7 @@ a = ap.parse_args()
 
 COHORT = os.environ.get('COHORT') or sys.exit('COHORT 를 주십시오')
 _h = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# 찾는 순서는 3단계와 같다: --conf → COHORT_CONF → COHORT_DIR(기본 ~/cohorts) → 저장소 예시.
+# 코호트 설정 찾는 순서: --conf → COHORT_CONF → COHORT_DIR(기본 ~/cohorts) → 저장소 예시
 _env = os.environ.get('COHORT_CONF')
 cands = [a.conf] if a.conf else ([_env] if _env else []) + [os.path.join(os.environ.get('COHORT_DIR') or os.path.expanduser('~/cohorts'), '%s.conf' % COHORT),
                                  os.path.join(_h, '3_validate', 'steps', 'cohorts', '%s.conf' % COHORT)]

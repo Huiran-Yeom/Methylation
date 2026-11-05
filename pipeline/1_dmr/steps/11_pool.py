@@ -33,11 +33,15 @@ except ImportError:
 
 import os, re, sys, glob, subprocess
 import pandas as pd, pysam
+# 검체 이름, 단위 규칙은 sample_id.py (SID_RE, GROUP_RE)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sample_id as _sid
+sid = _sid.sid
 
 # 이 단계 경로. 폴더 구조 다르면 여기만 수정
-#   NORMAL_BAM_DIR (정상 BAM), GBM_BAM_DIR (암 BAM) 환경변수로 바꿀 수 있음
+#   NORMAL_BAM_DIR (정상 BAM), CANCER_BAM_DIR (암 BAM · 옛 이름 GBM_BAM_DIR) 환경변수로 바꿀 수 있음
 NB = _os.environ.get('NORMAL_BAM_DIR') or _D + '/for_in_silico_test/normal_cfDNA_public/aligned_bam'
-GB = _os.environ.get('GBM_BAM_DIR')    or _D + '/training/GBM_cell-line/aligned_bam'
+GB = _cfg.cancer_env('CANCER_BAM_DIR', 'GBM_BAM_DIR') or _D + '/training/GBM_cell-line/aligned_bam'
 BLOCK = 100
 try:   # 01~03 과 같은 블록 크기 사용
     BLOCK = int(_cfg.BLOCK_SIZE)
@@ -72,20 +76,6 @@ if int(getattr(_cfg, 'LLR_HELDOUT', 0)):
           % (_k, len(_mix), len(_ref) + len(_mix), len(USE), _before))
     if not USE:
         sys.exit('held-out: 혼합군에 남은 검체가 없다')
-
-# 파일 이름 → 검체 이름. 기본은 첫 _ 앞까지
-#   규칙이 다르면 SID_RE 로 지정 (첫 괄호가 이름, 안 맞으면 기본 규칙)
-#   예: SID_RE='(.+?)__'  H1876_0d__SRR... → H1876_0d
-_SRE = _os.environ.get('SID_RE')
-_srx = re.compile(_SRE) if _SRE else None
-def sid(p):
-    b = os.path.basename(p)
-    for suf in ('.bismark.cov.gz', '.cov.gz', '.bam'):
-        if b.endswith(suf): b = b[:-len(suf)]; break
-    if _srx is not None:
-        m = _srx.match(b)
-        if m and m.groups(): return m.group(1)
-    return b.split('_')[0]
 
 P = pd.read_csv(PANEL)
 keep = set(zip(P['chr'].astype(str), P['blk'].astype('int64')))

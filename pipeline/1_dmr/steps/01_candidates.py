@@ -35,9 +35,9 @@ import numpy as np, pandas as pd
 
 # 이 단계 경로. 폴더 구조 다르면 여기만 수정 (환경변수, 인자로 덮어쓰기 가능)
 #   NORMAL_SET      정상 cov (*.cov.gz)
-#   GBM_COV_DIR     암 cov
+#   CANCER_COV_DIR  암 cov (옛 이름 GBM_COV_DIR)
 ND  = _os.environ.get('NORMAL_SET')  or _M + '/sample_data/_input/normal_pub15'
-GD  = _os.environ.get('GBM_COV_DIR') or _D + '/training/GBM_cell-line/cov'
+GD  = _cfg.cancer_env('CANCER_COV_DIR', 'GBM_COV_DIR') or _D + '/training/GBM_cell-line/cov'
 # 산출 폴더 이름에 GEN(패널 세대) 붙임. 못 읽으면 중단
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:
@@ -62,37 +62,16 @@ if '--cpg'   in a: MINCPG = int(a[a.index('--cpg')+1])
 if '--out' in a: OUT = a[a.index('--out')+1]
 DRY = '--dry' in a
 
-# 파일 이름에서 검체 이름 뽑기. 기본은 첫 _ 앞까지 (cov, BAM 꼬리표 달라도 짝 맞게)
-# 규칙이 안 맞으면 SID_RE 사용 (첫 괄호가 검체 이름, 안 걸리면 기본 규칙). 예:
-#   SID_RE='(.+?)__'   H1876_0d__SRR...  -> H1876_0d
-#                      H1876__SRR...     -> H1876
-_SRE = _os.environ.get('SID_RE')
-_srx = re.compile(_SRE) if _SRE else None
-def sid(p):
-    b = os.path.basename(p)
-    for suf in ('.bismark.cov.gz', '.cov.gz'):
-        if b.endswith(suf):
-            b = b[:-len(suf)]; break
-    if _srx is not None:
-        m = _srx.match(b)
-        if m and m.groups(): return m.group(1)
-    return b.split('_')[0]
-# 반복본을 세포주 하나로 묶는 규칙 (커버를 세포주 단위로 세서 need_g, MINREP 에 바로 들어감)
-# 기본은 SNU<n>-<반복>. 다른 자료는 GROUP_RE 사용 (첫 괄호가 세포주 이름). 예:
-#   GROUP_RE='(.+?)_\d+d$'        H1876_0d -> H1876, H1876 -> H1876
-# 안 맞는 이름은 그대로 한 단위 (안 주면 반복본이 서로 다른 세포주로 세어짐)
-_GRE = _os.environ.get('GROUP_RE')
-_grx = re.compile(_GRE) if _GRE else None
-
-
+# 검체 이름, 단위 규칙은 sample_id.py (SID_RE, GROUP_RE)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sample_id as _sid
+sid = _sid.sid
 _CANCER = getattr(_cfg, 'CANCER_LABEL', 'GBM')   # samples.csv 의 type 값
 
+
 def grp(s, t=_CANCER):
-    # GROUP_RE 는 암 쪽에만 사용. 정상은 한 사람당 한 파일 전제 (아래 assert 로 확인)
-    if _grx is not None and t == _CANCER:
-        m = _grx.match(s)
-        return m.group(1) if (m and m.groups()) else s
-    return s.split('-')[0] if s.upper().startswith('SNU') and '-' in s else s
+    # GROUP_RE 는 암 쪽에만 사용. 정상은 한 사람당 한 파일 전제
+    return _sid.grp(s, t == _CANCER)
 
 def read_one(p):
     d = pd.read_csv(p, sep='\t', header=None, usecols=[0,1,3,4,5],
@@ -125,7 +104,7 @@ if _dup:
 # 정상, 암 한 쪽만 비어도 중단 (need 가 0 이 돼서 한 쪽만으로 후보가 나옴)
 _nn = sum(1 for _, _t in files if _t == 'Normal')
 if _nn == 0:        sys.exit('정상 cov 가 없다 — NORMAL_SET 또는 --nd 를 확인하라: ' + ND)
-if _nn == len(files): sys.exit('암 cov 가 없다 — GBM_COV_DIR 을 확인하라: ' + GD)
+if _nn == len(files): sys.exit('암 cov 가 없다 — CANCER_COV_DIR (옛 이름 GBM_COV_DIR) 을 확인하라: ' + GD)
 if DRY: files = files[:1] + files[-1:]   # 정상 1 + 암 1 (암 경로도 지나가게)
 # 커버 기준은 정상, 암 따로 (합쳐 세면 한쪽에 몰린 블록이 통과해 t검정 NaN)
 # 문턱은 파일 수 말고 세포주 수 기준 (복제 파일로 세면 암 표본이 부풂)

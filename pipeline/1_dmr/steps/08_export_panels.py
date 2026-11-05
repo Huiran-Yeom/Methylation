@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """실제 패널 세 판을 2단계가 읽는 형식(Feature,dbeta,q)으로 내보냄
-Feature = <chr>_<blk>
+Feature = <chr>_<blk>, N = PANEL_N (기본 200)
 
-  bl200   j_panel_dmr<GEN>/bl200_d10_cellline/DMR_confirmed_m.csv   (07_panel.py)
-  jsd200  j_panel<GEN>/panel_jsd_jsd_mean_n200.csv                  (06_select.py)
-  jsdb200 j_panel<GEN>_supplement/panel_jsd_supplement_n200.csv     (06b_select_supplement.py)
+  bl<N>   j_panel_dmr<GEN>/bl<N>_d10_cellline/DMR_confirmed_m.csv   (07_panel.py)
+  jsd<N>  j_panel<GEN>/panel_jsd_jsd_mean_n<N>.csv                  (06_select.py)
+  jsdb<N> j_panel<GEN>_supplement/panel_jsd_supplement_n<N>.csv     (06b_select_supplement.py)
 
   사용
     python 08_export_panels.py                  # 실제 자리에 씀
@@ -61,24 +61,27 @@ if '--r' in a:
 if '--out' in a:
     OUT = a[a.index('--out') + 1].rstrip('/')
 
-SRC = {'bl200':   R + '/j_panel_dmr' + _GEN + '/bl200_d10_cellline/DMR_confirmed_m.csv',
-       'jsd200':  R + '/j_panel' + _GEN + '/panel_jsd_jsd_mean_n200.csv',
-       'jsdb200': R + '/j_panel' + _GEN + '_supplement/panel_jsd_supplement_n200.csv'}
+N = _cfg.PANEL_N    # 패널 블록 수 (config.conf PANEL_N)
+SRC = {'bl%d' % N:   R + '/j_panel_dmr' + _GEN + '/bl%d_d10_cellline/DMR_confirmed_m.csv' % N,
+       'jsd%d' % N:  R + '/j_panel' + _GEN + '/panel_jsd_jsd_mean_n%d.csv' % N,
+       'jsdb%d' % N: R + '/j_panel' + _GEN + '_supplement/panel_jsd_supplement_n%d.csv' % N}
 
 # 입력 없을 때 어느 단계를 먼저 돌릴지 알려 주는 용도
-_MADE_BY = {'bl200':   '07_panel.py  (Baseline 순위)',
-            'jsd200':  '06_select.py (JSD 상위 N)',
-            'jsdb200': '06b_select_supplement.py 를 먼저 돌리십시오 (j_panel<GEN>_supplement 에 씁니다)'}
-# 옛 트리는 bl200, jsdb200 입력이 한글 이름. 새 이름 없을 때만 옛 이름 읽음
-_OLD = {'bl200':   SRC['bl200'].replace('bl200_d10_cellline', 'bl200_d10_세포주'),
-        'jsdb200': SRC['jsdb200'].replace('_supplement/panel_jsd_supplement_n200.csv',
-                                          '_보완/panel_jsd보완_n200.csv')}
+_MADE_BY = {'bl%d' % N:   '07_panel.py  (Baseline 순위)',
+            'jsd%d' % N:  '06_select.py (JSD 상위 N)',
+            'jsdb%d' % N: '06b_select_supplement.py 를 먼저 돌리십시오 (j_panel<GEN>_supplement 에 씁니다)'}
+# 옛 트리(200 블록)는 bl200, jsdb200 입력이 한글 이름. 새 이름 없을 때만 옛 이름 읽음
+_OLD = {}
+if N == 200:
+    _OLD = {'bl200':   SRC['bl200'].replace('bl200_d10_cellline', 'bl200_d10_세포주'),
+            'jsdb200': SRC['jsdb200'].replace('_supplement/panel_jsd_supplement_n200.csv',
+                                              '_보완/panel_jsd보완_n200.csv')}
 for _p, _o in _OLD.items():
     if not os.path.isfile(SRC[_p]) and os.path.isfile(_o):
         print('  옛 이름으로 읽는다: %s' % _o)
         SRC[_p] = _o
 
-# 설정 PANELS 에 없는 판은 건너뜀 (예: 200칸 못 채운 jsdb200)
+# 설정 PANELS 에 없는 판은 건너뜀 (예: N 칸 못 채운 jsdb)
 _skip = [p for p in SRC if p not in _cfg.PANELS]
 if _skip:
     print('  PANELS(%s) 에 없어 건너뜀: %s' % (','.join(_cfg.PANELS), ','.join(_skip)))
@@ -98,12 +101,12 @@ for panel, src in SRC.items():
     f = pd.DataFrame({'Feature': d['chr'].astype(str) + '_' + d['blk'].astype(str),
                       'dbeta':   d['dbeta'].astype(float),
                       'q':       d['q'].astype(float)})
-    # 200칸 아니거나 중복 칸 있으면 중단
-    assert len(f) == 200 and f['Feature'].is_unique, (panel, len(f))
+    # N 칸 아니거나 중복 칸 있으면 중단
+    assert len(f) == N and f['Feature'].is_unique, (panel, len(f))
     os.makedirs(OUT + '/' + panel, exist_ok=True)
     f.to_csv('%s/%s/DMR_confirmed_%s.csv' % (OUT, panel, panel), index=False)
     with open('%s/%s/_origin.txt' % (OUT, panel), 'w') as h:
-        h.write('원본 %s\n변환 2026-09-14 · Feature=chr_blk · 200블록\n' % src)
+        h.write('원본 %s\n변환 2026-09-14 · Feature=chr_blk · %d블록\n' % (src, N))
     print('%-8s %3d블록  <- %s' % (panel, len(f), '/'.join(src.split('/')[-2:])))
 
 # 판끼리 겹침 출력 (많이 겹치면 판 비교 의미가 약함)
@@ -111,5 +114,5 @@ F = {panel: set(pd.read_csv('%s/%s/DMR_confirmed_%s.csv' % (OUT, panel, panel))[
      for panel in SRC}
 for x, y in itertools.combinations(SRC, 2):
     n = len(F[x] & F[y])
-    print('겹침 %-8s x %-8s %3d칸 (%.1f%%)' % (x, y, n, 100 * n / 200))
+    print('겹침 %-8s x %-8s %3d칸 (%.1f%%)' % (x, y, n, 100 * n / N))
 print('합집합 %d칸' % len(set().union(*F.values())))

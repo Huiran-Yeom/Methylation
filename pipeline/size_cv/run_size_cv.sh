@@ -11,7 +11,7 @@
 #     pick    04 고르기
 #
 #   사용법 (pipeline/ 에서)
-#     NORMAL_SET=… GBM_COV_DIR=… NORMAL_BAM_DIR=… GBM_BAM_DIR=… bash size_cv/run_size_cv.sh
+#     NORMAL_SET=… CANCER_COV_DIR=… NORMAL_BAM_DIR=… CANCER_BAM_DIR=… bash size_cv/run_size_cv.sh   (옛 이름 GBM_* 도 받음)
 #     bash size_cv/run_size_cv.sh dmr 3        # 한 단계만, 접기 3 만
 #     bash size_cv/run_size_cv.sh cell 1 jsd200   # 칸 하나만
 #     CV_DRY=1 bash size_cv/run_size_cv.sh pick   # 표 형식, 칸 검사만
@@ -32,17 +32,9 @@ P=$(cd "$_HERE/.." && pwd)
 STEPS=$_HERE/steps
 ONE=${1:-}; shift || true
 
-# config.conf 읽기. 환경변수가 우선 (run_dmr.sh 와 같은 규칙)
-_CONFFILE=$P/0_setup/config.conf
-[ -f "$_CONFFILE" ] || { echo "멈춤: $_CONFFILE 없음" >&2; exit 1; }
-_PREKEYS=$(awk -F= '/^[A-Za-z_][A-Za-z0-9_]*=/{print $1}' "$_CONFFILE" | tr '\n' ' ')
-for _k in $_PREKEYS; do eval "_pre_$_k=\${$_k-}"; done
-set -a; . "$_CONFFILE"; METH_CONF_DIR=$P/0_setup; set +a
-for _k in $_PREKEYS; do
-  eval "_v=\$_pre_$_k"
-  if [ -n "${_v:-}" ]; then eval "export $_k=\$_pre_$_k"; fi
-done
-unset _v
+# 공통 머리: config.conf 읽기 (환경변수 우선), BLAS 스레드 고정, 암 쪽 자료 이름 맞추기
+[ -f "$P/0_setup/load_config.sh" ] || { echo "멈춤: $P/0_setup/load_config.sh 없음" >&2; exit 1; }
+. "$P/0_setup/load_config.sh"
 : "${GEN:?GEN 이 없습니다}" "${METH_ROOT:?}"
 
 export P GEN
@@ -60,7 +52,7 @@ esac
 _own=" METH_ROOT WORK_ROOT TMP_ROOT LLR_HELDOUT PANELS PANEL VERSION TARGET_DEPTH_READS COHORT COHORT_CONF VAL_COHORTS "
 CV_CONF_SIG=$( { md5sum < "$_CONFFILE"; md5sum < "$P/0_setup/meth_config.py"
   for _k in $_PREKEYS; do case "$_own" in *" $_k "*) ;; *) echo "$_k=${!_k-}" ;; esac; done
-  for _k in SID_RE GROUP_RE CANCER_LABEL NORMAL_SET GBM_COV_DIR NORMAL_BAM_DIR GBM_BAM_DIR; do echo "$_k=${!_k-}"; done
+  for _k in SID_RE GROUP_RE CANCER_LABEL NORMAL_SET CANCER_COV_DIR NORMAL_BAM_DIR CANCER_BAM_DIR; do echo "$_k=${!_k-}"; done
   } | md5sum | cut -c1-12)
 export CV_CONF_SIG
 mkdir -p "$CV_ROOT"

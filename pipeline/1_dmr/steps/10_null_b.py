@@ -68,18 +68,20 @@ cnt = collections.Counter()
 for (c, b), n in B.groupby(['chr', 'blk']).size().items():
     cnt[(str(c), int(b))] = int(n)
 
-# bl200 의 CpG 수 분포를 그대로 따름. bl200 파일 없으면 중단
-_bl = '%s/bl200/DMR_confirmed_bl200.csv' % OUT
+# bl<N> 의 CpG 수 분포를 그대로 따름. bl<N> 파일 없으면 중단
+N = _cfg.PANEL_N          # 패널 블록 수 (config.conf PANEL_N)
+BL = 'bl%d' % N
+_bl = '%s/%s/DMR_confirmed_%s.csv' % (OUT, BL, BL)
 if not os.path.isfile(_bl):
     raise SystemExit(
         ('입력이 없다: %s' % _bl)
         + '  |  08_export_panels.py 가 만든다 (그 앞은 07_panel.py).'
-        + '  귀무B 는 bl200 의 CpG 수 분포를 맞춰 뽑으므로 bl200 이 먼저 있어야 한다.')
+        + '  귀무B 는 %s 의 CpG 수 분포를 맞춰 뽑으므로 %s 이 먼저 있어야 한다.' % (BL, BL))
 bl = pd.read_csv(_bl)
 blk = [(x.split('_')[0], int(x.split('_')[1])) for x in bl['Feature']]
 hist = collections.Counter(min(cnt.get(k, 0), CAP) for k in blk)
-print('bl200 CpG 수 분포(8+ 묶음):', dict(sorted(hist.items())))
-NPICK = len(blk)          # 칸 수도 bl200 에 맞춤 (보통 200, 교집합 패널이면 그 크기)
+print('%s CpG 수 분포(8+ 묶음):' % BL, dict(sorted(hist.items())))
+NPICK = len(blk)          # 칸 수도 bl<N> 에 맞춤 (보통 N, 교집합 패널이면 그 크기)
 
 bucket = collections.defaultdict(list)
 for k in U:
@@ -97,14 +99,14 @@ for i in (1, 2, 3):
     assert len(pick) == NPICK, (len(pick), NPICK)
     d = pd.DataFrame({'Feature': ['%s_%d' % (c, b) for c, b in pick],
                       'dbeta': [0.0] * NPICK, 'q': [1.0] * NPICK})
-    o = '%s/randb%d200' % (OUT, i)
+    o = '%s/randb%d%d' % (OUT, i, N)
     os.makedirs(o, exist_ok=True)
-    d.to_csv('%s/DMR_confirmed_randb%d200.csv' % (o, i), index=False)
+    d.to_csv('%s/DMR_confirmed_randb%d%d.csv' % (o, i, N), index=False)
     with open(o + '/_origin.txt', 'w') as h:
-        h.write('무작위 패널 귀무B 씨앗 %d: 2026-09-14\n'
+        h.write(('무작위 패널 귀무B 씨앗 %d: 2026-09-14\n'
                 '  모집단: blocks_frac060.csv %s칸 (Baseline 이 고르는 그 모집단)\n'
                 '  bl200 의 CpG 수 분포에 맞춰 층화 추출. bl200 의 칸 수 불리함을 그대로 진다.\n'
-                '  bl200 의 잣대로 쓴다. jsd/jsdb 의 잣대는 귀무A(rand*200).\n' % (i, format(len(U), ',')))
+                '  bl200 의 잣대로 쓴다. jsd/jsdb 의 잣대는 귀무A(rand*200).\n' % (i, format(len(U), ','))).replace('bl200', BL).replace('rand*200', 'rand*%d' % N))
     have3 = sum(1 for k in pick if cnt.get(k, 0) >= 3)
-    print('randb%d200  %d칸 · K=3창 서는 칸 %d · CpG<3 인 칸 %d'
-          % (i, NPICK, have3, sum(1 for k in pick if cnt.get(k, 0) < 3)))
+    print('randb%d%d  %d칸 · K=3창 서는 칸 %d · CpG<3 인 칸 %d'
+          % (i, N, NPICK, have3, sum(1 for k in pick if cnt.get(k, 0) < 3)))

@@ -49,7 +49,7 @@ R = _M + "/results/dmr"
 CAND = R + "/j_candidates" + _GEN
 K    = int(_os.environ.get("PATTERN_K", 0) or _cfg.PATTERN_K)
 MINR = int(_os.environ.get("MIN_READS_PER_WINDOW", 0) or _cfg.MIN_READS_PER_WINDOW)
-N    = int(_os.environ.get("PANEL_N", 0) or 200)
+N    = _cfg.PANEL_N    # 패널 블록 수 (config.conf PANEL_N)
 OUT = R + "/j_panel" + _GEN + "_supplement"
 boot = pd.read_parquet("%s/j_jsd%s/boot_K%d_minr%d.parquet" % (R, _GEN, K, MINR))
 null = pd.read_parquet("%s/j_jsd%s/null_K%d_minr%d.parquet" % (R, _GEN, K, MINR))["null_block_jsd"].values
@@ -62,7 +62,7 @@ for pct in (99.9, 99.5, 99.0):
     if n >= N:
         used_pct, used_t = pct, t; break
 else:
-    raise SystemExit("어느 문턱으로도 200 을 못 채움")
+    raise SystemExit("어느 문턱으로도 %d 을 못 채움" % N)
 print("=> 채택 문턱 귀무 %.1f%% · t=%.4f" % (used_pct, used_t))
 Z = boot[boot.jsd_obs > used_t].copy()
 Z = Z.sort_values(["freq", "jsd_obs"], ascending=[False, False]).reset_index(drop=True)

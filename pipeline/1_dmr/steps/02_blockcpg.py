@@ -37,9 +37,9 @@ import numpy as np, pandas as pd
 
 # 이 단계 경로. 폴더 구조 다르면 여기만 수정 (환경변수, 인자로 덮어쓰기 가능)
 #   NORMAL_SET      정상 cov (*.cov.gz)
-#   GBM_COV_DIR     암 cov
+#   CANCER_COV_DIR  암 cov (옛 이름 GBM_COV_DIR)
 ND   = _os.environ.get('NORMAL_SET')  or _M + '/sample_data/_input/normal_pub15'
-GD   = _os.environ.get('GBM_COV_DIR') or _D + '/training/GBM_cell-line/cov'
+GD   = _cfg.cancer_env('CANCER_COV_DIR', 'GBM_COV_DIR') or _D + '/training/GBM_cell-line/cov'
 # 산출 폴더 이름에 GEN(패널 세대) 붙임. 못 읽으면 중단
 _GEN = _os.environ.get('GEN', '')
 if not _GEN:
@@ -61,37 +61,16 @@ if '--cand' in a: CAND = a[a.index('--cand')+1]
 if '--depth' in a: MINCOV = int(a[a.index('--depth')+1]) - 1
 OUT = a[a.index('--out')+1] if '--out' in a else CAND
 
-# 파일 이름에서 검체 이름 뽑기. 기본은 첫 _ 앞까지 (cov, BAM 꼬리표 달라도 짝 맞게)
-# 규칙이 안 맞으면 SID_RE 사용 (첫 괄호가 검체 이름, 안 걸리면 기본 규칙). 예:
-#   SID_RE='(.+?)__'   H1876_0d__SRR...  -> H1876_0d
-#                      H1876__SRR...     -> H1876
-_SRE = _os.environ.get('SID_RE')
-_srx = re.compile(_SRE) if _SRE else None
-def sid(p):
-    b = os.path.basename(p)
-    for suf in ('.bismark.cov.gz', '.cov.gz'):
-        if b.endswith(suf):
-            b = b[:-len(suf)]; break
-    if _srx is not None:
-        m = _srx.match(b)
-        if m and m.groups(): return m.group(1)
-    return b.split('_')[0]
-# 반복본을 세포주 하나로 묶는 규칙 (커버를 세포주 단위로 세서 need_g, MINREP 에 바로 들어감)
-# 기본은 SNU<n>-<반복>. 다른 자료는 GROUP_RE 사용 (첫 괄호가 세포주 이름). 예:
-#   GROUP_RE='(.+?)_\d+d$'        H1876_0d -> H1876, H1876 -> H1876
-# 안 맞는 이름은 그대로 한 단위 (안 주면 반복본이 서로 다른 세포주로 세어짐)
-_GRE = _os.environ.get('GROUP_RE')
-_grx = re.compile(_GRE) if _GRE else None
-
-
+# 검체 이름, 단위 규칙은 sample_id.py (SID_RE, GROUP_RE)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sample_id as _sid
+sid = _sid.sid
 _CANCER = getattr(_cfg, 'CANCER_LABEL', 'GBM')   # samples.csv 의 type 값
+
 
 def grp(s, t=_CANCER):
     # GROUP_RE 는 암 쪽에만 사용. 정상은 한 사람당 한 파일 전제
-    if _grx is not None and t == _CANCER:
-        m = _grx.match(s)
-        return m.group(1) if (m and m.groups()) else s
-    return s.split('-')[0] if s.upper().startswith('SNU') and '-' in s else s
+    return _sid.grp(s, t == _CANCER)
 
 files = [(f,'Normal') for f in sorted(glob.glob(ND+'/*.cov.gz'))] + \
         [(f,_CANCER)    for f in sorted(glob.glob(GD+'/*.cov.gz'))]
@@ -110,7 +89,7 @@ if _dup:
     sys.exit(chr(10).join(_msg))
 _nn = sum(1 for f, _t in files if _t == 'Normal')
 if _nn == 0:          sys.exit('정상 cov 가 없다 — NORMAL_SET 또는 --nd 를 확인하라: ' + ND)
-if _nn == len(files): sys.exit('암 cov 가 없다 — GBM_COV_DIR 을 확인하라: ' + GD)
+if _nn == len(files): sys.exit('암 cov 가 없다 — CANCER_COV_DIR (옛 이름 GBM_COV_DIR) 을 확인하라: ' + GD)
 
 u_norm = len({grp(sid(f), 'Normal') for f,t in files if t=='Normal'})
 u_gbm  = len({grp(sid(f)) for f,t in files if t==_CANCER})

@@ -48,7 +48,7 @@ a = sys.argv
 if '--gen' in a: GEN = a[a.index('--gen') + 1]
 if '--dmr' in a: R = a[a.index('--dmr') + 1].rstrip('/')
 
-PANELS = list(getattr(_cfg, 'PANELS', ['bl200', 'jsd200', 'jsdb200']))
+PANELS = list(getattr(_cfg, 'PANELS', ['%s%d' % (x, _cfg.PANEL_N) for x in ('bl', 'jsd', 'jsdb')]))
 NULLS = list(getattr(_cfg, 'NULL_PANELS', []))
 _CANCER = getattr(_cfg, 'CANCER_LABEL', 'GBM')
 

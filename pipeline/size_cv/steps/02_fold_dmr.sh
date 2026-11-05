@@ -13,9 +13,9 @@ say(){ echo "[$(date +%F' '%T)] f$K $*"; }
 run(){ say "\$ $*"; "$@" || { say "실패 rc=$? — 중단"; exit 1; }; }
 
 # 격리: 바깥 값이 끼어들지 않게
-unset JSD_CAND LLR_CAND USE_NORMAL USE_GBM POOL_DIR COLSET_FROM SCORE_UNIT CONVERGENCE_GATE
+unset JSD_CAND LLR_CAND USE_NORMAL USE_GBM USE_CANCER POOL_DIR COLSET_FROM SCORE_UNIT CONVERGENCE_GATE
 export METH_ROOT=$F/root WORK_ROOT=$F/work TMP_ROOT=$F/tmp LLR_HELDOUT=$CV_LLR_HELDOUT
-export NORMAL_SET=$F/train_normal_cov GBM_COV_DIR=$F/train_cancer_cov
+export NORMAL_SET=$F/train_normal_cov CANCER_COV_DIR=$F/train_cancer_cov GBM_COV_DIR=$F/train_cancer_cov   # 새 이름, 옛 이름 둘 다
 export PANELS=$(for N in $CV_SIZES; do printf 'jsd%s,bl%s,' "$N" "$N"; done | sed 's/,$//')
 mkdir -p "$WORK_ROOT" "$TMP_ROOT"
 D=$METH_ROOT/results/dmr
@@ -30,7 +30,7 @@ if [ -e "$METH_ROOT" ] && [ -n "$(ls -A "$METH_ROOT" 2>/dev/null)" ]; then
   say "멈춤: $METH_ROOT 가 비어있지 않은데 완료 표지가 없거나 다름. 이 모듈이 만든 폴더이니 지우고 다시 돌리거나 그대로 쓸지 확인"
   exit 1
 fi
-say "시작 · 정상 $(ls "$NORMAL_SET"/*.cov.gz | wc -l) · 암 $(ls "$GBM_COV_DIR"/*.cov.gz | wc -l) · 크기 $CV_SIZES · TOPCAP $CV_TOPCAP"
+say "시작 · 정상 $(ls "$NORMAL_SET"/*.cov.gz | wc -l) · 암 $(ls "$CANCER_COV_DIR"/*.cov.gz | wc -l) · 크기 $CV_SIZES · TOPCAP $CV_TOPCAP"
 
 for s in 01 02 03 04 05; do run bash "$P/1_dmr/run_dmr.sh" $s; done
 JF=$(ls "$D/j_jsd$GEN"/jsd_K${PATTERN_K:-3}_minr${MIN_READS_PER_WINDOW:-6}.parquet)

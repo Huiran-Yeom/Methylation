@@ -39,7 +39,8 @@ for k in ('--a', '--b', '--out'):
 RA = a[a.index('--a') + 1].rstrip('/')
 RB = a[a.index('--b') + 1].rstrip('/')
 OUT = a[a.index('--out') + 1].rstrip('/')
-N = int(a[a.index('--n') + 1]) if '--n' in a else 200
+PN = _cfg.PANEL_N    # 판 이름, 07 폴더 이름의 크기 (config.conf PANEL_N)
+N = int(a[a.index('--n') + 1]) if '--n' in a else PN
 PCT = float(a[a.index('--pct') + 1]) if '--pct' in a else 99.0
 MIN = int(a[a.index('--min') + 1]) if '--min' in a else 50
 ONLY = '--report-only' in a
@@ -73,7 +74,7 @@ def stats(R):
 
 
 def ranked(R):
-    d = pd.read_csv('%s/j_panel_dmr%s/bl200_d10_cellline/DMR_ranked_m.csv' % (R, GEN))
+    d = pd.read_csv('%s/j_panel_dmr%s/bl%d_d10_cellline/DMR_ranked_m.csv' % (R, GEN, PN))
     return list(d['chr'].astype(str) + '_' + d['blk'].astype(str))
 
 
@@ -92,14 +93,15 @@ SA, SB = stats(RA), stats(RB)
 la, lb = ranked(RA), ranked(RB)
 ja, ta = jsd_pass(RA)
 jb, tb = jsd_pass(RB)
-sel = {'bl200': [f for f in lb if f in set(la)],
-       'jsd200': [f for f in jb if f in set(ja)]}
-note = {'bl200': 'DMR1 통과 %d · DMR2 통과 %d · 둘 다 %d' % (len(la), len(lb), len(sel['bl200'])),
-        'jsd200': 'DMR1 통과 %d(t %.4f) · DMR2 통과 %d(t %.4f) · 둘 다 %d' % (len(ja), ta, len(jb), tb, len(sel['jsd200']))}
+BL, JS = 'bl%d' % PN, 'jsd%d' % PN
+sel = {BL: [f for f in lb if f in set(la)],
+       JS: [f for f in jb if f in set(ja)]}
+note = {BL: 'DMR1 통과 %d · DMR2 통과 %d · 둘 다 %d' % (len(la), len(lb), len(sel[BL])),
+        JS: 'DMR1 통과 %d(t %.4f) · DMR2 통과 %d(t %.4f) · 둘 다 %d' % (len(ja), ta, len(jb), tb, len(sel[JS]))}
 keep, report = [], []
 for p in _cfg.PANELS:
     if p not in sel:
-        raise SystemExit('이 단계는 bl200 · jsd200 만 만든다: PANELS 에 %s' % p)
+        raise SystemExit('이 단계는 %s · %s 만 만든다: PANELS 에 %s' % (BL, JS, p))
     F = sel[p][:N]
     da, db = SA.reindex(F)['dbeta'], SB.reindex(F)['dbeta']
     same = int(((da > 0) & (db > 0)).sum() + ((da < 0) & (db < 0)).sum())

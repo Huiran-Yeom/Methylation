@@ -45,15 +45,15 @@ if not _GEN:
                          '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
 # 이 단계 경로. 폴더 구조 다르면 여기만 수정 (환경변수, 인자로 덮어쓰기 가능)
 #   NORMAL_SET      정상 cov (검체 목록용)
-#   GBM_COV_DIR     암 cov (검체 목록용)
+#   CANCER_COV_DIR  암 cov (검체 목록용 · 옛 이름 GBM_COV_DIR)
 #   NORMAL_BAM_DIR  정상 BAM (실제로 읽는 곳)
-#   GBM_BAM_DIR     암 BAM (실제로 읽는 곳)
+#   CANCER_BAM_DIR  암 BAM (실제로 읽는 곳 · 옛 이름 GBM_BAM_DIR)
 CAND = _M + '/results/dmr/j_candidates' + _GEN
 OUT  = _M + '/results/dmr/j_jsdcount' + _GEN
 NB   = _os.environ.get('NORMAL_BAM_DIR') or _D + '/for_in_silico_test/normal_cfDNA_public/aligned_bam'
-GB   = _os.environ.get('GBM_BAM_DIR')    or _D + '/training/GBM_cell-line/aligned_bam'
+GB   = _cfg.cancer_env('CANCER_BAM_DIR', 'GBM_BAM_DIR') or _D + '/training/GBM_cell-line/aligned_bam'
 ND   = _os.environ.get('NORMAL_SET')     or _M + '/sample_data/_input/normal_pub15'
-GD   = _os.environ.get('GBM_COV_DIR')    or _D + '/training/GBM_cell-line/cov'
+GD   = _cfg.cancer_env('CANCER_COV_DIR', 'GBM_COV_DIR') or _D + '/training/GBM_cell-line/cov'
 BLOCK, KS = 100, (3, 4, 5)
 try:   # config.conf 의 BLOCK_SIZE 사용 (01, 02, 11 과 같은 격자)
     BLOCK = int(_cfg.BLOCK_SIZE)
@@ -67,20 +67,10 @@ if '--out'  in a: OUT  = a[a.index('--out')+1]
 ONLY  = a[a.index('--sample')+1] if '--sample' in a else None
 LIMIT = int(a[a.index('--limit')+1]) if '--limit' in a else 0
 
-# 파일 이름에서 검체 이름 뽑기. 기본은 첫 _ 앞까지 (cov, BAM 꼬리표 달라도 짝 맞게)
-# 규칙이 안 맞으면 SID_RE 사용 (첫 괄호가 검체 이름, 안 걸리면 기본 규칙). 예:
-#   SID_RE='(.+?)__'   H1876_0d__SRR...  -> H1876_0d
-#                      H1876__SRR...     -> H1876
-_SRE = _os.environ.get('SID_RE')
-_srx = re.compile(_SRE) if _SRE else None
-def sid(p):
-    b = os.path.basename(p)
-    for suf in ('.bismark.cov.gz', '.cov.gz', '.bam'):
-        if b.endswith(suf): b = b[:-len(suf)]; break
-    if _srx is not None:
-        m = _srx.match(b)
-        if m and m.groups(): return m.group(1)
-    return b.split('_')[0]
+# 검체 이름, 단위 규칙은 sample_id.py (SID_RE, GROUP_RE)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sample_id as _sid
+sid = _sid.sid
 
 P = pd.read_parquet(CAND + '/blocks_cpg.parquet').sort_values(['chr','blk','pos'])
 gp = P.groupby(['chr','blk'], observed=True)['pos'].apply(list)
@@ -175,7 +165,7 @@ if _miss:
                  '  cov 이름과 BAM 이름이 첫 _ 앞까지 같아야 짝이 맞습니다.' + chr(10) +
                  '  정상 BAM: ' + NB + chr(10) +
                  '  암   BAM: ' + GB + chr(10) +
-                 '  폴더가 다르면 NORMAL_BAM_DIR · GBM_BAM_DIR 로 주십시오.' + chr(10) +
+                 '  폴더가 다르면 NORMAL_BAM_DIR · CANCER_BAM_DIR 로 주십시오.' + chr(10) +
                  '  빠진 채로 진행하려면 ALLOW_SKIP=1 (04 의 정상 기준이 줄어듭니다).')
     # ALLOW_SKIP 이어도 정상 또는 암이 통째로 비면 중단
     _gone = [t for t in sorted({j[2] for j in jobs}) if not any(x[2] == t for x in _pair)]
@@ -183,7 +173,7 @@ if _miss:
         sys.exit(('중단: %s 을 한 개도 짝짓지 못했습니다 (ALLOW_SKIP 으로도 넘길 수 없습니다).'
                   % ' · '.join(_gone)) + chr(10) +
                  '  정상 BAM: ' + NB + chr(10) + '  암   BAM: ' + GB + chr(10) +
-                 '  폴더가 다르면 NORMAL_BAM_DIR · GBM_BAM_DIR 로 주십시오.')
+                 '  폴더가 다르면 NORMAL_BAM_DIR · CANCER_BAM_DIR 로 주십시오.')
     print('  ALLOW_SKIP=1 — 빠진 채로 진행합니다. 04 의 정상 기준이 줄어듭니다.')
 
 if not _pair: sys.exit('중단: 짝지은 검체가 하나도 없습니다.')

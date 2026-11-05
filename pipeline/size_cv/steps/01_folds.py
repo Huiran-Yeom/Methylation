@@ -4,7 +4,7 @@
   층마다 단위를 바이트 순 정렬 → 1..NFOLD 에 번갈아 넣음 (시드 없음)
   접기별 학습 cov 링크, 빼 둔 정상 / 암 목록을 만듦. 원자료는 읽기만 하고 링크만 만듦
 사용: python 01_folds.py --out <CV_ROOT> --nfold 5 [--strata <검체,층 csv>] [--dry]
-  정상 cov = NORMAL_SET, 암 cov = GBM_COV_DIR, 암 BAM = GBM_BAM_DIR, 정상 BAM = NORMAL_BAM_DIR
+  정상 cov = NORMAL_SET, 암 cov = CANCER_COV_DIR, 암 BAM = CANCER_BAM_DIR, 정상 BAM = NORMAL_BAM_DIR (옛 이름 GBM_* 도 받음)
   검체 id = SID_RE, 단위 = GROUP_RE (1단계 01 과 같은 규칙, 정상은 사람 = 단위)
   --strata 없으면 정상 / 암 두 층
 """
@@ -12,7 +12,6 @@ if __name__ != '__main__':
     raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
 import glob
 import os
-import re
 import sys
 
 import pandas as pd
@@ -23,35 +22,24 @@ NFOLD = int(a[a.index('--nfold') + 1]) if '--nfold' in a else 5
 STRATA = a[a.index('--strata') + 1] if '--strata' in a else ''
 DRY = '--dry' in a
 ENV = os.environ
-ND, CD = ENV.get('NORMAL_SET', ''), ENV.get('GBM_COV_DIR', '')
-NB, CB = ENV.get('NORMAL_BAM_DIR', ''), ENV.get('GBM_BAM_DIR', '')
-for k, v in (('NORMAL_SET', ND), ('GBM_COV_DIR', CD), ('NORMAL_BAM_DIR', NB), ('GBM_BAM_DIR', CB)):
+_P = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path[:0] = [os.path.join(_P, '0_setup'), os.path.join(_P, '1_dmr', 'steps')]
+import meth_config as _cfg   # noqa: E402  (암 쪽 자료 이름, CANCER_LABEL)
+import sample_id as _sid     # noqa: E402  (검체 이름, 단위 규칙)
+
+
+ND, CD = ENV.get('NORMAL_SET', ''), _cfg.cancer_env('CANCER_COV_DIR', 'GBM_COV_DIR')
+NB, CB = ENV.get('NORMAL_BAM_DIR', ''), _cfg.cancer_env('CANCER_BAM_DIR', 'GBM_BAM_DIR')
+for k, v in (('NORMAL_SET', ND), ('CANCER_COV_DIR', CD), ('NORMAL_BAM_DIR', NB), ('CANCER_BAM_DIR', CB)):
     if not v or not os.path.isdir(v):
         sys.exit('멈춤: %s 폴더가 없음 — %s' % (k, v))
-CANCER = ENV.get('CANCER_LABEL', 'GBM')
-_srx = re.compile(ENV['SID_RE']) if ENV.get('SID_RE') else None
-_grx = re.compile(ENV['GROUP_RE']) if ENV.get('GROUP_RE') else None
-
-
-def sid(p):
-    b = os.path.basename(p)
-    for suf in ('.bismark.cov.gz', '.cov.gz', '.sort.bam', '.bam'):
-        if b.endswith(suf):
-            b = b[:-len(suf)]
-            break
-    if _srx is not None:
-        m = _srx.match(b)
-        if m and m.groups():
-            return m.group(1)
-    return b.split('_')[0]
+CANCER = _cfg.CANCER_LABEL
+sid = _sid.sid
 
 
 def unit(s, cancer):
-    # 1단계 01 의 grp() 와 같은 규칙. GROUP_RE 는 암 쪽에만
-    if cancer and _grx is not None:
-        m = _grx.match(s)
-        return m.group(1) if (m and m.groups()) else s
-    return s.split('-')[0] if s.upper().startswith('SNU') and '-' in s else s
+    # 1단계 01 의 grp() 와 같은 규칙 (sample_id.py). GROUP_RE 는 암 쪽에만
+    return _sid.grp(s, cancer)
 
 
 def pairs(cov_dir, bam_dir, what):

@@ -52,7 +52,8 @@ R = _M + '/results/dmr'
 OUT = R + '/j_panel_dmr' + _GEN + '_panels'
 CAND = R + '/j_candidates' + _GEN
 SEED0 = 20260914          # 씨앗 i = SEED0 + i (고정)
-NPICK = 200
+N = _cfg.PANEL_N          # 패널 블록 수 (config.conf PANEL_N)
+NPICK = N
 MINCPG = 3                # K=3 창이 서려면 블록에 CpG 3개 이상
 a = sys.argv
 if '--cand' in a:
@@ -60,14 +61,14 @@ if '--cand' in a:
 if '--out' in a:
     OUT = a[a.index('--out') + 1].rstrip('/')
 
-# 칸 수는 jsd200 패널에 맞춤 (보통 200, 교집합 패널이면 그 크기)
-_js = '%s/jsd200/DMR_confirmed_jsd200.csv' % OUT
+# 칸 수는 jsd<N> 패널에 맞춤 (보통 N, 교집합 패널이면 그 크기)
+_js = '%s/jsd%d/DMR_confirmed_jsd%d.csv' % (OUT, N, N)
 if os.path.isfile(_js):
     NPICK = len(pd.read_csv(_js))
 # NULL_A_N 주면 그 칸 수 사용
 if _os.environ.get('NULL_A_N'):
     NPICK = int(_os.environ['NULL_A_N'])
-print('뽑을 칸 수 %d (jsd200 패널 %s%s)' % (NPICK, '있음' if os.path.isfile(_js) else '없음 — 기본 200', ' · NULL_A_N 지정' if _os.environ.get('NULL_A_N') else ''))
+print('뽑을 칸 수 %d (jsd%d 패널 %s%s)' % (NPICK, N, '있음' if os.path.isfile(_js) else '없음 — 기본 %d' % N, ' · NULL_A_N 지정' if _os.environ.get('NULL_A_N') else ''))
 
 B = pd.read_parquet(CAND + '/blocks_cpg.parquet')
 cnt = B.groupby(['chr', 'blk']).size()
@@ -81,16 +82,17 @@ for i in (1, 2, 3):
     pick = [pool[j] for j in idx]
     d = pd.DataFrame({'Feature': ['%s_%d' % (c, b) for c, b in pick],
                       'dbeta': [0.0] * NPICK, 'q': [1.0] * NPICK})
-    o = '%s/rand%d200' % (OUT, i)
+    o = '%s/rand%d%d' % (OUT, i, N)
     os.makedirs(o, exist_ok=True)
-    d.to_csv('%s/DMR_confirmed_rand%d200.csv' % (o, i), index=False)
+    d.to_csv('%s/DMR_confirmed_rand%d%d.csv' % (o, i, N), index=False)
     with open(o + '/_origin.txt', 'w') as h:
-        h.write('무작위 패널 씨앗 %d: 2026-09-14\n'
+        h.write(('무작위 패널 씨앗 %d: 2026-09-14\n'
                 '  K=3 창이 서는 블록 %d개에서 %d개를 비복원 추출.\n'
                 '  암과 무관하게 골랐다. 실제 패널과 견줄 무작위 기준 패널로 쓴다.\n'
                 '  창이 서는 블록에서 고르므로 리드 기반 피처를 전 칸 받는다 —\n'
-                '  bl200(104칸)에 대해서는 보수적인(넘기 어려운) 귀무다.\n'
+                + ('  bl200(104칸)에 대해서는 보수적인(넘기 어려운) 귀무다.\n' if N == 200 else
+                   '  bl%d 에 대해서는 보수적인(넘기 어려운) 귀무다.\n' % N))
                 % (i, len(pool), NPICK))
     used |= set(pick)
-    print('rand%d200  %d칸' % (i, NPICK))
+    print('rand%d%d  %d칸' % (i, N, NPICK))
 print('세 씨앗 합집합 %d칸 (겹침 %d)' % (len(used), 3 * NPICK - len(used)))

@@ -10,35 +10,14 @@
 set -eu
 
 _HERE=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)
-# config.conf 읽기. 환경변수가 우선 (meth_config.py 와 같은 규칙)
-# conf 키를 미리 보관해 뒀다가 conf 읽은 뒤 되돌림
-_CONFFILE=""
+# 공통 머리: config.conf 읽기 (환경변수 우선), BLAS 스레드 고정, 암 쪽 자료 이름 맞추기 (0_setup/load_config.sh)
+_LC=""
 for _d in "$_HERE" "$_HERE/.." "$_HERE/../.." "$_HERE/../../.."; do
-  [ -f "$_d/0_setup/config.conf" ] && { _CONFFILE="$_d/0_setup/config.conf"; break; }
+  [ -f "$_d/0_setup/load_config.sh" ] && { _LC="$_d/0_setup/load_config.sh"; break; }
 done
-_PREKEYS=$(awk -F= '/^[A-Za-z_][A-Za-z0-9_]*=/{print $1}' "${_CONFFILE:-/dev/null}" 2>/dev/null | tr '\n' ' ')
-for _k in $_PREKEYS; do eval "_pre_$_k=\${$_k-}"; done
-for _d in "$_HERE" "$_HERE/.." "$_HERE/../.." "$_HERE/../../.."; do
-  if [ -f "$_d/0_setup/config.conf" ]; then
-    set -a; . "$_d/0_setup/config.conf"; METH_CONF_DIR="$_d/0_setup"; set +a; break
-  fi
-done
-for _k in $_PREKEYS; do
-  eval "_v=\$_pre_$_k"
-  if [ -n "${_v:-}" ]; then eval "export $_k=\$_pre_$_k"; fi
-done
-unset _v
-: "${METH_CONF_DIR:?config.conf 를 못 찾았다 — 트리 밖에서 돌리려면 METH_CONF_DIR 를 직접 주라}"
-# BLAS 스레드 고정 - 로지스틱 회귀 값이 스레드 수 따라 조금 달라짐
-# 환경변수에 이미 있으면 그 값 사용, BLAS_THREADS=none 이면 고정 안 함
-# 진입점(run_*.sh, make_report.sh)에서만 고정. steps/ 직접 실행하면 안 걸림
-_bt=${BLAS_THREADS:-1}
-case "$_bt" in
-  [Nn][Oo][Nn][Ee]) ;;
-  ''|*[!0-9]*|0) echo "멈춤: BLAS_THREADS 는 none 또는 1 이상의 정수여야 합니다: $_bt" >&2; exit 1 ;;
-  *) export OMP_NUM_THREADS=${OMP_NUM_THREADS:-$_bt} OPENBLAS_NUM_THREADS=${OPENBLAS_NUM_THREADS:-$_bt} MKL_NUM_THREADS=${MKL_NUM_THREADS:-$_bt}
-     [ "$OMP_NUM_THREADS" = "$OPENBLAS_NUM_THREADS" ] && [ "$OMP_NUM_THREADS" = "$MKL_NUM_THREADS" ]        || echo "주의: 스레드 값이 갈린다 · OMP=$OMP_NUM_THREADS OPENBLAS=$OPENBLAS_NUM_THREADS MKL=$MKL_NUM_THREADS" >&2 ;;
-esac
+: "${_LC:=${METH_CONF_DIR:+$METH_CONF_DIR/load_config.sh}}"
+[ -f "${_LC:-}" ] || { echo "멈춤: 0_setup/load_config.sh 를 못 찾았다 — 트리 밖에서 돌리려면 METH_CONF_DIR 를 직접 주라" >&2; exit 1; }
+. "$_LC"
 : "${METH_ROOT:=/ssd_data/Methylation}"
 # GEN 은 기본값 없음. conf 에 없으면 중단
 : "${GEN:?GEN 이 없습니다 — 0_setup/config.conf 의 GEN 을 채우십시오}"

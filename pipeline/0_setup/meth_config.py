@@ -32,6 +32,10 @@ _DEFAULTS = {
     'NULL_PANELS': 'rand1200,rand2200,rand3200,randb1200,randb2200,randb3200',
     'VERSION': 'j15bl200_5k_uni',
     'PANEL': 'bl200',
+    # 1단계 패널 블록 수. PANELS, NULL_PANELS, VERSION, PANEL 이름의 숫자도 같이 바꿈
+    'PANEL_N': '200',
+    # bl 안정성 빈도를 셀 때 중요도 상위 몇 개까지 볼지. N 이면 PANEL_N 과 같게
+    'TOPCAP': '1000',
     'TARGET_DEPTH_READS': '5000',
     'DEPTH_MODE': 'total',
     'MUT_RATIOS': '0.0,0.001,0.005,0.01,0.02,0.025,0.03,0.05,0.1,1.0',
@@ -133,6 +137,23 @@ PANELS = [x.strip() for x in get('PANELS').split(',') if x.strip()]
 # STEP_MAP 도 다른 키처럼 모듈 속성으로 노출
 STEP_MAP = get('STEP_MAP')
 NULL_PANELS = [x.strip() for x in get('NULL_PANELS').split(',') if x.strip()]
+PANEL_N = get('PANEL_N').strip()
+if not (PANEL_N.isdigit() and int(PANEL_N) >= 1):
+    raise SystemExit('PANEL_N 은 1 이상의 정수여야 합니다: %r' % PANEL_N)
+PANEL_N = int(PANEL_N)
+TOPCAP = get('TOPCAP').strip()
+if TOPCAP != 'N' and not (TOPCAP.isdigit() and int(TOPCAP) >= 1):
+    raise SystemExit('TOPCAP 은 N 또는 1 이상의 정수여야 합니다: %r' % TOPCAP)
+TOPCAP = PANEL_N if TOPCAP == 'N' else int(TOPCAP)
+
+
+def cancer_env(new, old):
+    """암 쪽 자료 위치. 새 이름(CANCER_*)과 옛 이름(GBM_*) 둘 다 받음. 둘 다 있고 다르면 중단"""
+    a, b = os.environ.get(new, ''), os.environ.get(old, '')
+    if a and b and a != b:
+        raise SystemExit('%s 와 %s 가 다르다 (%s · %s). 하나만 주십시오' % (new, old, a, b))
+    return a or b
+
 
 def version_name(panel, depth):
     """판 이름 조립: 세대 + 패널 + 깊이"""
@@ -221,7 +242,7 @@ def snapshot(folder):
 
 if __name__ == '__main__':
     for k in ('METH_ROOT', 'DATASET_ROOT', 'WORK_ROOT', 'TMP_ROOT',
-              'TRAIN_SRC', 'ANALYSIS_DIR', 'GEN', 'VAL_COHORTS', 'PANELS', 'NULL_PANELS', 'VERSION', 'PANEL',
+              'TRAIN_SRC', 'ANALYSIS_DIR', 'GEN', 'VAL_COHORTS', 'PANELS', 'NULL_PANELS', 'PANEL_N', 'TOPCAP', 'VERSION', 'PANEL',
               'TARGET_DEPTH_READS', 'DEPTH_MODE', 'MUT_RATIOS', 'PATTERN_K',
               'MIN_READS_PER_WINDOW', 'BLOCK_SIZE', 'MIN_SAMPLE_COVERAGE', 'COLSET_FROM', 'BLAS_THREADS', 'SCORE_UNIT', 'REPORT_BASELINE', 'CONVERGENCE_GATE',
               'SEED', 'TEST_SIZE', 'N_JOBS', 'FIXED_MODEL', 'LLR_HELDOUT'):

@@ -31,7 +31,7 @@ COHORT=<your_cohort> bash 4_report/make_report.sh   # same COHORT as stage 3
 | | Stage | Entry point | What it does |
 |---|---|---|---|
 | 0 | Setup | `0_setup/config.conf` | paths, depth, ratios, generation |
-| 1 | DMR panel selection | `1_dmr/run_dmr.sh` | candidate blocks → JSD → 200-block panel + 6 null panels + pooled BAMs |
+| 1 | DMR panel selection | `1_dmr/run_dmr.sh` | candidate blocks → JSD → `PANEL_N`-block panels (200) + 6 null panels + pooled BAMs |
 | 2 | Training | `2_train/run_train.sh` | in-silico mixing → five features → four models, cross-validated |
 | 3 | External validation | `3_validate/run_validate.sh` | mix the external cohort under the training conditions, then score |
 | 4 | Reporting | `4_report/make_report.sh` | discrimination tables, paired bootstrap intervals |
@@ -135,7 +135,7 @@ The stage-1 panels have 200 blocks. `size_cv/` picks N from the training data
 alone, by 5-fold CV over whole units (one cell line, or one donor):
 
 ```bash
-NORMAL_SET=<normal cov> GBM_COV_DIR=<tumour cov> NORMAL_BAM_DIR=<normal bam> GBM_BAM_DIR=<tumour bam> \
+NORMAL_SET=<normal cov> CANCER_COV_DIR=<tumour cov> NORMAL_BAM_DIR=<normal bam> CANCER_BAM_DIR=<tumour bam> \
   bash size_cv/run_size_cv.sh                  # folds → dmr → cells → pick
 bash size_cv/run_size_cv.sh dmr 3              # one step, fold 3 only
 bash size_cv/run_size_cv.sh cell 1 jsd200      # one cell
@@ -162,8 +162,11 @@ Things to keep in mind:
 - If the smallest size is chosen, smaller sizes were never tried. The output says so.
 - `CV_TOPCAP=N` (default) makes bl rank blocks up to the panel size, so sizes are
   compared on equal terms. The published bl200 used 1000.
-- Stage 1 still builds 200-block panels. To use another N, change `--n`/`--topn` in
-  `run_dmr.sh` (and set `TOPCAP` to the same N).
+- To use the chosen N, set `PANEL_N` in `config.conf`, rename `PANELS`, `NULL_PANELS`,
+  `VERSION` and `PANEL` to match (e.g. `bl300`, `rand1300`), set `TOPCAP=N`, and rerun
+  stage 1 from step 06. `run_dmr.sh` stops if a name does not match `PANEL_N`.
+- The fold signatures include `config.conf` and `meth_config.py`. Editing either
+  makes an existing `CV_ROOT` stop at step 02; start a new `CV_ROOT` or remove the old one.
 - The CV keeps LLR reference and training donors together (`CV_LLR_HELDOUT=0`); the
   default stage-1/2 run splits them.
 - Step 03 loads `run/lib.sh` for `train_cell` but keeps your `PATH`, so use the same
@@ -231,7 +234,7 @@ the list may fall under the data access agreement. Structure-only examples:
 | What | Where | Note |
 |---|---|---|
 | Training normals (BAM) | `NORMAL_BAM_DIR` | public cfDNA |
-| Training cancer (cov, BAM) | `GBM_COV_DIR`, `GBM_BAM_DIR` | GBM cell lines |
+| Training cancer (cov, BAM) | `CANCER_COV_DIR`, `CANCER_BAM_DIR` | GBM cell lines |
 | Validation cancer BAM | `CANCER` in the cohort definition | EGAD00001003427 (controlled access) |
 | Validation normal background | `NORMAL` / `NORMALS_*` in the same file | zero overlap with training |
 
@@ -256,9 +259,9 @@ value is read in two or three places):
 | Variable | Default | Read by |
 |---|---|---|
 | `NORMAL_SET` | `$METH_ROOT/sample_data/_input/normal_pub15` | steps 01, 02, 03 |
-| `GBM_COV_DIR` | `$DATASET_ROOT/training/GBM_cell-line/cov` | steps 01, 02, 03 |
+| `CANCER_COV_DIR` | `$DATASET_ROOT/training/GBM_cell-line/cov` | steps 01, 02, 03 (old name `GBM_COV_DIR` also works) |
 | `NORMAL_BAM_DIR` | `$DATASET_ROOT/for_in_silico_test/normal_cfDNA_public/aligned_bam` | steps 03, 11 |
-| `GBM_BAM_DIR` | `$DATASET_ROOT/training/GBM_cell-line/aligned_bam` | steps 03, 11 |
+| `CANCER_BAM_DIR` | `$DATASET_ROOT/training/GBM_cell-line/aligned_bam` | steps 03, 11 (old name `GBM_BAM_DIR` also works) |
 
 BAM and cov files are paired by the sample id. Step 03 checks every pair before
 it starts and stops if any is missing:
@@ -279,13 +282,14 @@ without renaming files. Their defaults reproduce the GBM results.
 
 | Variable | Default | What it does |
 |---|---|---|
-| `SID_RE` | first `_`-separated field | sample id from the filename (first capture group) |
+| `SID_RE` | first `_`-separated field | sample id from the filename (first capture group), after dropping `.bismark.cov.gz`, `.cov.gz`, `.sort.bam` or `.bam` |
 | `GROUP_RE` | `SNU<n>-<rep>` → `SNU<n>` | groups replicate files into one independent unit, cancer side only |
 | `PERSON_RE` | `pat_1_…` / `ind_3_…` | stage 4 only: groups validation samples by person |
 | `DEPTHS` | `5k 15k 50k 100k` | panel depths read in stages 3 and 4 |
 | `CANCER_LABEL` | `GBM` | the `type` value stage 1 writes in `samples.csv` and later steps compare against |
 | `EGAD_REPS` | `1 2 3` | stage 4 only: background numbers on the first platform. Specificity is printed per platform as `EGAD` (these) and `GSE` (the rest); empty skips the split |
-| `TOPCAP` | `1000` | stage 1, step 07: rank cutoff for the Baseline bootstrap count. The published tables use 1000 with `--topn 200`; to compare panel sizes on equal terms, set it equal to `--topn` |
+| `PANEL_N` | `200` | stage 1: blocks per panel (steps 06, 06b, 07, 08, 09, 10). Panel names in `PANELS`, `NULL_PANELS`, `VERSION`, `PANEL` carry the same number |
+| `TOPCAP` | `1000` | stage 1, step 07: rank cutoff for the Baseline bootstrap count. The published tables use 1000 with 200 blocks; `N` sets it to `PANEL_N`, the condition `size_cv` uses |
 
 Steps 01 and 02 stop if two files resolve to the same sample id. `GROUP_RE` is
 not applied to normals.
@@ -293,7 +297,7 @@ not applied to normals.
 ### The lung (SCLC) run
 
 The lung tables used the same code with `GEN=16`, `CANCER_LABEL=SCLC`, the cell
-line cov/BAM folders in `GBM_COV_DIR` / `GBM_BAM_DIR`, the training normals in
+line cov/BAM folders in `CANCER_COV_DIR` / `CANCER_BAM_DIR`, the training normals in
 `NORMAL_SET` / `NORMAL_BAM_DIR`, and
 
 ```bash
@@ -458,20 +462,20 @@ Output names are ASCII. Code comments are in Korean.
 
 ```
 README.md  requirements.txt  .gitignore  .gitattributes
-0_setup/      config.conf (the file you edit)  meth_config.py
+0_setup/      config.conf (the file you edit)  meth_config.py  load_config.sh (shared shell header)
 1_dmr/        run_dmr.sh   steps/ 01_candidates 02_blockcpg 03_jsdcount 04_jsd
                                   04b_jsdnull 04c_jsdboot 05_llrref 06_select
                                   06b_select_supplement 07_panel 08_export_panels
                                   09_null_a 10_null_b 10c_panel_union 11_pool
                                   12_intersect_panels 12b_passset_panels (optional)
-                                  run_pool.sh moderated_t
+                                  run_pool.sh moderated_t sample_id
 2_train/      run_train.sh steps/ 01-03_Preprocessing…Mixing 04_coverage_check
                                   05_Feature_Matrix 06_jsdfeat 07_llrfeat
                                   08_ML_classifier 09_save_best_j config
 3_validate/   run_validate.sh steps/ run_one_sample make_val_config score_one_sample
                                   paths val_single
                                   cohorts/ sample_cohort.conf.example patient_plasma.conf.example
-4_report/     make_report.sh steps/ make_tables primary_metric plasma_metric plasma_baseline
+4_report/     make_report.sh steps/ make_tables primary_metric plasma_metric plasma_baseline report_common
 run/          drv.sh (2·3·4단계를 판 단위로 · main · help · finish) lib.sh profiles.sh cv_all tables_md cv_md
 size_cv/      run_size_cv.sh steps/ 01_folds 02_fold_dmr 02b_export_sizes 03_cells 04_pick (optional)
 ```

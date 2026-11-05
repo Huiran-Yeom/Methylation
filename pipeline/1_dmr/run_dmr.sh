@@ -1,7 +1,7 @@
 #!/bin/bash
 # 1단계: DMR 패널 선정
 #
-#   후보 블록 → 창별 무늬 분포로 JSD → 패널 200블록
+#   후보 블록 → 창별 무늬 분포로 JSD → 패널 PANEL_N 블록 (기본 200)
 #   비교용 무작위 패널 6개도 여기서 만듦
 #
 #   설정은 ../0_setup/config.conf, 단계 코드는 steps/ (번호 = 실행 순서)
@@ -18,35 +18,14 @@ _HERE=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)
 S=$_HERE/steps
 ONE=${1:-}
 
-# config.conf 읽기. 환경변수가 우선 (meth_config.py 와 같은 규칙)
-# conf 키를 미리 보관해 뒀다가 conf 읽은 뒤 되돌림
-_CONFFILE=""
-for _d in "$_HERE" "$_HERE/.." "$_HERE/../.." "$_HERE/../../.."; do
-  [ -f "$_d/0_setup/config.conf" ] && { _CONFFILE="$_d/0_setup/config.conf"; break; }
-done
-_PREKEYS=$(awk -F= '/^[A-Za-z_][A-Za-z0-9_]*=/{print $1}' "${_CONFFILE:-/dev/null}" 2>/dev/null | tr '\n' ' ')
-for _k in $_PREKEYS; do eval "_pre_$_k=\${$_k-}"; done
+# 공통 머리: config.conf 읽기 (환경변수 우선), BLAS 스레드 고정, 암 쪽 자료 이름 맞추기 (0_setup/load_config.sh)
+_LC=""
 for _d in "$_HERE/.." "$_HERE/../.."; do
-  if [ -f "$_d/0_setup/config.conf" ]; then
-    set -a; . "$_d/0_setup/config.conf"; METH_CONF_DIR="$_d/0_setup"; set +a; break
-  fi
+  [ -f "$_d/0_setup/load_config.sh" ] && { _LC="$_d/0_setup/load_config.sh"; break; }
 done
-for _k in $_PREKEYS; do
-  eval "_v=\$_pre_$_k"
-  if [ -n "${_v:-}" ]; then eval "export $_k=\$_pre_$_k"; fi
-done
-unset _v
-: "${METH_CONF_DIR:?0_setup/config.conf 를 못 찾았다}"
-# BLAS 스레드 고정 - 로지스틱 회귀 값이 스레드 수 따라 조금 달라짐
-# 환경변수에 이미 있으면 그 값 사용, BLAS_THREADS=none 이면 고정 안 함
-# 진입점(run_*.sh, make_report.sh)에서만 고정. steps/ 직접 실행하면 안 걸림
-_bt=${BLAS_THREADS:-1}
-case "$_bt" in
-  [Nn][Oo][Nn][Ee]) ;;
-  ''|*[!0-9]*|0) echo "멈춤: BLAS_THREADS 는 none 또는 1 이상의 정수여야 합니다: $_bt" >&2; exit 1 ;;
-  *) export OMP_NUM_THREADS=${OMP_NUM_THREADS:-$_bt} OPENBLAS_NUM_THREADS=${OPENBLAS_NUM_THREADS:-$_bt} MKL_NUM_THREADS=${MKL_NUM_THREADS:-$_bt}
-     [ "$OMP_NUM_THREADS" = "$OPENBLAS_NUM_THREADS" ] && [ "$OMP_NUM_THREADS" = "$MKL_NUM_THREADS" ]        || echo "주의: 스레드 값이 갈린다 · OMP=$OMP_NUM_THREADS OPENBLAS=$OPENBLAS_NUM_THREADS MKL=$MKL_NUM_THREADS" >&2 ;;
-esac
+: "${_LC:=${METH_CONF_DIR:+$METH_CONF_DIR/load_config.sh}}"
+[ -f "${_LC:-}" ] || { echo "멈춤: 0_setup/load_config.sh 를 못 찾았다 — 트리 밖에서 돌리려면 METH_CONF_DIR 를 직접 주라" >&2; exit 1; }
+. "$_LC"
 : "${METH_ROOT:=/ssd_data/Methylation}"
 # GEN 은 기본값 없음. conf 에 없으면 중단
 : "${GEN:?GEN 이 없습니다 — 0_setup/config.conf 의 GEN 을 채우십시오}"
@@ -87,7 +66,7 @@ _outs() {   # _outs <단계>
     05)  echo "$D/j_llrref$GEN" ;;
     06)  echo "$D/j_panel$GEN" ;;
     06b) echo "$D/j_panel${GEN}_supplement" ;;
-    07)  echo "$D/j_panel_dmr$GEN/bl200_d10_cellline" ;;
+    07)  echo "$D/j_panel_dmr$GEN/bl${PANEL_N}_d10_cellline" ;;
     08)  echo "$D/j_panel_dmr${GEN}_panels" ;;
     09|10) : ;;                     # j_panel_dmr<GEN>_panels 에 추가
     10c) : ;;                      # j_panel<GEN> 에 추가
@@ -143,7 +122,26 @@ EOF
   done
 }
 
+# 패널 크기. PANELS, NULL_PANELS 이름 속 크기도 같아야 함 (06 이후 단계만 봄, 01~05 는 크기와 무관)
+: "${PANEL_N:=200}"
+case "$PANEL_N" in ''|*[!0-9]*|0) echo "멈춤: PANEL_N 은 1 이상의 정수여야 합니다: $PANEL_N" >&2; exit 1 ;; esac
+_TC=${TOPCAP:-1000}; [ "$_TC" = N ] && _TC=$PANEL_N      # 07 --topcap. N 이면 PANEL_N 과 같게
+_names_ok() {
+  local x bad=""
+  for x in ${PANELS//,/ }; do
+    [[ $x =~ ^(bl|jsd|jsdb)([0-9]+)$ ]] && [ "${BASH_REMATCH[2]}" = "$PANEL_N" ] || bad="$bad $x"
+  done
+  for x in ${NULL_PANELS//,/ }; do
+    [[ $x =~ ^(randb?)([1-3])([0-9]+)$ ]] && [ "${BASH_REMATCH[3]}" = "$PANEL_N" ] || bad="$bad $x"
+  done
+  [ -z "$bad" ] && return 0
+  echo "멈춤: PANELS · NULL_PANELS 이름이 PANEL_N($PANEL_N) 과 안 맞습니다:$bad" >&2
+  echo "  N 을 바꾸면 config.conf 의 PANELS, NULL_PANELS 이름 숫자도 같이 바꾸십시오 (예 bl300, rand1300)" >&2
+  exit 1
+}
+
 say "DMR 시작: METH_ROOT=$METH_ROOT · GEN=$GEN"
+case "${ONE:-all}" in 0[1-5]|04b|04c) ;; *) _names_ok ;; esac
 _precheck
 
 step 01 "후보 블록"        python -u "$S/01_candidates.py" --nd "$ND" --out "$D/j_candidates$GEN"
@@ -155,7 +153,7 @@ step 03 "창별 무늬수"      python -u "$S/03_jsdcount.py"  --nd "$ND" --cand
                                 --out "$D/j_jsdcount$GEN" $_LIM
 step 04 "JSD"              python -u "$S/04_jsd.py"       --dir "$D/j_jsdcount$GEN" \
                                 --cand "$D/j_candidates$GEN" --out "$D/j_jsd$GEN" --k "${PATTERN_K:-3}" --minr "${MIN_READS_PER_WINDOW:-6}"
-# 04b(귀무 분포), 04c(부트스트랩)는 06b 의 jsdb200 선정에 필요
+# 04b(귀무 분포), 04c(부트스트랩)는 06b 의 jsdb<N> 선정에 필요
 step 04b "JSD 귀무 분포"    python -u "$S/04b_jsdnull.py"  --dir "$D/j_jsdcount$GEN" \
                                 --cand "$D/j_candidates$GEN" --out "$D/j_jsd$GEN" --k "${PATTERN_K:-3}" --minr "${MIN_READS_PER_WINDOW:-6}"
 step 04c "JSD 부트스트랩"   python -u "$S/04c_jsdboot.py"  --dir "$D/j_jsdcount$GEN" \
@@ -164,19 +162,19 @@ step 05 "LLR 참조표"       python -u "$S/05_llrref.py"    --dir "$D/j_jsdcoun
                                 --cand "$D/j_candidates$GEN" --out "$D/j_llrref$GEN" --k "${PATTERN_K:-3}" --minr "${MIN_READS_PER_WINDOW:-6}"
 
 _JF=$(ls "$D/j_jsd$GEN"/jsd_K${PATTERN_K:-3}_minr${MIN_READS_PER_WINDOW:-6}.parquet 2>/dev/null | head -1)
-step 06 "JSD 상위 200 선정" python -u "$S/06_select.py" --cand "$D/j_candidates$GEN" \
-                                --jsd "$_JF" --out "$D/j_panel$GEN" --n 200
-# 06b 는 PANELS 에 jsdb200 있을 때만. 200블록 못 채우는 자료면 PANELS 에서 빼기
+step 06 "JSD 상위 $PANEL_N 선정" python -u "$S/06_select.py" --cand "$D/j_candidates$GEN" \
+                                --jsd "$_JF" --out "$D/j_panel$GEN" --n "$PANEL_N"
+# 06b 는 PANELS 에 jsdb<N> 있을 때만. N 블록 못 채우는 자료면 PANELS 에서 빼기
 _06b() {
-  case ",${PANELS:-bl200,jsd200,jsdb200}," in
-    *,jsdb200,*) python -u "$S/06b_select_supplement.py" ;;
-    *) echo "  건너뜀 — PANELS(${PANELS}) 에 jsdb200 이 없다" ;;
+  case ",${PANELS:-bl$PANEL_N,jsd$PANEL_N,jsdb$PANEL_N}," in
+    *,jsdb$PANEL_N,*) python -u "$S/06b_select_supplement.py" ;;
+    *) echo "  건너뜀 — PANELS(${PANELS}) 에 jsdb$PANEL_N 이 없다" ;;
   esac
 }
-step 06b "보완판 JSD 200 (jsdb200)" _06b
-step 07 "Baseline 순위 200" python -u "$S/07_panel.py"  --cand "$D/j_candidates$GEN" \
-                                --out "$D/j_panel_dmr$GEN/bl200_d10_cellline" --topn 200 \
-                                ${TOPCAP:+--topcap "$TOPCAP"}
+step 06b "보완판 JSD $PANEL_N (jsdb$PANEL_N)" _06b
+step 07 "Baseline 순위 $PANEL_N" python -u "$S/07_panel.py"  --cand "$D/j_candidates$GEN" \
+                                --out "$D/j_panel_dmr$GEN/bl${PANEL_N}_d10_cellline" --topn "$PANEL_N" \
+                                --topcap "$_TC"
 
 step 08 "검증용 형식으로 내보내기" python -u "$S/08_export_panels.py"
 step 09 "귀무A 3판 (씨앗 20260914+i)"      python -u "$S/09_null_a.py"
@@ -197,8 +195,8 @@ _pool_all() {   # 풀 3개 순서대로, 하나라도 실패하면 중단
   done
   [ -z "$bad" ] && return 0
   echo "멈춤: 풀을 못 만들었습니다 —$bad" >&2
-  echo "  cellline 은 bl200·jsd200·jsdb200 이, rand 는 rand1-3 이," >&2
-  echo "  randb 는 randb1-3 이 씁니다. 빠진 풀의 판은 학습이 200칸 중" >&2
+  echo "  cellline 은 bl·jsd·jsdb 실판이, rand 는 rand1-3 이," >&2
+  echo "  randb 는 randb1-3 이 씁니다. 빠진 풀의 판은 학습이 $PANEL_N 칸 중" >&2
   echo "  몇 칸으로 조용히 돌거나 「풀 부족」 으로 멈춥니다." >&2
   return 1
 }

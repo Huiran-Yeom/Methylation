@@ -170,7 +170,7 @@ case "$MODE" in
     rm -f "$RUN"/* 2>/dev/null
     [ "$DRY" = 1 ] || rm -f "$TMP_ROOT/val__.log" "$TMP_ROOT"/val_*__*.log 2>/dev/null   # 이름 빈 검증 로그 지움 (DRY 면 안 지움)
     CELLS=$( for d in "100k 100000" "50k 50000" "5k 5000"; do for p in $REAL; do echo "$p $d"; done; done
-             for p in rand1200 rand2200 rand3200 randb1200 randb2200 randb3200; do echo "$p 5k 5000"; done )
+             for p in $(echo "${NULL_PANELS:-rand1200,rand2200,rand3200,randb1200,randb2200,randb3200}" | tr "," " "); do echo "$p 5k 5000"; done )
     while read -r p d r; do
       v=j${GEN}${p}_${d}_uni; l=$TMP_ROOT/train_${p}_${d}.log
       if [ -s "$l" ] && tail -1 "$l" | grep -q "끝 rc=0" && [ "$(best_n "$R/results/panels/j${GEN}${p}/$v")" = "$EXPECT_BEST" ]; then

@@ -12,7 +12,7 @@ F=$CV_ROOT/fold$K
 say(){ echo "[$(date +%F' '%T)] f$K $PN $*"; }
 [ -s "$F/.dmr_done" ] || { say "멈춤: 02 를 먼저"; exit 1; }
 
-unset JSD_CAND LLR_CAND USE_NORMAL USE_GBM POOL_DIR COLSET_FROM SCORE_UNIT CONVERGENCE_GATE
+unset JSD_CAND LLR_CAND USE_NORMAL USE_GBM USE_CANCER POOL_DIR COLSET_FROM SCORE_UNIT CONVERGENCE_GATE
 case "$CV_DEPTH" in *000) DG=$((CV_DEPTH / 1000))k ;; *) DG=$CV_DEPTH ;; esac
 V=j${GEN}${PN}_${DG}_uni
 export METH_ROOT=$F/root WORK_ROOT=$F/work TMP_ROOT=$F/tmp LLR_HELDOUT=$CV_LLR_HELDOUT

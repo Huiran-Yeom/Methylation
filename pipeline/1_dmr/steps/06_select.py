@@ -49,13 +49,17 @@ if not _GEN:
 CAND = _M + '/results/dmr/j_candidates' + _GEN
 JSD  = None
 OUT  = _M + '/results/dmr/j_panel' + _GEN
-N, COL = 300, 'jsd_mean'
+N, COL = int(getattr(_cfg, 'PANEL_N', 200)), 'jsd_mean'   # N: 패널 블록 수 (run_dmr 은 --n 으로 넘김)
 a = sys.argv
 if '--cand' in a: CAND = a[a.index('--cand')+1]
 if '--jsd'  in a: JSD  = a[a.index('--jsd')+1]
 if '--out'  in a: OUT  = a[a.index('--out')+1]
 if '--n'    in a: N    = int(a[a.index('--n')+1])
 if '--col'  in a: COL  = a[a.index('--col')+1]
+# --n 없이 부르면 기본 크기라 본 패널 파일과 이름이 같음 — 있으면 덮지 않고 멈춤
+if '--n' not in a and os.path.exists(OUT + '/panel_jsd_%s_n%d.csv' % (COL, N)):
+    sys.exit('멈춤: %s/panel_jsd_%s_n%d.csv 가 이미 있다. --n 없이 부르면 본 패널을 덮으니 --n 이나 --out 을 주십시오'
+             % (OUT, COL, N))
 # 빈 문자열(--jsd "")도 막음. 파일 없으면 run_dmr.sh 가 빈 값을 넘김
 if not JSD:
     sys.exit('사용: python 06_select.py --jsd <jsd_K?_minr?.parquet> [--cand ..] [--out ..] [--n N]'

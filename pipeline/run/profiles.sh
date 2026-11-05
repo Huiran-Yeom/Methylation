@@ -2,7 +2,7 @@
 # 판마다 다른 설정
 # profile <이름> 이 정하는 값:
 #   DS, O(대기열, 로그 폴더), COHORTS, NV, NL, MEMW, REAL(실판), DEL_ROOTS(중간 산출 지워도 되는 METH_ROOT)
-#   OUT(표 폴더), STAGE1(1단계 드라이버 이름, 안내용), EXC_*(예외 칸, 있으면)
+#   OUT(표 폴더), STAGE1(1단계 드라이버 이름, 안내용), EXC_*(미리 정해 둔 예외 칸, 있으면)
 profile(){
   local name=$1
   unset EXC_C EXC_V EXC_S EXC_N

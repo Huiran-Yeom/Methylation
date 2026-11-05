@@ -95,7 +95,7 @@ print("  기존 기준(선정에 안 씀): q<0.05 %d (%.1f%%) · |dbeta|>=30 %d 
          int((P.dbeta.abs() >= 30).sum()), 100 * (P.dbeta.abs() >= 30).mean()))
 print("  염색체 %d개 · 상위: %s" % (P["chr"].nunique(),
       " · ".join("chr%s %d" % (c, n) for c, n in P["chr"].value_counts().head(5).items())))
-w = (P["blk"] * 100 // 10_000_000 * 10)
+w = (P["blk"] * int(getattr(_cfg, "BLOCK_SIZE", 100)) // 10_000_000 * 10)
 g = P.assign(w=w).groupby(["chr", "w"]).size()
 print("  10Mb 구간 %d개 · 최다 chr%s %d~%dMb %d개(%.0f%%)"
       % (len(g), g.idxmax()[0], g.idxmax()[1], g.idxmax()[1] + 10, g.max(), 100 * g.max() / N))

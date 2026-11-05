@@ -7,7 +7,7 @@
 #     finish  준 PGID 다 끝나길 기다린 뒤 관문 → 4단계 표 (main 이 먼저 끝나 검증 미완으로 멈췄을 때)
 #   환경변수: DRY=1(할 일만 기록), NV_SET, NL_SET, MEMW_SET, O_SET(대기열 폴더, 시험용),
 #             REPORT_ONLY_OUT(표 폴더, 시험용), FINISH_TEST=1(finish 를 관문까지만)
-#   관문 예외는 판 설정의 EXC_* 만 사용
+#   관문 예외는 판 설정에 미리 정해 둔 예외 칸(EXC_*)만 사용
 set -u
 NAME=${1:?판 이름}; CODEDIR=${2:?코드 폴더 이름}; MODE=${3:?main · help · finish}; shift 3
 for k in NL MEMW O; do         # NL 등은 판 설정이 덮어서 무시되므로 받으면 중단 (*_SET 사용)

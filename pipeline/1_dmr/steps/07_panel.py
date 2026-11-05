@@ -8,7 +8,7 @@
     panel_summary.txt
 
   사용
-    python 07_panel.py --cand <후보폴더> --out <산출폴더>   # DBETA 30, N 2000
+    python 07_panel.py --cand <후보폴더> --out <산출폴더>   # DBETA 30, N = PANEL_N (기본 200)
     ... --topn 1000      # 자르는 위치만 변경
     ... --dbeta X --boot B --topcap C
 """
@@ -53,7 +53,8 @@ CAND  = None
 OUT   = None
 DBETA = 30.0
 NBOOT = 100
-TOPN  = 2000
+TOPN  = int(getattr(_cfg, 'PANEL_N', 200))   # 패널 블록 수 (run_dmr 은 --topn 으로 넘김)
+BS    = int(getattr(_cfg, 'BLOCK_SIZE', 100))   # 블록 번호 → 염기 위치
 NJOB  = 8
 TOPCAP = 1000   # 빈도 셀 때 중요도 상위 몇 개까지 볼지. 기본 1000 = 발표한 표, 패널 크기 비교 땐 --topcap N
 a = sys.argv
@@ -146,7 +147,7 @@ order = sig[op]; frs = fr[op]
 T = pd.DataFrame({'rank':  np.arange(1, len(order) + 1),
                   'chr':   [B.index[i][0] for i in order],
                   'blk':   [B.index[i][1] for i in order],
-                  'start': [int(B.index[i][1]) * 100 for i in order],
+                  'start': [int(B.index[i][1]) * BS for i in order],
                   'q':     np.round(q[order], 10),
                   'dbeta': np.round(d[order], 2),
                   'freq':  frs.astype(int)})
@@ -156,7 +157,7 @@ P = T.head(min(TOPN, len(T)))
 P.to_csv('%s/DMR_confirmed_m.csv' % OUT, index=False)
 
 P2 = P.copy(); P2['chr'] = P2['chr'].astype(str)
-P2['win'] = (P2['blk'].astype('int64') * 100) // 10000000
+P2['win'] = (P2['blk'].astype('int64') * BS) // 10000000
 w = P2.groupby(['chr', 'win']).size().sort_values(ascending=False)
 ch = P2['chr'].value_counts()
 txt = [

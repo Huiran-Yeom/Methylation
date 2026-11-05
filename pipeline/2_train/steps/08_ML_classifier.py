@@ -75,7 +75,7 @@ print('[특징] %d조합 · %s' % (len(COMBOS), ' · '.join('|'.join(c) for c in
 def make_models():
     """모델 4개 (FIXED_MODEL 있으면 그 하나만)"""
     ms = {
-        # 09 와 같은 설정이어야 함
+        # 모델 설정은 09 와 같아야 함. n_jobs 만 다름 (09 는 1 고정, N_JOBS 기본 1 이면 같음)
         'Logistic Regression': LogisticRegression(random_state=C.SEED, max_iter=2000),
         'Random Forest': RandomForestClassifier(random_state=C.SEED, n_jobs=C.N_JOBS),
         'XGBoost': XGBClassifier(

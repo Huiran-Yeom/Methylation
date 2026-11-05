@@ -322,7 +322,7 @@ def main():
             rng = random.Random(_sbase if not _smp else '%d|%s' % (_sbase, _smp))
             # 반복 하나를 배경 K명 전원에서 균등하게 뽑아 만듦 (한 사람으로는 깊이를 못 채움)
             # 몫 못 채운 사람 부족분은 여유 있는 사람에게 나눔, 그래도 모자라면 fallback 기록
-            # 반복마다 같은 K명이라 반복 간 차이에 사람 간 차이는 안 들어감
+            # 반복마다 같은 K명이라 반복 간 차이에 사람 간 차이는 안 들어감 (그래서 특이도가 사람 간 변동을 덜 반영함)
             _wt_reads_t = r['total_reads'] - r['mut_reads']
             if _bgnames:
                 _K = len(_bgnames)

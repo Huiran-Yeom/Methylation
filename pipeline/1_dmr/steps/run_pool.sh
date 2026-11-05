@@ -23,8 +23,8 @@ done
 : "${GEN:?GEN 이 없습니다 — 0_setup/config.conf 의 GEN 을 채우십시오}"
 : "${DMR_OUT:=$METH_ROOT/results/dmr}"
 # 검체 목록 이름에 GEN 붙임 (세대 섞임 방지)
-: "${USE_NORMAL:=$HOME/tmp/use${GEN}_normal.txt}"   # 쓸 정상 BAM 목록
-: "${USE_GBM:=$HOME/tmp/use${GEN}_gbm.txt}"         # 쓸 암 BAM 목록
+: "${USE_NORMAL:=$DMR_OUT/j_panel$GEN/use${GEN}_normal.txt}"   # 쓸 정상 BAM 목록 (10c 가 씀, run_dmr 과 같은 자리)
+: "${USE_GBM:=$DMR_OUT/j_panel$GEN/use${GEN}_gbm.txt}"         # 쓸 암 BAM 목록
 
 # 패널 목록 경로는 PANEL_CSV 에. PANEL 은 conf 의 판 이름이라 덮어쓰면 meth_config 가드가 멈춤
 WHICH=${1:-}

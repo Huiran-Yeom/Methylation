@@ -172,8 +172,8 @@ def baseline_lines(D, depth, ratios):
     for r in ratios:
         x = B[B.fraction_pct == r]
         rs.append(auc(x.y_true.values, x._b.values))
-        gp = x[x.y_true == 1].groupby('person')['_b'].mean()
-        gn = x[x.y_true == 0].groupby('sample')['_b'].mean()
+        gp = x[x.y_true == 1].groupby('person')['_b'].mean().round(12)  # 12자리 반올림: 같은 값이 더하는 순서로 2e-16 갈려 동률이 승으로 세지는 것 막음 (반올림 경계를 낀 경우 · 1e-12 안쪽 진짜 차이는 못 가림)
+        gn = x[x.y_true == 0].groupby('sample')['_b'].mean().round(12)
         rp.append(auc(np.r_[np.ones(len(gp)), np.zeros(len(gn))], np.r_[gp.values, gn.values]))
     print('%-16s %-5s %s   검체' % ('기준선 블록평균', '-', ''.join('%9.3f' % v for v in rs)))
     print('%-16s %-5s %s   사람' % ('', '', ''.join('%9.3f' % v for v in rp)))
@@ -254,8 +254,8 @@ for depth in DEPTHS:
             rs.append(auc(x.y_true.values, x.y_score.values))
             _lo, _hi, _u = tie_width(x.y_true.values, x.y_score.values)
             tw.append((_lo, _hi, _u))
-            gp = x[x.y_true == 1].groupby('person')['y_score'].mean()     # 양성만 사람으로
-            gn = x[x.y_true == 0].groupby('sample')['y_score'].mean()     # 음성은 검체로
+            gp = x[x.y_true == 1].groupby('person')['y_score'].mean().round(12)     # 양성만 사람으로 (12자리: 동률 보존)
+            gn = x[x.y_true == 0].groupby('sample')['y_score'].mean().round(12)     # 음성은 검체로
             rp.append(auc(np.r_[np.ones(len(gp)), np.zeros(len(gn))], np.r_[gp.values, gn.values]))
         print('%-16s %-5s %s   검체' % (SHORT.get(c, c), (mdl.iloc[0][:3] if len(mdl) else '?'),
                                         ''.join('%9.3f' % v for v in rs)))

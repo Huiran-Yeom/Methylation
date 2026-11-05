@@ -124,7 +124,7 @@ def scores(v, combo, rows):
     for s in names:                       # 파일마다 한 칸, 머리줄만 있는 파일도 남겨서 반복 수 검사에 걸리게
         d = D[D._s == s]
         d = d[(d.feature_set == combo) & (d.ratio.astype(float) == 1.0) & d.rep.astype(str).str.startswith(rows)]
-        out[s] = (d.y_score.mean(), len(d), d.score_type.astype(str).str.contains('df').any())
+        out[s] = (round(float(d.y_score.mean()), 12), len(d), d.score_type.astype(str).str.contains('df').any())  # 12자리 반올림: 같은 값이 더하는 순서로 2e-16 갈려 동률이 승으로 세지는 것 막음 (반올림 경계를 낀 경우 · 1e-12 안쪽 진짜 차이는 못 가림)
     return out
 
 

@@ -129,6 +129,46 @@ blocks; a panel below that is reported as not computable and skipped. Run with
 panel can fail at 5k for single undiluted plasma samples: in the LUAD run a
 110-block panel left 11 of 48 patients without 5,000 reads.
 
+### Choosing the panel size (optional · size_cv)
+
+The stage-1 panels have 200 blocks. `size_cv/` picks N from the training data
+alone, by 5-fold CV over whole units (one cell line, or one donor):
+
+```bash
+NORMAL_SET=<normal cov> GBM_COV_DIR=<tumour cov> NORMAL_BAM_DIR=<normal bam> GBM_BAM_DIR=<tumour bam> \
+  bash size_cv/run_size_cv.sh                  # folds → dmr → cells → pick
+bash size_cv/run_size_cv.sh dmr 3              # one step, fold 3 only
+bash size_cv/run_size_cv.sh cell 1 jsd200      # one cell
+CV_DRY=1 bash size_cv/run_size_cv.sh pick      # check files and row counts, no AUC
+```
+
+Each fold reruns stage-1 steps 01–05 on its training units, then builds jsd and bl
+panels for every size in `CV_SIZES` (default 100 200 300 500 1000 2000), trains, and
+scores the held-out units mixed into the held-out donors at `CV_RATIO` (0.5%).
+`pick` takes the size with the best mean fold AUC, then the smallest size within one
+standard error of it. Everything goes under `CV_ROOT` (default `$METH_ROOT/size_cv`);
+cancer subtypes can be kept apart with `CV_STRATA=<csv of sample,stratum>`. The other
+settings are listed at the top of `run_size_cv.sh`.
+
+Things to keep in mind:
+
+- The chosen N is the best size for cell lines mixed into donor cfDNA. It is not
+  tuned on patient plasma.
+- Each fold holds out only a few donors, so the negatives vary little.
+- Only jsd and bl are compared; jsdb is not covered.
+- It is slow: 5 folds × 2 methods × 6 sizes = 60 cells, a few hours each on a
+  32-core server. Run time grows with `CV_NCELL × NSLICE` (or `× CV_NV`), and so does
+  memory; the defaults give 2 × 4 = 8.
+- If the smallest size is chosen, smaller sizes were never tried. The output says so.
+- `CV_TOPCAP=N` (default) makes bl rank blocks up to the panel size, so sizes are
+  compared on equal terms. The published bl200 used 1000.
+- Stage 1 still builds 200-block panels. To use another N, change `--n`/`--topn` in
+  `run_dmr.sh` (and set `TOPCAP` to the same N).
+- The CV keeps LLR reference and training donors together (`CV_LLR_HELDOUT=0`); the
+  default stage-1/2 run splits them.
+- Step 03 loads `run/lib.sh` for `train_cell` but keeps your `PATH`, so use the same
+  Python environment you run the rest of the pipeline with.
+
 ---
 
 ## Method in brief
@@ -433,4 +473,5 @@ README.md  requirements.txt  .gitignore  .gitattributes
                                   cohorts/ sample_cohort.conf.example patient_plasma.conf.example
 4_report/     make_report.sh steps/ make_tables primary_metric plasma_metric plasma_baseline
 run/          drv.sh (2·3·4단계를 판 단위로 · main · help · finish) lib.sh profiles.sh cv_all tables_md cv_md
+size_cv/      run_size_cv.sh steps/ 01_folds 02_fold_dmr 02b_export_sizes 03_cells 04_pick (optional)
 ```

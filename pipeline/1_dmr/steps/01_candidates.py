@@ -39,13 +39,9 @@ import numpy as np, pandas as pd
 ND  = _os.environ.get('NORMAL_SET')  or _M + '/sample_data/_input/normal_pub15'
 GD  = _cfg.cancer_env('CANCER_COV_DIR', 'GBM_COV_DIR') or _D + '/training/GBM_cell-line/cov'
 # 산출 폴더 이름에 GEN(패널 세대) 붙임. 못 읽으면 중단
-_GEN = _os.environ.get('GEN', '')
-if not _GEN:
-    try:
-        _GEN = _cfg.GEN
-    except Exception:
-        raise SystemExit('GEN(패널 세대)을 못 읽었습니다 — config.conf 의 GEN 을 채우거나 '
-                         '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+import dmr_common   # noqa: E402  (GEN, 암 검사, 단위 평균)
+_GEN = dmr_common.gen(_cfg)
 OUT = _M + '/results/dmr/j_candidates' + _GEN
 BLOCK, MINCOV, MINCPG, FRAC = 100, 9, 3, 0.60   # MINCOV=9 → 리드 10 이상
 try:   # 02, 03, 11 과 같은 블록 격자 사용 (BLOCK_SIZE)

@@ -37,13 +37,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from moderated_t import moderated_ttest, bh
 
 # 산출 폴더 이름에 GEN(패널 세대) 붙임. 못 읽으면 중단
-_GEN = _os.environ.get('GEN', '')
-if not _GEN:
-    try:
-        _GEN = _cfg.GEN
-    except Exception:
-        raise SystemExit('GEN(패널 세대)을 못 읽었습니다 — config.conf 의 GEN 을 채우거나 '
-                         '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+import dmr_common   # noqa: E402  (GEN, 암 검사, 단위 평균)
+_GEN = dmr_common.gen(_cfg)
 # 이 단계 경로. 폴더 구조 다르면 여기만 수정 (인자로 덮어쓰기 가능)
 # --jsd 는 필수 - 기본값 두면 다른 JSD 표로 패널을 고를 수 있음
 CAND = _M + '/results/dmr/j_candidates' + _GEN
@@ -69,21 +65,9 @@ if not JSD:
 
 B = pd.read_parquet(CAND + '/beta_matrix.parquet')
 M = pd.read_csv(CAND + '/samples.csv')
-X = B.T.reindex(M['sample']).values.astype(np.float32)
 _CANCER = getattr(_cfg, 'CANCER_LABEL', 'GBM')   # samples.csv 의 type 값
-
-y = (M['type'] == _CANCER).astype(int).values
-# CANCER_LABEL 과 samples.csv type 이 안 맞으면 암 0개 → 중단
-if int(y.sum()) == 0:
-    sys.exit('samples.csv 에 type=%s 인 검체가 없습니다. CANCER_LABEL 과 1단계가 쓴 값이'
-             ' 어긋났습니다 (현재 CANCER_LABEL=%s).' % (_CANCER, _CANCER))
-_c = [str(i) for i in range(X.shape[1])]
-_D = pd.DataFrame(X, columns=_c); _D['_g'] = M['group'].values; _D['_y'] = y
-_A = _D.groupby('_g', sort=True).mean()
-y = (_A['_y'].values > 0.5).astype(int)
-X = _A[_c].values.astype(np.float32)
-mu = np.nanmean(X, axis=0); mu = np.where(np.isfinite(mu), mu, 0.0)
-X = np.where(np.isfinite(X), X, mu)
+X, y, _ = dmr_common.unit_matrix(B, M, _CANCER)   # 세포주 단위 평균
+X = dmr_common.fill_col_mean(X)
 print('단위 %d (암 %d) · 블록 %d' % (len(y), int(y.sum()), X.shape[1]))
 
 d, t, p, dft, d0, s0 = moderated_ttest(X[y == 1], X[y == 0])

@@ -31,6 +31,7 @@ import numpy as np
 import pandas as pd
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from moderated_t import moderated_ttest, bh
+import dmr_common   # noqa: E402
 
 a = sys.argv
 for k in ('--a', '--b', '--out'):
@@ -56,17 +57,8 @@ def stats(R):
     C = '%s/j_candidates%s' % (R, GEN)
     B = pd.read_parquet(C + '/beta_matrix.parquet')
     M = pd.read_csv(C + '/samples.csv')
-    X = B.T.reindex(M['sample']).values.astype(np.float32)
-    y = (M['type'] == _CANCER).astype(int).values
-    if int(y.sum()) == 0:
-        raise SystemExit('%s 에 type=%s 인 검체가 없다' % (C, _CANCER))
-    cols = [str(i) for i in range(X.shape[1])]
-    D = pd.DataFrame(X, columns=cols); D['_g'] = M['group'].values; D['_y'] = y
-    G = D.groupby('_g', sort=True).mean()
-    y = (G['_y'].values > 0.5).astype(int)
-    X = G[cols].values.astype(np.float32)
-    mu = np.nanmean(X, axis=0); mu = np.where(np.isfinite(mu), mu, 0.0)
-    X = np.where(np.isfinite(X), X, mu)
+    X, y, _ = dmr_common.unit_matrix(B, M, _CANCER, '%s 에 type=%s 인 검체가 없다' % (C, _CANCER))
+    X = dmr_common.fill_col_mean(X)
     d, t, p, dft, d0, s0 = moderated_ttest(X[y == 1], X[y == 0])
     q = bh(p)
     f = B.index.get_level_values(0).astype(str) + '_' + B.index.get_level_values(1).astype('int64').astype(str)

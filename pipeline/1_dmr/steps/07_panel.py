@@ -46,6 +46,7 @@ from sklearn.ensemble import RandomForestClassifier
 import xgboost as xgb
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from moderated_t import moderated_ttest, bh, efp
+import dmr_common   # noqa: E402
 
 # 이 단계 경로. 폴더 구조 다르면 여기만 수정 (인자로 덮어쓰기 가능)
 # --cand, --out 필수 - 기본값 두면 옛 세대 후보로 조용히 패널을 만들 수 있음
@@ -78,21 +79,8 @@ if _os.path.basename(CAND.rstrip('/')) != _want_cand:
 
 B = pd.read_parquet(CAND + '/beta_matrix.parquet')
 M = pd.read_csv(CAND + '/samples.csv')
-X0 = B.T.reindex(M['sample']).values.astype(np.float32)
 _CANCER = getattr(_cfg, 'CANCER_LABEL', 'GBM')   # samples.csv 의 type 값
-
-y0 = (M['type'] == _CANCER).astype(int).values
-# CANCER_LABEL 과 samples.csv type 이 안 맞으면 암 0개 → 중단
-if int(y0.sum()) == 0:
-    sys.exit('samples.csv 에 type=%s 인 검체가 없습니다. CANCER_LABEL 과 1단계가 쓴 값이'
-             ' 어긋났습니다 (현재 CANCER_LABEL=%s).' % (_CANCER, _CANCER))
-# 세포주 단위로 평균 (같은 세포주 반복 파일을 독립으로 세지 않게)
-_c = [str(i) for i in range(X0.shape[1])]
-_D = pd.DataFrame(X0, columns=_c); _D['_g'] = M['group'].values; _D['_y'] = y0
-_A = _D.groupby('_g', sort=True).mean()
-y = (_A['_y'].values > 0.5).astype(int)
-X = _A[_c].values.astype(np.float32)
-g = np.array(_A.index)                       # 세포주 단위 (정상은 각자 한 단위)
+X, y, g = dmr_common.unit_matrix(B, M, _CANCER)   # 세포주 단위 평균 · g 단위 이름 (정상은 각자 한 단위)
 print('독립단위 %d (암 %d · 정상 %d) · 블록 %d · 그룹 %d · 부트스트랩 %d · DBETA %.0f · N %d'
       % (len(y), int(y.sum()), int((y == 0).sum()), X.shape[1], len(set(g)), NBOOT, DBETA, TOPN))
 

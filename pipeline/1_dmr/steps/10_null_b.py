@@ -42,13 +42,9 @@ import numpy as np
 import pandas as pd
 
 # 폴더 이름에 GEN(패널 세대) 붙임. 박아 두면 GEN 바꿔도 옛 세대 후보로 귀무를 만듦
-_GEN = _os.environ.get('GEN', '')
-if not _GEN:
-    try:
-        _GEN = _cfg.GEN
-    except Exception:
-        raise SystemExit('GEN(패널 세대)을 못 읽었습니다 — config.conf 의 GEN 을 채우거나 '
-                         '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+import dmr_common   # noqa: E402  (GEN, 암 검사, 단위 평균)
+_GEN = dmr_common.gen(_cfg)
 # 이 단계 경로. 폴더 구조 다르면 여기만 수정 (인자로 덮어쓰기 가능)
 R = _M + '/results/dmr'
 OUT = R + '/j_panel_dmr' + _GEN + '_panels'

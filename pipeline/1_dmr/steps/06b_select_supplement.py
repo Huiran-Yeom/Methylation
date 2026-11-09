@@ -34,13 +34,9 @@ import os, sys
 import numpy as np, pandas as pd
 
 # 산출 폴더 이름에 GEN(패널 세대) 붙임. 못 읽으면 중단
-_GEN = _os.environ.get('GEN', '')
-if not _GEN:
-    try:
-        _GEN = _cfg.GEN
-    except Exception:
-        raise SystemExit('GEN(패널 세대)을 못 읽었습니다 — config.conf 의 GEN 을 채우거나 '
-                         '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+import dmr_common   # noqa: E402  (GEN, 암 검사, 단위 평균)
+_GEN = dmr_common.gen(_cfg)
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # moderated_t 는 같은 폴더
 from moderated_t import moderated_ttest, bh
@@ -69,20 +65,9 @@ Z = Z.sort_values(["freq", "jsd_obs"], ascending=[False, False]).reset_index(dro
 P = Z.head(N).copy()
 # 보고용 q, dbeta (선정에 안 씀)
 B = pd.read_parquet(CAND + "/beta_matrix.parquet"); M = pd.read_csv(CAND + "/samples.csv")
-X = B.T.reindex(M["sample"]).values.astype(np.float32)
 _CANCER = getattr(_cfg, 'CANCER_LABEL', 'GBM')   # samples.csv 의 type 값
-
-y = (M["type"] == _CANCER).astype(int).values
-# CANCER_LABEL 과 samples.csv type 이 안 맞으면 암 0개 → 중단
-if int(y.sum()) == 0:
-    sys.exit('samples.csv 에 type=%s 인 검체가 없습니다. CANCER_LABEL 과 1단계가 쓴 값이'
-             ' 어긋났습니다 (현재 CANCER_LABEL=%s).' % (_CANCER, _CANCER))
-_c = [str(i) for i in range(X.shape[1])]
-_D = pd.DataFrame(X, columns=_c); _D["_g"] = M["group"].values; _D["_y"] = y
-_A = _D.groupby("_g", sort=True).mean()
-y2 = (_A["_y"].values > 0.5).astype(int); X2 = _A[_c].values.astype(np.float32)
-mu = np.nanmean(X2, 0); mu = np.where(np.isfinite(mu), mu, 0.0)
-X2 = np.where(np.isfinite(X2), X2, mu)
+X2, y2, _ = dmr_common.unit_matrix(B, M, _CANCER)   # 세포주 단위 평균
+X2 = dmr_common.fill_col_mean(X2)
 d, t_, p_, _, _, _ = moderated_ttest(X2[y2 == 1], X2[y2 == 0]); q = bh(p_)
 T = pd.DataFrame({"chr": B.index.get_level_values(0).astype(str),
                   "blk": B.index.get_level_values(1).astype("int64"), "dbeta": d, "q": q})

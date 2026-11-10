@@ -22,7 +22,8 @@ D=$METH_ROOT/results/dmr
 
 # 이미 같은 코드, 같은 설정으로 끝난 접기면 건너뜀
 SIG=$( { cat "$P"/size_cv/steps/02_fold_dmr.sh "$P"/size_cv/steps/02b_export_sizes.py "$P"/1_dmr/run_dmr.sh \
-          "$P"/1_dmr/steps/0[1-7]*.py "$P"/1_dmr/steps/moderated_t.py "$P"/1_dmr/steps/11_pool.py \
+          "$P"/1_dmr/steps/0[1-7]*.py "$P"/1_dmr/steps/11_pool.py \
+          "$P"/1_dmr/steps/moderated_t.py "$P"/1_dmr/steps/sample_id.py "$P"/1_dmr/steps/dmr_common.py "$P"/1_dmr/steps/jsd_resample.py \
           "$CV_ROOT/folds.csv" "$F"/heldout_*.txt | md5sum | cut -c1-12
         echo "$CV_SIZES|$CV_TOPCAP|$CV_RATIO|$CV_NREP|$CV_LLR_HELDOUT|$GEN|$CV_CONF_SIG"; } | tr '\n' ' ')
 if [ -s "$F/.dmr_done" ] && [ "$(cat "$F/.dmr_done")" = "$SIG" ]; then say "이미 끝남 — 건너뜀"; exit 0; fi

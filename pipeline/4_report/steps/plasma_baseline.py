@@ -12,7 +12,7 @@
             [--bam '/path/{sample}.bam' | --reads-tsv reads.tsv] [--conf x.conf] -o baseline.csv
 """
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 
 import argparse
 import io

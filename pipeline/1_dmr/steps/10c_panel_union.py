@@ -13,7 +13,7 @@
 
 # 스크립트 전용. import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 
 import os as _os, sys as _sys
 
@@ -71,7 +71,7 @@ NAME = {'cellline': 'panel_union3_cellline.csv',
 def read_panel(p):
     f = PDIR + '/' + p + '/DMR_confirmed_' + p + '.csv'
     if not os.path.exists(f):
-        sys.exit('판 파일이 없습니다 — 08·09·10 단계를 먼저 돌리십시오: ' + f)
+        sys.exit('판 파일이 없습니다. 08·09·10 단계를 먼저 돌리십시오: ' + f)
     rows = []
     with open(f, newline='', encoding='utf-8') as fh:
         rd = csv.DictReader(fh)
@@ -95,7 +95,7 @@ os.makedirs(OUT, exist_ok=True)
 for g in ('cellline', 'rand', 'randb'):
     ps = GROUPS[g]
     if not ps:
-        sys.exit('%s 에 해당하는 판이 없습니다 — config.conf 의 PANELS·NULL_PANELS 를 보십시오' % g)
+        sys.exit('%s 에 해당하는 판이 없습니다. config.conf 의 PANELS·NULL_PANELS 를 보십시오' % g)
     seen, uni = set(), []
     for p in ps:
         for ch, bk in read_panel(p):
@@ -114,7 +114,7 @@ for g in ('cellline', 'rand', 'randb'):
 # 풀에 넣을 검체 이름
 sc = CAND + '/samples.csv'
 if not os.path.exists(sc):
-    sys.exit('samples.csv 가 없습니다 — 01 단계를 먼저 돌리십시오: ' + sc)
+    sys.exit('samples.csv 가 없습니다. 01 단계를 먼저 돌리십시오: ' + sc)
 norm, canc = [], []
 with open(sc, newline='', encoding='utf-8') as fh:
     rd = csv.DictReader(fh)

@@ -7,7 +7,7 @@ q, |dbeta| 는 보고용으로만 계산 (선정에 안 씀)
 
 # 스크립트 전용. import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 
 import os as _os, sys as _sys
 # 0_setup 찾기: 위로 올라가며 찾고, 없으면 METH_CONF_DIR 사용
@@ -52,7 +52,7 @@ if '--jsd'  in a: JSD  = a[a.index('--jsd')+1]
 if '--out'  in a: OUT  = a[a.index('--out')+1]
 if '--n'    in a: N    = int(a[a.index('--n')+1])
 if '--col'  in a: COL  = a[a.index('--col')+1]
-# --n 없이 부르면 기본 크기라 본 패널 파일과 이름이 같음 — 있으면 덮지 않고 멈춤
+# --n 없이 부르면 기본 크기라 본 패널 파일과 이름이 같음. 있으면 덮지 않고 멈춤
 if '--n' not in a and os.path.exists(OUT + '/panel_jsd_%s_n%d.csv' % (COL, N)):
     sys.exit('멈춤: %s/panel_jsd_%s_n%d.csv 가 이미 있다. --n 없이 부르면 본 패널을 덮으니 --n 이나 --out 을 주십시오'
              % (OUT, COL, N))

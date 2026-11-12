@@ -26,7 +26,7 @@ for _d in "$_HERE/.." "$_HERE/../.."; do
   [ -f "$_d/0_setup/load_config.sh" ] && { _LC="$_d/0_setup/load_config.sh"; break; }
 done
 : "${_LC:=${METH_CONF_DIR:+$METH_CONF_DIR/load_config.sh}}"
-[ -f "${_LC:-}" ] || { echo "멈춤: 0_setup/load_config.sh 를 못 찾았다 — 트리 밖에서 돌리려면 METH_CONF_DIR 를 직접 주라" >&2; exit 1; }
+[ -f "${_LC:-}" ] || { echo "멈춤: 0_setup/load_config.sh 를 못 찾았다. 트리 밖에서 돌리려면 METH_CONF_DIR 를 직접 주라" >&2; exit 1; }
 . "$_LC"
 
 say(){ echo "[$(date +%H:%M:%S)] $*"; }
@@ -39,10 +39,10 @@ step(){  # step <번호> <제목> <파일> [인자...]
 }
 
 # GEN 은 기본값 없음. conf 에 없으면 중단
-: "${GEN:?GEN 이 없습니다 — 0_setup/config.conf 의 GEN 을 채우십시오}"
+: "${GEN:?GEN 이 없습니다. 0_setup/config.conf 의 GEN 을 채우십시오}"
 # VERSION, PANEL 은 09 에서 처음 쓰지만 몇 시간 뒤라 여기서 먼저 확인
-: "${VERSION:?VERSION 이 없습니다 — config.conf 에 넣거나 VERSION=j15bl200_5k_uni 로 주십시오}"
-: "${PANEL:?PANEL 이 없습니다 — config.conf 에 넣거나 PANEL=bl200 으로 주십시오}"
+: "${VERSION:?VERSION 이 없습니다. config.conf 에 넣거나 VERSION=j15bl200_5k_uni 로 주십시오}"
+: "${PANEL:?PANEL 이 없습니다. config.conf 에 넣거나 PANEL=bl200 으로 주십시오}"
 : "${METH_ROOT:=/ssd_data/Methylation}"
 
 # 06, 07 이 읽는 후보, 참조 경로 (안 넘기면 세대 없는 기본 경로 보고 중단)
@@ -52,7 +52,7 @@ export LLR_CAND=${LLR_CAND:-$METH_ROOT/results/dmr/j_candidates${GEN}}
 export JSD_CAND=${JSD_CAND:-$METH_ROOT/results/dmr/j_candidates${GEN}}
 export JSD_JCOUNT=${JSD_JCOUNT:-$METH_ROOT/results/dmr/j_jsdcount${GEN}}
 
-say "학습 시작 — VERSION=${VERSION:-?} · PANEL=${PANEL:-?} · 깊이 ${TARGET_DEPTH_READS:-?}"
+say "학습 시작. VERSION=${VERSION:-?} · PANEL=${PANEL:-?} · 깊이 ${TARGET_DEPTH_READS:-?}"
 say "  후보 $JSD_CAND · 참조 $LLR_REF"
 
 step 01 "DMR 영역 리드 추출·정렬"   01_Preprocessing_for_ML_RawData_Mixing.py

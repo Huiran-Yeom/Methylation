@@ -24,11 +24,11 @@ for _d in "$_HERE/.." "$_HERE/../.."; do
   [ -f "$_d/0_setup/load_config.sh" ] && { _LC="$_d/0_setup/load_config.sh"; break; }
 done
 : "${_LC:=${METH_CONF_DIR:+$METH_CONF_DIR/load_config.sh}}"
-[ -f "${_LC:-}" ] || { echo "멈춤: 0_setup/load_config.sh 를 못 찾았다 — 트리 밖에서 돌리려면 METH_CONF_DIR 를 직접 주라" >&2; exit 1; }
+[ -f "${_LC:-}" ] || { echo "멈춤: 0_setup/load_config.sh 를 못 찾았다. 트리 밖에서 돌리려면 METH_CONF_DIR 를 직접 주라" >&2; exit 1; }
 . "$_LC"
 : "${METH_ROOT:=/ssd_data/Methylation}"
 # GEN 은 기본값 없음. conf 에 없으면 중단
-: "${GEN:?GEN 이 없습니다 — 0_setup/config.conf 의 GEN 을 채우십시오}"
+: "${GEN:?GEN 이 없습니다. 0_setup/config.conf 의 GEN 을 채우십시오}"
 # 이 단계 경로. 폴더 구조 다르면 여기만 수정
 D=$METH_ROOT/results/dmr                              # 1단계 산출 폴더
 ND=${NORMAL_SET:-$METH_ROOT/sample_data/_input/normal_pub15}   # 정상 cov (*.cov.gz)
@@ -44,7 +44,7 @@ _check() {   # _check <폴더>
     return 0
   fi
   echo "" >&2
-  echo "멈춤: 산출 폴더가 비어 있지 않습니다 — $d" >&2
+  echo "멈춤: 산출 폴더가 비어 있지 않습니다. $d" >&2
   echo "  덮어쓰면 기존 결과가 사라집니다. 셋 중 하나를 고르십시오:" >&2
   echo "    1) 다른 뿌리에 쓴다   METH_ROOT=\$HOME/tmp/test bash $(basename "$0")" >&2
   echo "    2) 새 세대로 간다     GEN=16 bash $(basename "$0")" >&2
@@ -94,8 +94,8 @@ _precheck() {
     # 목록 못 읽으면(파이프로 넘긴 경우 등) 검사 없이 지나가지 않게 중단
     _ids=$(grep -oE "^step +[0-9a-z]+" "$0" 2>/dev/null | awk "{print \$2}")
     if [ -z "$_ids" ]; then
-      echo "멈춤: 단계 목록을 못 읽었습니다 ($0). 파이프로 넘기지 말고" >&2
-      echo "      bash $(basename "$0") 로 부르십시오 — 덮어쓰기 관문이 꺼집니다." >&2
+      echo "멈춤: 단계 목록을 못 읽어 중단했습니다 ($0). 이대로 돌면 덮어쓰기 관문이 꺼집니다." >&2
+      echo "      파이프로 넘기지 말고 파일로 저장한 뒤 bash $(basename "$0") 로 실행하십시오." >&2
       exit 1
     fi
   fi
@@ -104,7 +104,7 @@ _precheck() {
     case " $(grep -oE "^step +[0-9a-z]+" "$0" 2>/dev/null | awk "{print \$2}" | tr "
 " " ") " in
       *" $ONE "*) : ;;
-      *) echo "멈춤: 그런 단계가 없습니다 — $ONE" >&2
+      *) echo "멈춤: 그런 단계가 없습니다. $ONE" >&2
          echo "  있는 단계: $(grep -oE "^step +[0-9a-z]+" "$0" | awk "{print \$2}" | tr "
 " " ")" >&2
          exit 1 ;;
@@ -168,7 +168,7 @@ step 06 "JSD 상위 $PANEL_N 선정" python -u "$S/06_select.py" --cand "$D/j_ca
 _06b() {
   case ",${PANELS:-bl$PANEL_N,jsd$PANEL_N,jsdb$PANEL_N}," in
     *,jsdb$PANEL_N,*) python -u "$S/06b_select_supplement.py" ;;
-    *) echo "  건너뜀 — PANELS(${PANELS}) 에 jsdb$PANEL_N 이 없다" ;;
+    *) echo "  건너뜀. PANELS(${PANELS}) 에 jsdb$PANEL_N 이 없다" ;;
   esac
 }
 step 06b "보완판 JSD $PANEL_N (jsdb$PANEL_N)" _06b
@@ -194,7 +194,7 @@ _pool_all() {   # 풀 3개 순서대로, 하나라도 실패하면 중단
     bash "$S/run_pool.sh" "$w" || bad="$bad $w"
   done
   [ -z "$bad" ] && return 0
-  echo "멈춤: 풀을 못 만들었습니다 —$bad" >&2
+  echo "멈춤: 풀을 못 만들었습니다:$bad" >&2
   echo "  cellline 은 bl·jsd·jsdb 실판이, rand 는 rand1-3 이," >&2
   echo "  randb 는 randb1-3 이 씁니다. 빠진 풀의 판은 학습이 $PANEL_N 칸 중" >&2
   echo "  몇 칸으로 조용히 돌거나 「풀 부족」 으로 멈춥니다." >&2

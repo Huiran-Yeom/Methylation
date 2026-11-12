@@ -16,11 +16,11 @@ for _d in "$_HERE" "$_HERE/.." "$_HERE/../.." "$_HERE/../../.."; do
   [ -f "$_d/0_setup/load_config.sh" ] && { _LC="$_d/0_setup/load_config.sh"; break; }
 done
 : "${_LC:=${METH_CONF_DIR:+$METH_CONF_DIR/load_config.sh}}"
-[ -f "${_LC:-}" ] || { echo "멈춤: 0_setup/load_config.sh 를 못 찾았다 — 트리 밖에서 돌리려면 METH_CONF_DIR 를 직접 주라" >&2; exit 1; }
+[ -f "${_LC:-}" ] || { echo "멈춤: 0_setup/load_config.sh 를 못 찾았다. 트리 밖에서 돌리려면 METH_CONF_DIR 를 직접 주라" >&2; exit 1; }
 . "$_LC"
 : "${METH_ROOT:=/ssd_data/Methylation}"
 # GEN 은 기본값 없음. conf 에 없으면 중단
-: "${GEN:?GEN 이 없습니다 — 0_setup/config.conf 의 GEN 을 채우십시오}"
+: "${GEN:?GEN 이 없습니다. 0_setup/config.conf 의 GEN 을 채우십시오}"
 : "${DMR_OUT:=$METH_ROOT/results/dmr}"
 # 검체 목록 이름에 GEN 붙임 (세대 섞임 방지)
 : "${USE_NORMAL:=$DMR_OUT/j_panel$GEN/use${GEN}_normal.txt}"   # 쓸 정상 BAM 목록 (10c 가 씀, run_dmr 과 같은 자리)

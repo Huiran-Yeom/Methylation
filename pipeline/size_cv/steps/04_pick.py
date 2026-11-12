@@ -8,7 +8,7 @@
       [--fold-root <k 를 받는 형식, 기본 {root}/fold{k}/root>] [--cohort <형식, 기본 cv_f{k}>] [--dry]
 """
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 import glob
 import os
 import sys
@@ -88,7 +88,7 @@ for meth in ('jsd', 'bl'):
         aucs = [r[0] for r in res]
         b = blocks(p)
         full = all(x is not None for x in aucs)
-        cell = ' '.join('%.4f ' % x if (x is not None and not np.isnan(x)) else ('  —    ' if x is None else ' dry   ') for x in aucs)
+        cell = ' '.join('%.4f ' % x if (x is not None and not np.isnan(x)) else ('  -    ' if x is None else ' dry   ') for x in aucs)
         note = ('N 미달 %s ' % b if any(0 <= x < N for x in b) else '')
         if not full:
             note += '계산 불가: ' + '; '.join('f%d %s' % (i + 1, r[1]) for i, r in enumerate(res) if r[0] is None)
@@ -107,4 +107,4 @@ for meth in ('jsd', 'bl'):
     nstar, mstar, sestar, thr, n = pick(ok)
     print('N* = %d (평균 %.4f · SE %.4f) · 문턱 %.4f → 고른 N = %d' % (nstar, mstar, sestar, thr, n))
     if n == min(SIZES):
-        print('  고른 N 이 후보 중 가장 작음 — 더 작은 N 은 안 봄')
+        print('  고른 N 이 후보 중 가장 작음. 더 작은 N 은 안 봄')

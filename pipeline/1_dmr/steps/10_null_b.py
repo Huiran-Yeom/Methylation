@@ -12,7 +12,7 @@ bl200 비교용 (창 안 서는 칸 비율까지 bl200 과 같게). jsd 계열�
 
 # 스크립트 전용. import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 
 import os as _os, sys as _sys
 _h = _os.path.dirname(_os.path.abspath(__file__))

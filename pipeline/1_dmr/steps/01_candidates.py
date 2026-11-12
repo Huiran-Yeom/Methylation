@@ -6,7 +6,7 @@
 
 # 스크립트 전용. import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 
 import os as _os, sys as _sys
 # 0_setup 찾기: 위로 올라가며 찾고, 없으면 METH_CONF_DIR 사용
@@ -99,8 +99,8 @@ if _dup:
     sys.exit(chr(10).join(_msg))
 # 정상, 암 한 쪽만 비어도 중단 (need 가 0 이 돼서 한 쪽만으로 후보가 나옴)
 _nn = sum(1 for _, _t in files if _t == 'Normal')
-if _nn == 0:        sys.exit('정상 cov 가 없다 — NORMAL_SET 또는 --nd 를 확인하라: ' + ND)
-if _nn == len(files): sys.exit('암 cov 가 없다 — CANCER_COV_DIR (옛 이름 GBM_COV_DIR) 을 확인하라: ' + GD)
+if _nn == 0:        sys.exit('정상 cov 가 없다. NORMAL_SET 또는 --nd 를 확인하라: ' + ND)
+if _nn == len(files): sys.exit('암 cov 가 없다. CANCER_COV_DIR (옛 이름 GBM_COV_DIR) 을 확인하라: ' + GD)
 if DRY: files = files[:1] + files[-1:]   # 정상 1 + 암 1 (암 경로도 지나가게)
 # 커버 기준은 정상, 암 따로 (합쳐 세면 한쪽에 몰린 블록이 통과해 t검정 NaN)
 # 문턱은 파일 수 말고 세포주 수 기준 (복제 파일로 세면 암 표본이 부풂)
@@ -108,7 +108,7 @@ n_norm = sum(1 for _, t in files if t == 'Normal')
 n_gbm  = len(files) - n_norm
 u_norm = len({grp(sid(f), 'Normal') for f, t in files if t == 'Normal'})
 u_gbm  = len({grp(sid(f)) for f, t in files if t == _CANCER})
-assert u_norm == n_norm, '정상에 복제 파일이 있다 — 커버 계산을 다시 봐야 한다'
+assert u_norm == n_norm, '정상에 복제 파일이 있다. 커버 계산을 다시 봐야 한다'
 need_n = int(math.ceil(FRAC * u_norm))
 need_g = int(math.ceil(FRAC * u_gbm))
 need   = need_n + need_g

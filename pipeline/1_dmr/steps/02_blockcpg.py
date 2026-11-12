@@ -8,7 +8,7 @@ JSD 창이 모든 검체에서 같아야 해서 충분한 검체가 함께 보�
 
 # 스크립트 전용. import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 
 import os as _os, sys as _sys
 # 0_setup 찾기: 위로 올라가며 찾고, 없으면 METH_CONF_DIR 사용
@@ -84,8 +84,8 @@ if _dup:
     _msg.append('  파일 이름의 첫 _ 앞을 서로 다르게 바꾸십시오.')
     sys.exit(chr(10).join(_msg))
 _nn = sum(1 for f, _t in files if _t == 'Normal')
-if _nn == 0:          sys.exit('정상 cov 가 없다 — NORMAL_SET 또는 --nd 를 확인하라: ' + ND)
-if _nn == len(files): sys.exit('암 cov 가 없다 — CANCER_COV_DIR (옛 이름 GBM_COV_DIR) 을 확인하라: ' + GD)
+if _nn == 0:          sys.exit('정상 cov 가 없다. NORMAL_SET 또는 --nd 를 확인하라: ' + ND)
+if _nn == len(files): sys.exit('암 cov 가 없다. CANCER_COV_DIR (옛 이름 GBM_COV_DIR) 을 확인하라: ' + GD)
 
 u_norm = len({grp(sid(f), 'Normal') for f,t in files if t=='Normal'})
 u_gbm  = len({grp(sid(f)) for f,t in files if t==_CANCER})

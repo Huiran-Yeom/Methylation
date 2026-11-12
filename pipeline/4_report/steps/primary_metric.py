@@ -17,7 +17,7 @@
 """
 # 스크립트 전용 (import 하면 본체가 돎). python <파일> 로만 실행
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 
 import os as _os, sys as _sys
 # 0_setup 찾기: 위 폴더로 올라가며 찾고, 없으면 METH_CONF_DIR
@@ -127,9 +127,9 @@ def gen_warn():
         return
     if 0 in wids or -1 in wids:
         print('   !! 1차 조합이 없는 판이 있습니다 (%s). 그 판은 1차 지표를'
-              ' 낼 수 없습니다 — 빠진 채로 순위를 매기지 마십시오.' % COMBO)
+              ' 낼 수 없습니다. 빠진 채로 순위를 매기지 마십시오.' % COMBO)
     else:
-        print('   !! 이름세대 혼합 — 1차 조합(%s)은 모든 판에 있으나 읽은'
+        print('   !! 이름세대 혼합. 1차 조합(%s)은 모든 판에 있으나 읽은'
               ' 산출물의 세대가 다릅니다. 값은 비교할 수 있으나 재현 경로가'
               ' 다릅니다.' % COMBO)
     for _n in sorted(_GEN_SEEN):
@@ -282,7 +282,7 @@ def run(combo, mixed):
     elif not EGAD_REPS:
         print('  특이도 (합본만: EGAD_REPS 가 비어 플랫폼으로 가르지 않는다)')
     else:
-        print('  특이도 (플랫폼별 · 낮은 쪽을 주장값으로 쓴다 — 조항 (2))')
+        print('  특이도 (플랫폼별 · 낮은 쪽을 주장값으로 쓴다. 조항 (2))')
     for p in PANELS:
         neg = out[p][1]
         if 'y_pred' not in neg.columns:

@@ -1,7 +1,7 @@
 
 # 스크립트 전용 (import 하면 본체가 돎). python <파일> 로만 실행
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 
 import os as _os, sys as _sys
 # 0_setup 찾기: 위 폴더로 올라가며 찾고, 없으면 METH_CONF_DIR
@@ -84,11 +84,11 @@ def gen_warn():
     if len(gens) < 2 and len(wids) < 2:
         return
     if len(wids) > 1:
-        print('   !! 조합 집합 비대칭 — 판마다 보고 %d조합 중 가진 수가 다릅니다.'
+        print('   !! 조합 집합 비대칭. 판마다 보고 %d조합 중 가진 수가 다릅니다.'
               ' 빈 칸이 생기는 열은 판마다 다른 조합을 나란히 놓은 것입니다.'
               ' 그 열로 판 순위를 매기지 마십시오.' % len(COMBOS))
     else:
-        print('   !! 이름세대 혼합 — 보고 조합은 %d개로 같으나 읽은 산출물의 세대가'
+        print('   !! 이름세대 혼합. 보고 조합은 %d개로 같으나 읽은 산출물의 세대가'
               ' 다릅니다. 값은 비교할 수 있으나 재현 경로가 다릅니다.' % wids.pop())
     for _n in sorted(_GEN_SEEN):
         _g, _w = _GEN_SEEN[_n]

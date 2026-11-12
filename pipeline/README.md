@@ -17,7 +17,7 @@ conclusion is the same in all three (see `results/README.md`).
 Edit one file, then run four entry points in order.
 
 ```bash
-# 0) point the config at your data — data roots (METH_ROOT, DATASET_ROOT)
+# 0) point the config at your data: data roots (METH_ROOT, DATASET_ROOT)
 #    and work roots (WORK_ROOT, TMP_ROOT)
 vi 0_setup/config.conf
 
@@ -246,7 +246,7 @@ excluded.
 
 | Needed | Where the code looks | If missing |
 |---|---|---|
-| Normal cov files | `NORMAL_SET`, default `$METH_ROOT/sample_data/_input/normal_pub15/*.cov.gz` — under the output root, not `DATASET_ROOT` | step 01: `정상 cov 가 없다` |
+| Normal cov files | `NORMAL_SET`, default `$METH_ROOT/sample_data/_input/normal_pub15/*.cov.gz`: under the output root, not `DATASET_ROOT` | step 01: `정상 cov 가 없다` |
 | Bisulfite genome index | `$METH_ROOT/data/Bisulfite_Genome/` | step 03 runs bismark without `--genome_folder`, which changes its behaviour silently |
 
 Step `10c` builds the three panel-union CSVs and the two sample lists that step

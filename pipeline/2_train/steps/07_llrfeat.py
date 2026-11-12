@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # 스크립트 전용 - import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 
 import os as _os, sys as _sys
 # 0_setup 찾기: 위 폴더로 올라가며 → METH_CONF_DIR → 없으면 기본값 (검증 복사본용)
@@ -22,7 +22,7 @@ except ImportError:
     # 설정 못 찾으면 환경변수/기본값 사용, 어느 뿌리 썼는지 로그에 남김
     _M = _os.environ.get('METH_ROOT', '/ssd_data/Methylation').rstrip('/')
     _D = _os.environ.get('DATASET_ROOT', '/ssd_data/dataset').rstrip('/')
-    _sys.stderr.write('  [설정 없음] 환경변수/기본값으로 진행 — METH_ROOT=%s\n' % _M)
+    _sys.stderr.write('  [설정 없음] 환경변수/기본값으로 진행. METH_ROOT=%s\n' % _M)
 
 
 """2단계 07: 여러 θ 의 LLR 피처
@@ -57,7 +57,7 @@ _G = getattr(C, 'GEN')
 _want = 'j_candidates' + _G
 # VERSION 이름과 상관없이 항상 확인
 if os.path.basename(CAND.rstrip('/')) != _want:
-    sys.exit('중단: 세대 불일치 — VERSION=%s · GEN=%s 인데 CAND=%s (기대 %s)'
+    sys.exit('중단: 세대 불일치. VERSION=%s · GEN=%s 인데 CAND=%s (기대 %s)'
              % (C.VERSION, _G, CAND, _want))
 REF_DEFAULT = _os.environ.get('METH_ROOT', _M) + '/results/dmr/j_llrref/llrref_K3_minr6.parquet'
 
@@ -100,7 +100,7 @@ REF_PATH = os.environ.get('LLR_REF', REF_DEFAULT)
 _wref = 'j_llrref' + _G
 # VERSION 이름과 상관없이 항상 확인
 if os.path.basename(os.path.dirname(REF_PATH)) != _wref:
-    sys.exit('중단: 세대 불일치 — VERSION=%s 인데 LLR_REF=%s\n'
+    sys.exit('중단: 세대 불일치. VERSION=%s 인데 LLR_REF=%s\n'
              '  러너가 LLR_REF 를 내보내는지 보십시오 (3_validate/steps/run_one_sample.sh).'
              % (C.VERSION, REF_PATH))
 
@@ -465,7 +465,7 @@ def main():
     print('  진단 저장 %s' % os.path.basename(dp_path))
     top = D['best_theta_at_top_pct'].max() if len(D) else 0.0
     if top >= 20.0:
-        print('  !! best_theta 가 격자 최댓값(%g)에 %.0f%% 몰렸습니다 — LLR_THETAS 로 넓히세요.'
+        print('  !! best_theta 가 격자 최댓값(%g)에 %.0f%% 몰렸습니다. LLR_THETAS 로 넓히세요.'
               % (max(THETAS), top))
     if len(D) and D['dropped_reads'].sum() > 0:
         print('  !! P_Normal=0 인 무늬의 리드 %s개를 버렸습니다. LLR_EPS 로 평활을 넣으면 살릴 수 있습니다.'

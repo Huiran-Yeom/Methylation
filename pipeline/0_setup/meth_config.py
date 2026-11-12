@@ -217,7 +217,7 @@ if int(_depth_match.group(1)) * 1000 != TARGET_DEPTH_READS:
 # VERSION, PANEL 을 환경변수로 준 실행(2, 3단계)만 검사. 1단계는 VERSION 안 씀
 if '환경변수' in (SOURCE.get('VERSION'), SOURCE.get('PANEL')) and VERSION.startswith('j') and not VERSION.startswith('j%s%s_' % (GEN, PANEL)):
     raise SystemExit(
-        'VERSION(%s) 이 GEN(%s) · PANEL(%s) 과 어긋난다 — j<GEN><PANEL>_<깊이>k_<방식> 꼴이어야 한다.'
+        'VERSION(%s) 이 GEN(%s) · PANEL(%s) 과 어긋난다. j<GEN><PANEL>_<깊이>k_<방식> 꼴이어야 한다.'
         % (VERSION, GEN, PANEL))
 
 
@@ -264,7 +264,7 @@ def check_same_refs(paths, what=''):
         if sig is None:
             sig, first = s, p
         elif s != sig:
-            raise SystemExit('참조 서열 목록이 다르다%s: %s 와 %s — 같은 기준 유전체 · 같은 헤더로 정렬된 BAM 이어야 한다'
+            raise SystemExit('참조 서열 목록이 다르다%s: %s 와 %s. 같은 기준 유전체 · 같은 헤더로 정렬된 BAM 이어야 한다'
                              % (' (' + what + ')' if what else '', os.path.basename(first), os.path.basename(p)))
 
 
@@ -314,7 +314,7 @@ def dup_check(n, allow, what):
         return
     m = '%s: 같은 이름 · 같은 짝 번호 리드 %d 개 (복원 추출 또는 이름 충돌)' % (what, n)
     if not allow:
-        raise SystemExit(m + ' — ALLOW_REPLACEMENT=False 인데 0 이 아니므로 멈춘다')
+        raise SystemExit(m + '. ALLOW_REPLACEMENT=False 인데 0 이 아니므로 멈춘다')
     print('  경고: ' + m)
 
 
@@ -354,17 +354,17 @@ def unify_score_unit(D, keys=('feature_set',)):
     if SCORE_UNIT != 'consistent' or not len(D):
         return D, 0
     if 'y_df' not in D.columns:
-        raise SystemExit('SCORE_UNIT=consistent 인데 채점 파일에 y_df 열이 없습니다 — 같은 설정으로 다시 채점하십시오')
+        raise SystemExit('SCORE_UNIT=consistent 인데 채점 파일에 y_df 열이 없습니다. 같은 설정으로 다시 채점하십시오')
     K = [D[k] for k in keys]
     st = D['score_type'].astype(str)
     sw = st.str.contains('df')                                  # 포화로 전환된 행
     if D.loc[sw.groupby(K).transform('any'), 'y_df'].isna().any():
-        raise SystemExit('전환된 행이 있는 묶음에 y_df 가 빈 행이 있습니다 — '
+        raise SystemExit('전환된 행이 있는 묶음에 y_df 가 빈 행이 있습니다. '
                          'consistent 로 다시 채점되지 않은 검체 파일이 섞였습니다')
     have = D['y_df'].notna().groupby(K)
     g = have.transform('all')                                     # decision_function 이 있는 모형의 묶음
     if (have.transform('any') & ~g).any():                        # 일부만 빔 (다른 설정 채점 파일 섞임)
-        raise SystemExit('한 묶음 안에서 y_df 가 일부 행만 비었습니다 — consistent 로 다시 채점되지 않은 '
+        raise SystemExit('한 묶음 안에서 y_df 가 일부 행만 비었습니다. consistent 로 다시 채점되지 않은 '
                          '검체 파일이 섞였습니다')
     conv = g & st.str.startswith('predict_proba')               # 단위가 실제로 바뀌는 행 (SVM 은 이미 df)
     D = D.copy()

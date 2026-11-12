@@ -25,7 +25,7 @@ for _d in "$_HERE/.." "$_HERE/../.."; do
   [ -f "$_d/0_setup/load_config.sh" ] && { _LC="$_d/0_setup/load_config.sh"; break; }
 done
 : "${_LC:=${METH_CONF_DIR:+$METH_CONF_DIR/load_config.sh}}"
-[ -f "${_LC:-}" ] || { echo "멈춤: 0_setup/load_config.sh 를 못 찾았다 — 트리 밖에서 돌리려면 METH_CONF_DIR 를 직접 주라" >&2; exit 1; }
+[ -f "${_LC:-}" ] || { echo "멈춤: 0_setup/load_config.sh 를 못 찾았다. 트리 밖에서 돌리려면 METH_CONF_DIR 를 직접 주라" >&2; exit 1; }
 . "$_LC"
 : "${COHORT:?COHORT 를 주십시오 (예: COHORT=<your_cohort>)}"
 
@@ -91,7 +91,7 @@ _APPLY=$S/score_one_sample.py
 [ -f "$_APPLY" ] || { echo "score_one_sample.py 가 없습니다: $_APPLY" >&2; exit 1; }
 _M=$METH_ROOT/results/panels/${V%%_*}/$V/step04_ML_classifier/models
 _nm=$(ls -d "$_M"/*/pooled 2>/dev/null | wc -l)
-[ "$_nm" -ge 1 ] || { say "!! 모델이 없습니다 ($V) — 2_train 의 09 굳히기를 먼저"; exit 1; }
+[ "$_nm" -ge 1 ] || { say "!! 모델이 없습니다 ($V). 2_train 의 09 굳히기를 먼저"; exit 1; }
 say "② 채점: pooled 모델 ${_nm}개"
 # 채점 로그 남김. 이름에 PID 넣어 드라이버 둘이 같은 파일에 안 씀 (기록용)
 _SLOG=${TMP_ROOT:-$HOME/tmp}/logs/${COHORT}/score_${V}_$$.log
@@ -114,7 +114,7 @@ tr '\n' '\0' < "$_LIST" | xargs -0 -P"$PAR" -I{} bash -c '
   python -u "$apply" --allmodels >> "$slog" 2>&1 || { echo "!! $s 채점 실패" >> "$slog"; exit 1; }
 ' _ {} "$V" "$_APPLY" "$METH_ROOT" "$COHORT" "${WORK_ROOT:-$HOME}" "$_SLOG" "$_TMP"
 _rc2=$?
-[ "$_rc2" -ne 0 ] && say "!! ② 에서 실패한 검체가 있습니다 (xargs rc=$_rc2) — 채점 로그 $_SLOG"
+[ "$_rc2" -ne 0 ] && say "!! ② 에서 실패한 검체가 있습니다 (xargs rc=$_rc2). 채점 로그 $_SLOG"
 
 # 완료 판정은 로그가 아니라 점수 파일과 잠금으로 함
 #   점수 파일 없는 검체는 잠금 잡아 봄 - 잡히면 빠짐, 안 잡히면 다른 실행이 도는 중
@@ -140,13 +140,13 @@ if [ "$_rc1" -ne 0 ] || [ "$_rc2" -ne 0 ]; then
   say "   로그를 보고 고친 뒤 다시 부르십시오. 다음 단계로 넘어가지 마십시오."
   exit 1
 fi
-say "검증 끝 — 검체별 채점: <뿌리>/${COHORT}_val/*/results/$V/step04_ML_classifier/"
+say "검증 끝. 검체별 채점: <뿌리>/${COHORT}_val/*/results/$V/step04_ML_classifier/"
 
 # 다 못 끝냈으면 exit 1 (run_validate.sh && make_report.sh 가 빈 표로 안 넘어가게)
 # 다른 실행이 잡고 있는 것도 미완료로 셈. 안내 문구만 따로
 if [ -n "$_miss" ] || [ "$_busy" -gt 0 ]; then
   [ "$_busy" -gt 0 ] && {
-    say "  ${_busy}개는 다른 실행이 「지금」 잡고 있습니다 — 그 실행이 끝난 뒤"
+    say "  ${_busy}개는 다른 실행이 「지금」 잡고 있습니다. 그 실행이 끝난 뒤"
     say "  이 명령을 다시 부르면 채워집니다 (고장이 아닙니다)."; }
   [ -n "$_miss" ] && {
     say "!! 빠진 검체:$_miss"

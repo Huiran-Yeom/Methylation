@@ -11,7 +11,7 @@
 
 # 스크립트 전용 - import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 
 import os as _os, sys as _sys
 # 0_setup 찾기: 위 폴더로 올라가며 → METH_CONF_DIR (못 찾으면 중단)
@@ -172,7 +172,7 @@ def fit_save(X, y, md, tag):
                  'threshold_spec95': thr,
                  'oof_neg_dist': negdist, 'oof_pos_dist': posdist,
                  'oof_neg_top20': negtop,
-                 'cv_auc_주의': '모든 비율을 합친 값이다. 특정 농도의 값이 아니다 — 5% 이상이 1.000 이라 평균이 올라간다. 보고에 그대로 쓰지 않는다.',
+                 'cv_auc_주의': '모든 비율을 합친 값이다. 특정 농도의 값이 아니다. 5% 이상이 1.000 이라 평균이 올라간다. 보고에 그대로 쓰지 않는다.',
                  'sens_at_spec95': float((o[yv == 1] > thr).mean()),
                  'spec_on_cv': float((o[yv == 0] <= thr).mean()),
                  'train_mean': {k: float(v) for k, v in mu.items()},
@@ -254,7 +254,7 @@ for _V in sorted(made_by_V):
     print('   %-24s 저장 %d / 기대 %d%s'
           % (_V, _n, _e, '' if _n == _e else '   <-- 어긋남'))
     if _n != _e:
-        failures.append('%s: 저장 %d / 기대 %d — 어긋남' % (_V, _n, _e))
+        failures.append('%s: 저장 %d / 기대 %d. 어긋남' % (_V, _n, _e))
 _cfg.convergence_check(_conv, failures, '09')
 if failures:
     print('')

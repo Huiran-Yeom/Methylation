@@ -8,7 +8,7 @@
 
 # 스크립트 전용. import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 
 import os as _os, sys as _sys
 # 0_setup 찾기: 위로 올라가며 찾고, 없으면 METH_CONF_DIR 사용
@@ -170,7 +170,7 @@ if _miss:
                   % ' · '.join(_gone)) + chr(10) +
                  '  정상 BAM: ' + NB + chr(10) + '  암   BAM: ' + GB + chr(10) +
                  '  폴더가 다르면 NORMAL_BAM_DIR · CANCER_BAM_DIR 로 주십시오.')
-    print('  ALLOW_SKIP=1 — 빠진 채로 진행합니다. 04 의 정상 기준이 줄어듭니다.')
+    print('  ALLOW_SKIP=1. 빠진 채로 진행합니다. 04 의 정상 기준이 줄어듭니다.')
 
 if not _pair: sys.exit('중단: 짝지은 검체가 하나도 없습니다.')
 

@@ -22,12 +22,12 @@ for _d in "$_HERE/.." "$_HERE/../.."; do
   [ -f "$_d/0_setup/load_config.sh" ] && { _LC="$_d/0_setup/load_config.sh"; break; }
 done
 : "${_LC:=${METH_CONF_DIR:+$METH_CONF_DIR/load_config.sh}}"
-[ -f "${_LC:-}" ] || { echo "멈춤: 0_setup/load_config.sh 를 못 찾았다 — 트리 밖에서 돌리려면 METH_CONF_DIR 를 직접 주라" >&2; exit 1; }
+[ -f "${_LC:-}" ] || { echo "멈춤: 0_setup/load_config.sh 를 못 찾았다. 트리 밖에서 돌리려면 METH_CONF_DIR 를 직접 주라" >&2; exit 1; }
 . "$_LC"
 # GEN 은 기본값 없음. conf 에 없으면 중단
-: "${GEN:?GEN 이 없습니다 — 0_setup/config.conf 의 GEN 을 채우십시오}"
+: "${GEN:?GEN 이 없습니다. 0_setup/config.conf 의 GEN 을 채우십시오}"
 # COHORT 기본값 없음 - 없는 코호트 읽으면 빈 표로 정상 종료돼서
-: "${COHORT:?COHORT 를 주십시오 — 3단계에서 쓴 것과 같아야 합니다 (예: COHORT=<your_cohort>)}"
+: "${COHORT:?COHORT 를 주십시오. 3단계에서 쓴 것과 같아야 합니다 (예: COHORT=<your_cohort>)}"
 # COHORT 가 VAL_COHORTS 에 있는지 확인 (3단계와 같은 검사)
 if [ -n "${VAL_COHORTS:-}" ]; then
   _VC=$(printf %s "$VAL_COHORTS" | tr -d " \t")
@@ -42,7 +42,7 @@ export COHORT
 for _c in "${COHORT_CONF:-}" "${COHORT_DIR:-$HOME/cohorts}/$COHORT.conf" "$_HERE/../3_validate/steps/cohorts/$COHORT.conf"; do
   [ -n "$_c" ] && [ -f "$_c" ] || continue
   if grep -qE '^[[:space:]]*NEG_SAMPLES=[[:space:]]*[^[:space:]]' "$_c"; then
-    echo "멈춤: $_c 에 NEG_SAMPLES 가 있습니다 — 혈장 코호트는 steps/plasma_metric.py 로 판정합니다" >&2
+    echo "멈춤: $_c 에 NEG_SAMPLES 가 있습니다. 혈장 코호트는 steps/plasma_metric.py 로 판정합니다" >&2
     exit 1
   fi
   break

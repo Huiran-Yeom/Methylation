@@ -15,7 +15,7 @@ for _k in $_PREKEYS; do
   if [ -n "${_v:-}" ]; then eval "export $_k=\$_pre_$_k"; fi
 done
 unset _v
-: "${METH_CONF_DIR:?0_setup/config.conf 를 못 찾았다 — 트리 밖에서 돌리려면 METH_CONF_DIR 를 직접 주라}"
+: "${METH_CONF_DIR:?0_setup/config.conf 를 못 찾았다. 트리 밖에서 돌리려면 METH_CONF_DIR 를 직접 주라}"
 
 # BLAS 스레드 고정 - 로지스틱 회귀 값이 스레드 수 따라 조금 달라짐
 # 환경변수에 이미 있으면 그 값 사용, BLAS_THREADS=none 이면 고정 안 함

@@ -7,7 +7,7 @@ BAM 을 PE, SE 로 나눠 각각 추출하고 cov 를 자리별로 합침
 """
 # 스크립트 전용 - import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 
 import gzip, os, subprocess, sys, time
 import config as C
@@ -219,7 +219,7 @@ def main():
 
     print('\n처리 %d개 · 건너뜀 %d개 · %.1f분' % (done, skip, (time.time() - t0) / 60))
     if bad:
-        print('실패 %d개 — 산출을 만들지 않았다: %s' % (len(bad), ' · '.join(bad[:20])))
+        print('실패 %d개. 산출을 만들지 않았다: %s' % (len(bad), ' · '.join(bad[:20])))
         sys.exit(1)
     print('2_train/steps/03 완료.')
 

@@ -10,7 +10,7 @@ K=${1:?접기 번호}
 F=$CV_ROOT/fold$K
 [ -d "$F/train_normal_cov" ] && [ -d "$F/train_cancer_cov" ] || { echo "멈춤: 01 을 먼저 ($F)"; exit 1; }
 say(){ echo "[$(date +%F' '%T)] f$K $*"; }
-run(){ say "\$ $*"; "$@" || { say "실패 rc=$? — 중단"; exit 1; }; }
+run(){ say "\$ $*"; "$@" || { say "실패 rc=$?. 중단"; exit 1; }; }
 
 # 격리: 바깥 값이 끼어들지 않게
 unset JSD_CAND LLR_CAND USE_NORMAL USE_GBM USE_CANCER POOL_DIR COLSET_FROM SCORE_UNIT CONVERGENCE_GATE
@@ -26,7 +26,7 @@ SIG=$( { cat "$P"/size_cv/steps/02_fold_dmr.sh "$P"/size_cv/steps/02b_export_siz
           "$P"/1_dmr/steps/moderated_t.py "$P"/1_dmr/steps/sample_id.py "$P"/1_dmr/steps/dmr_common.py "$P"/1_dmr/steps/jsd_resample.py \
           "$CV_ROOT/folds.csv" "$F"/heldout_*.txt | md5sum | cut -c1-12
         echo "$CV_SIZES|$CV_TOPCAP|$CV_RATIO|$CV_NREP|$CV_LLR_HELDOUT|$GEN|$CV_CONF_SIG"; } | tr '\n' ' ')
-if [ -s "$F/.dmr_done" ] && [ "$(cat "$F/.dmr_done")" = "$SIG" ]; then say "이미 끝남 — 건너뜀"; exit 0; fi
+if [ -s "$F/.dmr_done" ] && [ "$(cat "$F/.dmr_done")" = "$SIG" ]; then say "이미 끝남. 건너뜀"; exit 0; fi
 if [ -e "$METH_ROOT" ] && [ -n "$(ls -A "$METH_ROOT" 2>/dev/null)" ]; then
   say "멈춤: $METH_ROOT 가 비어있지 않은데 완료 표지가 없거나 다름. 이 모듈이 만든 폴더이니 지우고 다시 돌리거나 그대로 쓸지 확인"
   exit 1

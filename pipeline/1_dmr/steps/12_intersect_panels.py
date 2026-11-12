@@ -41,7 +41,7 @@ MIN = int(a[a.index('--min') + 1]) if '--min' in a else 50
 SAME = '--same-direction' in a
 ONLY = '--report-only' in a
 if os.path.realpath(OUT) in (os.path.realpath(A), os.path.realpath(B)):
-    raise SystemExit('출력이 입력 폴더와 같다 — 입력 패널을 덮는다: %s' % OUT)
+    raise SystemExit('출력이 입력 폴더와 같다. 입력 패널을 덮는다: %s' % OUT)
 
 print('DMR1 %s\nDMR2 %s\n출력 %s · 최소 %d칸 · 방향 %s%s'
       % (A, B, OUT, MIN, '같은 쪽만' if SAME else '안 봄', ' · 보고만' if ONLY else ''))
@@ -51,7 +51,7 @@ for p in _cfg.PANELS:
     fb = '%s/%s/DMR_confirmed_%s.csv' % (B, p, p)
     for f in (fa, fb):
         if not os.path.isfile(f):
-            raise SystemExit('입력이 없다: %s — 그 트리의 1단계 08 을 먼저 돌리십시오' % f)
+            raise SystemExit('입력이 없다: %s. 그 트리의 1단계 08 을 먼저 돌리십시오' % f)
     da, db = pd.read_csv(fa), pd.read_csv(fb)
     for n, d in (('DMR1', da), ('DMR2', db)):
         if not d['Feature'].is_unique:
@@ -81,7 +81,7 @@ for p in _cfg.PANELS:
 for r in report:
     print('  ' + r)
 if ONLY:
-    print('보고만 — 아무것도 쓰지 않았다')
+    print('보고만. 아무것도 쓰지 않았다')
     sys.exit(0)
 os.makedirs(OUT, exist_ok=True)
 with open(OUT + '/_intersect_panels.txt', 'w', encoding='utf-8') as h:

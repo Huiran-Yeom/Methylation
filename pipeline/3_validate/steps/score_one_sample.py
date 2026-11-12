@@ -12,7 +12,7 @@
 
 # import 금지 - 스크립트 본체가 그대로 돎
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 
 import os as _os, sys as _sys
 # 0_setup 찾기: 위 폴더로 올라가며 찾고, 없으면 METH_CONF_DIR, 그래도 없으면 중단
@@ -65,7 +65,7 @@ SM = os.path.basename(os.getcwd())
 RATIOS = [r for r in C.MUT_RATIOS if r > 0]
 if not RATIOS:
     # 리드 부족으로 모든 비율이 건너뛰어진 경우 (채점할 칸 없음)
-    sys.exit('%s: 풀 부족으로 채점할 비율이 없다 — 이 깊이에서는 채점 안 함' % SM)
+    sys.exit('%s: 풀 부족으로 채점할 비율이 없다. 이 깊이에서는 채점 안 함' % SM)
 _SKIP = []        # (조합, 비율), 특징 못 읽어 건너뛴 칸
 
 # 이미 채점된 검체 건너뛰기 - 표의 모델 지문(md5)이 현재 모델과 같을 때만
@@ -98,7 +98,7 @@ def _already_done():
     for _f in _glob.glob(TRAIN + '/*/pooled/BEST.joblib'):
         now.add((os.path.basename(os.path.dirname(os.path.dirname(_f))), _md5f(_f)))
     if have == now and now:
-        print('%s: 이미 채점됨 — 조합 %d개 지문이 현재 모델과 같습니다. 건너뜁니다.'
+        print('%s: 이미 채점됨. 조합 %d개 지문이 현재 모델과 같습니다. 건너뜁니다.'
               % (SM, len(now)))
         return True
     return False
@@ -138,9 +138,9 @@ if B is None and not ALL:
                                   'mean|entropy|jsd', 'mean|entropy']
     _has = any(os.path.exists('%s/%s/pooled/BEST.joblib' % (TRAIN, n)) for n in _cands)
     if _has:
-        print('%s: 검체 특징이 없습니다 — 아직 안 만들어졌을 수 있습니다 (판이 끝난 뒤 다시)' % SM)
+        print('%s: 검체 특징이 없습니다. 아직 안 만들어졌을 수 있습니다 (판이 끝난 뒤 다시)' % SM)
     else:
-        print('%s: 학습 모델이 없습니다 (%s) — 09_save_best_j.py 를 먼저 돌리세요' % (SM, TRAIN))
+        print('%s: 학습 모델이 없습니다 (%s). 09_save_best_j.py 를 먼저 돌리세요' % (SM, TRAIN))
     sys.exit(1)
 _cache = {}
 
@@ -249,7 +249,7 @@ thr = float(_models[-1][1].get('threshold_spec95', float('nan')))
 name = _models[-1][0] if not ALL else 'all_combos'
 
 if not rows:
-    print('%s: 채점할 것이 없습니다 — val04_1 이 행렬을 만들었는지 확인' % SM); sys.exit(1)
+    print('%s: 채점할 것이 없습니다. val04_1 이 행렬을 만들었는지 확인' % SM); sys.exit(1)
 T = pd.DataFrame(rows)
 os.makedirs(ML, exist_ok=True)
 # --model 주면 조합 이름을 파일명에 넣음 (다른 결과 덮어쓰기 방지)

@@ -6,7 +6,7 @@
 사용: python 02b_export_sizes.py --dmr <results/dmr> --gen <GEN> --sizes "200 300 …" [--topcap N|숫자]
 """
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 import os
 import sys
 

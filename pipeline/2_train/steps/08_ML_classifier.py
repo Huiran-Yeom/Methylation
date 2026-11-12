@@ -10,7 +10,7 @@ SVM 은 probability=False 라 decision_function 을 점수로 씀 (score_type �
 
 # 스크립트 전용 - import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 
 import itertools
 import os
@@ -59,7 +59,7 @@ for _k in ('jsd', 'llr', 'pdr'):
 _want = ['mean', 'entropy', 'jsd', 'llr', 'pdr']
 if len(_all) != len(_want):
     _miss = [x for x in _want if x not in _all]
-    sys.exit('중단: 특징 %d종만 보입니다 (%s) — 없는 것 %s. 앞 단계가 안 끝났습니다.'
+    sys.exit('중단: 특징 %d종만 보입니다 (%s). 없는 것 %s. 앞 단계가 안 끝났습니다.'
              % (len(_all), ','.join(_all), ','.join(_miss)))
 COMBOS = [tuple(c) for n in range(1, len(_all) + 1) for c in _it.combinations(_all, n)]
 print('[특징] %d조합 · %s' % (len(COMBOS), ' · '.join('|'.join(c) for c in COMBOS)))
@@ -210,7 +210,7 @@ def main():
                         negc = oof[yt == 0]
                         thr_cv = float(np.percentile(negc, 95)) if len(negc) else float('nan')
                     except Exception as _e:
-                        print(f'      ! OOF 문턱 실패 ({type(_e).__name__}) — NaN 으로 둔다')
+                        print(f'      ! OOF 문턱 실패 ({type(_e).__name__}). NaN 으로 둔다')
                         thr_cv = float('nan')
                     sens_cv = float((pos > thr_cv).mean()) if len(pos) and thr_cv == thr_cv else float('nan')
                     spec_cv = float((neg <= thr_cv).mean()) if len(neg) and thr_cv == thr_cv else float('nan')

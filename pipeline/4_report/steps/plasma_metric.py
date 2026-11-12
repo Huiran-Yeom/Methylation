@@ -28,7 +28,7 @@
 """
 # 스크립트 전용, import 하면 본체가 돎
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 
 import os as _os, sys as _sys
 _h = _os.path.dirname(_os.path.abspath(__file__))
@@ -89,11 +89,11 @@ conf = load_conf()
 SAMPLES = conf.get('SAMPLES', '').split()
 NEG = set(conf.get('NEG_SAMPLES', '').split())
 if not NEG or not NEG <= set(SAMPLES):
-    sys.exit('NEG_SAMPLES 가 비었거나 SAMPLES 에 없는 이름이 있다 — 혈장 코호트 설정이 아니다')
+    sys.exit('NEG_SAMPLES 가 비었거나 SAMPLES 에 없는 이름이 있다. 혈장 코호트 설정이 아니다')
 dk = a.depth.upper()
 NREP = int(conf.get('NREP_' + dk, conf.get('NREP', 10)))
 if [float(x) for x in conf.get('RATIOS', '').replace(' ', '').split(',') if x] != [0.0, 1.0]:
-    sys.exit('RATIOS 가 0.0, 1.0 이 아니다 — 희석 없음 채점이 아니다')
+    sys.exit('RATIOS 가 0.0, 1.0 이 아니다. 희석 없음 채점이 아니다')
 base = pd.read_csv(a.baseline).set_index('sample')
 stage = pd.read_csv(a.stage).set_index('sample')['stage'] if a.stage else None
 rng = np.random.default_rng(a.seed)
@@ -149,7 +149,7 @@ for pan in a.panels:
     if np.isnan(x).any() or np.isnan(xs).any():
         res[pan] = '판정 안 함 (점수 빠짐)'; print('  ' + res[pan]); continue
     if 0 < ndf < len(S):
-        res[pan] = '말하지 않는다 (단위 혼합 — df 전환 %d/%d)' % (ndf, len(S))
+        res[pan] = '말하지 않는다 (단위 혼합. df 전환 %d/%d)' % (ndf, len(S))
         print('  ' + res[pan]); continue
     perm = [rng.permutation(y) for _ in range(a.nperm)]
     o_s = auc(xs, y); nul_s = np.array([auc(xs, yy) for yy in perm]); lo, hi = np.percentile(nul_s, [2.5, 97.5])

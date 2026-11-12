@@ -9,7 +9,7 @@
   --strata 없으면 정상 / 암 두 층
 """
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 import glob
 import os
 import sys
@@ -32,7 +32,7 @@ ND, CD = ENV.get('NORMAL_SET', ''), _cfg.cancer_env('CANCER_COV_DIR', 'GBM_COV_D
 NB, CB = ENV.get('NORMAL_BAM_DIR', ''), _cfg.cancer_env('CANCER_BAM_DIR', 'GBM_BAM_DIR')
 for k, v in (('NORMAL_SET', ND), ('CANCER_COV_DIR', CD), ('NORMAL_BAM_DIR', NB), ('CANCER_BAM_DIR', CB)):
     if not v or not os.path.isdir(v):
-        sys.exit('멈춤: %s 폴더가 없음 — %s' % (k, v))
+        sys.exit('멈춤: %s 폴더가 없음. %s' % (k, v))
 CANCER = _cfg.CANCER_LABEL
 sid = _sid.sid
 
@@ -100,7 +100,7 @@ def ln(target, rel):
     os.makedirs(os.path.dirname(dst), exist_ok=True)
     if os.path.lexists(dst):
         if os.path.realpath(dst) != os.path.realpath(target):
-            sys.exit('멈춤: 이미 다른 곳을 가리키는 링크 — %s' % rel)
+            sys.exit('멈춤: 이미 다른 곳을 가리키는 링크. %s' % rel)
         return
     os.symlink(os.path.realpath(target), dst)
 

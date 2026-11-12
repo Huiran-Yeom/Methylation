@@ -15,7 +15,7 @@ P_Normal 은 검체별 합 1 로 맞춘 뒤 평균, P_GBM 은 세포주 안에�
 
 # 스크립트 전용. import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 
 import os as _os, sys as _sys
 # 0_setup 찾기: 위로 올라가며 찾고, 없으면 METH_CONF_DIR 사용
@@ -90,7 +90,7 @@ if int(getattr(_cfg, 'LLR_HELDOUT', 0)):
     _ta = dict(zip(M_ALL['sample'], M_ALL['type'])); _ga = dict(zip(M_ALL['sample'], M_ALL['group']))
     _rn, _mn = _cfg.split_ref_mix([x for x in _ta if _ta[x] == 'Normal'])
     _rg, _mg = _cfg.split_ref_mix({_ga[x] for x in _ta if _ta[x] == _CANCER})
-    print('[held-out] 참조군만 씀 — 정상 %d/%d · 암 %d/%d종' % (len(_rn), len(norm), len(_rg), len(lines)))
+    print('[held-out] 참조군만 씀. 정상 %d/%d · 암 %d/%d종' % (len(_rn), len(norm), len(_rg), len(lines)))
     print('  정상 참조군 ' + ' '.join(_rn))
     print('  암   참조군 ' + ' '.join(_rg))
     norm = [s for s in norm if s in set(_rn)]
@@ -142,7 +142,7 @@ PG[ok] = Ps[ok] / nP[ok, None]
 
 # 암 참조가 비면 중단 (PG 만든 뒤에 검사해야 함)
 if len(lines) == 0 or not np.isfinite(PG).any():
-    sys.exit('중단: 암 %d종 · P_GBM 에 유효값이 없습니다 — 참조를 만들지 않습니다' % len(lines))
+    sys.exit('중단: 암 %d종 · P_GBM 에 유효값이 없습니다. 참조를 만들지 않습니다' % len(lines))
 print('쓸 수 있는 창 %s / %s (%.1f%%)' % (format(int(ok.sum()), ','), format(nw, ','), 100.0 * ok.sum() / nw))
 
 R = W.copy()

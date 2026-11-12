@@ -8,9 +8,9 @@ for _d in "$_HERE" "$_HERE/.." "$_HERE/../.." "$_HERE/../../.."; do
   [ -f "$_d/0_setup/load_config.sh" ] && { _LC="$_d/0_setup/load_config.sh"; break; }
 done
 : "${_LC:=${METH_CONF_DIR:+$METH_CONF_DIR/load_config.sh}}"
-[ -f "${_LC:-}" ] || { echo "멈춤: 0_setup/load_config.sh 를 못 찾았다 — 트리 밖에서 돌리려면 METH_CONF_DIR 를 직접 주라" >&2; exit 1; }
+[ -f "${_LC:-}" ] || { echo "멈춤: 0_setup/load_config.sh 를 못 찾았다. 트리 밖에서 돌리려면 METH_CONF_DIR 를 직접 주라" >&2; exit 1; }
 . "$_LC"
-: "${GEN:?GEN(패널 세대)이 없다 — config.conf 의 GEN 을 채우십시오}"
+: "${GEN:?GEN(패널 세대)이 없다. config.conf 의 GEN 을 채우십시오}"
 : "${METH_ROOT:=/ssd_data/Methylation}"
 : "${DATASET_ROOT:=/ssd_data/dataset}"
 # TMP_ROOT 는 드라이버(run_validate.sh)와 같은 값이어야 함
@@ -30,12 +30,12 @@ set -u
 # OOM 때 워커가 먼저 죽게 oom_score_adj 올림 (스왑 0, 자식도 물려받음)
 echo 800 > /proc/self/oom_score_adj 2>/dev/null
 if [ -f "$TMP_ROOT/lock/STOP" ]; then
-  echo "[$(date +%H:%M:%S)] 그만 표시 — $1 $2 새로 걸지 않습니다" >> "$TMP_ROOT/drop_caches.log"
+  echo "[$(date +%H:%M:%S)] 그만 표시. $1 $2 새로 걸지 않습니다" >> "$TMP_ROOT/drop_caches.log"
   exit 0
 fi
 s="$1"; v="$2"
 # COHORT 기본값 없음, 없으면 중단
-: "${COHORT:?COHORT 를 주십시오 — 3_validate/run_validate.sh 와 같은 값이어야 합니다}"
+: "${COHORT:?COHORT 를 주십시오. 3_validate/run_validate.sh 와 같은 값이어야 합니다}"
 C=$COHORT
 # 검체 작업 폴더 (채점 루프와 같은 WORK_ROOT)
 W=${WORK_ROOT:-$HOME}/${C}_val/$v/$s
@@ -70,7 +70,7 @@ if [ "${VALREDO:-0}" != "1" ]; then
     if [ -z "$_dc" ]; then _dc=$_m; elif [ "$_m" != "$_dc" ]; then _dn=0; break; fi
   done
   if [ "$_dn" = "1" ]; then
-    echo "=== 건너뜀 $(date +%H:%M:%S) $s / $v — 피처 5종 x ${_dc}비율 이미 있음" >> "$L"
+    echo "=== 건너뜀 $(date +%H:%M:%S) $s / $v. 피처 5종 x ${_dc}비율 이미 있음" >> "$L"
     exit 0
   fi
 fi
@@ -116,7 +116,7 @@ val04_1d:07_llrfeat.py}"
     fi
   done
   if [ -s "$_MISS" ]; then
-    echo "!! 최신화할 원본이 없습니다 — STEP_MAP 의 이름과 원본 파일명이 어긋났습니다:" >> "$L"
+    echo "!! 최신화할 원본이 없습니다. STEP_MAP 의 이름과 원본 파일명이 어긋났습니다:" >> "$L"
     sed 's/^/     /' "$_MISS" >> "$L"
     echo "   그대로 두면 옛 스크립트가 돌아 그 피처만 빠진 채 완주합니다 (AUC 0.500)." >> "$L"
     rm -f "$_MISS"; exit 1
@@ -159,11 +159,11 @@ export METH_VALIDATE=1
 echo "--- 참조 $(basename $(dirname $LLR_REF))/$(basename $LLR_REF) · 후보 $(basename $LLR_CAND)" >> "$L"
 # 도는 순서 = $_pairs (STEP_MAP 또는 기본값) 왼쪽 이름 순서
 _STEPS=$(printf '%s\n' "$_pairs" | tr ';' '\n' | cut -d: -f1 | grep -v '^$' | tr '\n' ' ')
-[ -n "$_STEPS" ] || { echo "!! 돌 단계 목록이 비었다 — STEP_MAP 을 보십시오" >> "$L"; exit 1; }
+[ -n "$_STEPS" ] || { echo "!! 돌 단계 목록이 비었다. STEP_MAP 을 보십시오" >> "$L"; exit 1; }
 echo "--- 단계 $_STEPS" >> "$L"
 for st in $_STEPS; do
   # 단계 파일 없으면 중단 (복사 실패)
-  [ -f "$st.py" ] || { echo "!! $st.py 가 검체 폴더에 없다 — 복사가 안 됐다" >> "$L"; exit 1; }
+  [ -f "$st.py" ] || { echo "!! $st.py 가 검체 폴더에 없다. 복사가 안 됐다" >> "$L"; exit 1; }
   # 메모리 문은 원본 파일명(02_*)으로 판단 (왼쪽 이름은 STEP_MAP 에서 바뀔 수 있음)
   _SRCF=$(printf %s "$_pairs" | tr ';' '\n' | awk -F: -v k="$st" '$1==k{print $2}' | head -1)
   case "$_SRCF" in 02_*) _GATE=1 ;; *) _GATE=0 ;; esac
@@ -208,7 +208,7 @@ if [ "${VALKEEP:-0}" != "1" ]; then
   _ok=1; _cnt=""
   for _k in mean entropy jsd pdr llr; do
     _n=$(ls $_RD/[0-9]*_${_k}_*.csv 2>/dev/null | wc -l)
-    [ "$_n" -ge 1 ] || { echo "   정리 안 함 — $_k 피처가 없습니다" >> "$L"; _ok=0; break; }
+    [ "$_n" -ge 1 ] || { echo "   정리 안 함. $_k 피처가 없습니다" >> "$L"; _ok=0; break; }
     if [ -z "$_cnt" ]; then _cnt=$_n
     elif [ "$_n" != "$_cnt" ]; then
       echo "   정리 안 함. 피처 개수가 다릅니다 ($_k $_n vs $_cnt)" >> "$L"; _ok=0; break

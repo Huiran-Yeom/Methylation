@@ -134,7 +134,7 @@ def ensure_dirs():
 
 def guard_not_original():
     if not VERSION.startswith('j'):
-        raise SystemExit('중단: VERSION=' + VERSION + ' — j 로 시작해야 합니다.')
+        raise SystemExit('중단: VERSION=' + VERSION + '. j 로 시작해야 합니다.')
     for out, parent in ((SD, _R + '/sample_data/panels/' + _P), (RS, _R + '/results/panels/' + _P)):
         a, b = os.path.abspath(out), os.path.abspath(parent)
         if a == b:

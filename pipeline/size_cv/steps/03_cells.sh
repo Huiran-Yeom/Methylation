@@ -30,9 +30,9 @@ SIG=$( { cat "$P"/run/lib.sh "$P"/2_train/run_train.sh "$P"/2_train/steps/*.py "
         echo "$CV_DEPTH|$CV_LLR_HELDOUT|$GEN|$CV_CONF_SIG|$(cat "$F/.dmr_done")"; } | tr '\n' ' ')
 VD=$METH_ROOT/results/panels/j${GEN}${PN}/$V
 if [ -s "$MK.train_done" ] && [ "$(cat "$MK.train_done")" = "$SIG" ] && [ "$(best_n "$VD")" = "$EXPECT_BEST" ]; then
-  say "학습 이미 끝남 — 건너뜀"
+  say "학습 이미 끝남. 건너뜀"
 elif [ -s "$MK.infeasible" ] && [ "$(cat "$MK.infeasible")" = "$SIG" ]; then
-  say "계산 불가(풀 부족) 표지 있음 — 건너뜀"; exit 0
+  say "계산 불가(풀 부족) 표지 있음. 건너뜀"; exit 0
 else
   RP=$(cd "$CV_ROOT" && pwd -P)
   for d in "$VD" "$METH_ROOT/sample_data/panels/j${GEN}${PN}/$V" "$METH_ROOT"/cv_f${K}_val/*/results/"$V" \
@@ -71,6 +71,6 @@ if [ "${av:-0}" -lt "$CV_DISK_MIN" ]; then
   for d in "$METH_ROOT"/cv_f${K}_val/*/results/"$V"/step03_Preprocessing_for_ML; do
     case "$(cd "$d" 2>/dev/null && pwd -P)" in "$(cd "$CV_ROOT" && pwd -P)"/*) rm -rf -- "$d" ;; esac
   done
-  say "디스크 ${av}G — 섞은 BAM 정리"
+  say "디스크 ${av}G. 섞은 BAM 정리"
 fi
 say "끝"

@@ -9,7 +9,7 @@ DMR 블록마다 암, 정상 리드 세고 양쪽 모두 MIN_READS_PER_BLOCK 이
 
 # 스크립트 전용 - import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 
 import os
 import subprocess
@@ -161,7 +161,7 @@ def main():
         dropped = len(counts) - len(paired)
         print(
             f'  {label}: {len(paired):,}쌍  (제외 {dropped:,}개, '
-            f'{dropped/max(1,len(counts))*100:.1f}% — 짝이 2개가 아님)'
+            f'{dropped/max(1,len(counts))*100:.1f}%. 짝이 2개가 아님)'
         )
 
     print('\n2_train/steps/01 완료.')

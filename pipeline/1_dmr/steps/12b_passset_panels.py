@@ -48,7 +48,7 @@ ONLY = '--report-only' in a
 GEN = str(_cfg.GEN)
 K, MINR = int(_cfg.PATTERN_K), int(_cfg.MIN_READS_PER_WINDOW)
 if os.path.realpath(OUT).startswith(os.path.realpath(RA) + os.sep) or os.path.realpath(OUT).startswith(os.path.realpath(RB) + os.sep):
-    raise SystemExit('출력이 입력 트리 안이다 — 입력을 덮을 수 있다: %s' % OUT)
+    raise SystemExit('출력이 입력 트리 안이다. 입력을 덮을 수 있다: %s' % OUT)
 _CANCER = getattr(_cfg, 'CANCER_LABEL', 'GBM')
 
 
@@ -115,7 +115,7 @@ for p in _cfg.PANELS:
 for r in report:
     print('  ' + r)
 if ONLY:
-    print('보고만 — 아무것도 쓰지 않았다')
+    print('보고만. 아무것도 쓰지 않았다')
     sys.exit(0)
 os.makedirs(OUT, exist_ok=True)
 with open(OUT + '/_intersect_panels.txt', 'w', encoding='utf-8') as h:

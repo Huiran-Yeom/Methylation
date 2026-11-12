@@ -11,7 +11,7 @@ jsd 계열 판과 비교용. bl200 은 귀무B(10_null_b.py)와 비교
 
 # 스크립트 전용. import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 
 import os as _os, sys as _sys
 _h = _os.path.dirname(_os.path.abspath(__file__))
@@ -64,7 +64,7 @@ if os.path.isfile(_js):
 # NULL_A_N 주면 그 칸 수 사용
 if _os.environ.get('NULL_A_N'):
     NPICK = int(_os.environ['NULL_A_N'])
-print('뽑을 칸 수 %d (jsd%d 패널 %s%s)' % (NPICK, N, '있음' if os.path.isfile(_js) else '없음 — 기본 %d' % N, ' · NULL_A_N 지정' if _os.environ.get('NULL_A_N') else ''))
+print('뽑을 칸 수 %d (jsd%d 패널 %s%s)' % (NPICK, N, '있음' if os.path.isfile(_js) else '없음. 기본 %d' % N, ' · NULL_A_N 지정' if _os.environ.get('NULL_A_N') else ''))
 
 B = pd.read_parquet(CAND + '/blocks_cpg.parquet')
 cnt = B.groupby(['chr', 'blk']).size()
@@ -85,7 +85,7 @@ for i in (1, 2, 3):
         h.write(('무작위 패널 씨앗 %d: 2026-09-14\n'
                 '  K=3 창이 서는 블록 %d개에서 %d개를 비복원 추출.\n'
                 '  암과 무관하게 골랐다. 실제 패널과 견줄 무작위 기준 패널로 쓴다.\n'
-                '  창이 서는 블록에서 고르므로 리드 기반 피처를 전 칸 받는다 —\n'
+                '  창이 서는 블록에서 고르므로 리드 기반 피처를 전 칸 받는다.\n'
                 + ('  bl200(104칸)에 대해서는 보수적인(넘기 어려운) 귀무다.\n' if N == 200 else
                    '  bl%d 에 대해서는 보수적인(넘기 어려운) 귀무다.\n' % N))
                 % (i, len(pool), NPICK))

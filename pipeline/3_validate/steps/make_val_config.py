@@ -9,7 +9,7 @@
 """
 # import 금지 - 스크립트 본체가 그대로 돎 (run_one_sample.sh 가 부름)
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 
 import io
 import os
@@ -138,7 +138,7 @@ if 'PANEL' in dir():
             _pj = _t
             break
     if not _pj:
-        raise SystemExit('중단: 패널을 못 찾았습니다 — ' + VERSION
+        raise SystemExit('중단: 패널을 못 찾았습니다. ' + VERSION
                          + ' · ' + ' · '.join(_cands))
 if _pj and _os2.path.exists(_pj):
     DMR_DIR = _os2.path.dirname(_pj)
@@ -267,7 +267,7 @@ def main():
         # 원본 없으면 중단 - 넘기면 그 피처만 빠진 채 돌아 AUC 0.500
         #   피처를 빼려면 STEPS 항목을 지움
         if not os.path.exists(s):
-            sys.exit('복사할 파일이 없다: %s — STEPS 에는 있는데 TRAIN_SRC 에 없다. '
+            sys.exit('복사할 파일이 없다: %s. STEPS 에는 있는데 TRAIN_SRC 에 없다. '
                      '이름을 바꿨거나 TRAIN_SRC 가 딴 데를 가리킨다.' % s)
         if True:
             # 링크 말고 복사 - 링크면 원본 폴더의 config.py 를 읽음

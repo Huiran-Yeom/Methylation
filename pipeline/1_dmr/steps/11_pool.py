@@ -7,7 +7,7 @@
 
 # 스크립트 전용. import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 
 import os as _os, sys as _sys
 # 0_setup 찾기: 위로 올라가며 찾고, 없으면 METH_CONF_DIR 사용
@@ -63,7 +63,7 @@ if int(getattr(_cfg, 'LLR_HELDOUT', 0)):
     _t = dict(zip(_S['sample'].astype(str), _S['type'].astype(str)))
     _miss = [s for s in USE if s not in _t]
     if _miss:
-        sys.exit('held-out: samples.csv 에 없는 검체 — 어느 군인지 정할 수 없다: %s' % _miss[:5])
+        sys.exit('held-out: samples.csv 에 없는 검체. 어느 군인지 정할 수 없다: %s' % _miss[:5])
     _kinds = sorted({_t[s] for s in USE})
     if len(_kinds) != 1:
         sys.exit('held-out: 한 목록에 정상과 암이 섞여 있다: %s' % _kinds)
@@ -72,7 +72,7 @@ if int(getattr(_cfg, 'LLR_HELDOUT', 0)):
     _ref, _mix = _cfg.split_ref_mix(_unit(s) for s in _t if _t[s] == _k)
     _before = len(USE)
     USE = [s for s in USE if _unit(s) in set(_mix)]
-    print('[held-out] %s 혼합군만 씀 — 단위 %d/%d · 검체 %d/%d'
+    print('[held-out] %s 혼합군만 씀. 단위 %d/%d · 검체 %d/%d'
           % (_k, len(_mix), len(_ref) + len(_mix), len(USE), _before))
     if not USE:
         sys.exit('held-out: 혼합군에 남은 검체가 없다')

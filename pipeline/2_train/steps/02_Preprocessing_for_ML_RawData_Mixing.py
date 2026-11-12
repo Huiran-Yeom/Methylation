@@ -9,7 +9,7 @@ DEPTH_MODE='total' 이면 샘플당 총 리드 TARGET_DEPTH_READS, 'per_block' �
 
 # 스크립트 전용 - import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 
 import os
 import random
@@ -47,7 +47,7 @@ def build_plan(n_mut_pairs, n_wt_pairs, total_blocks, avg_mut=2.0, avg_wt=2.0):
     elif C.DEPTH_MODE == 'per_block':
         T = total_blocks * C.TARGET_DEPTH_READS
     else:
-        raise ValueError(f"DEPTH_MODE 는 'total' 또는 'per_block' — 받은 값 {C.DEPTH_MODE}")
+        raise ValueError(f"DEPTH_MODE 는 'total' 또는 'per_block'. 받은 값 {C.DEPTH_MODE}")
     base = int(round(T / max(1e-9, avg_wt)))   # 표시용 (정상 기준 조각 수)
 
     rows, problems = [], []
@@ -91,7 +91,7 @@ def print_plan(rows, base, n_mut, n_wt, total_blocks):
         print(f'  블록 {total_blocks:,}개 x {C.TARGET_DEPTH_READS:,} / 2 = 샘플당 {base:,}쌍')
     else:
         print(f'  샘플당 {base:,}쌍 = {base*2:,} reads   (250430 Method 문서 스펙)')
-    print(f'  풀 — 암 {n_mut:,}쌍 / 정상 {n_wt:,}쌍')
+    print(f'  풀: 암 {n_mut:,}쌍 / 정상 {n_wt:,}쌍')
     print('-' * 74)
     print(f"{'폴더':>16} {'명목%':>8} {'암 쌍':>9} {'암 리드':>9} {'총 리드':>10} {'실제%':>8} {'오차':>7}")
     for r in rows:
@@ -231,7 +231,7 @@ def main():
             _bgavg.append(sum(len(v) for v in _d.values()) / max(len(_d), 1))
         else:
             # 배경 BAM 없으면 중단 - 그냥 넘어가면 병합본으로 조용히 돌아도 티가 안 남
-            sys.exit('중단: 배경 %d 의 BAM 이 없습니다 — %s'
+            sys.exit('중단: 배경 %d 의 BAM 이 없습니다. %s'
                      '   2_train/steps/01 이 배경별 BAM 을 만들었는지 보십시오.' % (_k, _f))
     if _bgnames:
         print('배경 %d개 · 조각 수 %s'
@@ -276,7 +276,7 @@ def main():
         C.MUT_RATIOS = [r['ratio'] for r in rows]
         C.MUT_READ_COUNTS = [int(x * C.TARGET_DEPTH_READS) for x in C.MUT_RATIOS]
         print('\n건너뛴 비율: ' + ', '.join(f'{x*100:g}%' for x in _short))
-        print('  남은 비율 ' + str(len(rows)) + '개 — 목록은 skipped_ratios 파일에')
+        print('  남은 비율 ' + str(len(rows)) + '개. 목록은 skipped_ratios 파일에')
         problems = []
     if problems and not C.ALLOW_REPLACEMENT:
         raise SystemExit('풀 부족으로 중단했습니다.')
@@ -297,7 +297,7 @@ def main():
         txt_dir = f'{out_dir}/txt'
         os.makedirs(txt_dir, exist_ok=True)
         print(
-            f"\n[{r['nominal_pct']:g}%] {r['folder']} — 암 {r['mut_pairs']:,}쌍 / "
+            f"\n[{r['nominal_pct']:g}%] {r['folder']}. 암 {r['mut_pairs']:,}쌍 / "
             f"정상 {r['wt_pairs']:,}쌍 (실제 {r['actual_pct']:.3f}%)"
         )
         # 이어하기: BAM 다 있고 txt.tar.gz 까지 있으면 그 비율 건너뜀

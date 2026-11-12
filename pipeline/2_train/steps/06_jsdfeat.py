@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # 스크립트 전용 - import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 
 import os as _os, sys as _sys
 # 0_setup 찾기: 위 폴더로 올라가며 → METH_CONF_DIR → 없으면 기본값 (검증 복사본용)
@@ -22,7 +22,7 @@ except ImportError:
     # 설정 못 찾으면 환경변수/기본값 사용, 어느 뿌리 썼는지 로그에 남김
     _M = _os.environ.get('METH_ROOT', '/ssd_data/Methylation').rstrip('/')
     _D = _os.environ.get('DATASET_ROOT', '/ssd_data/dataset').rstrip('/')
-    _sys.stderr.write('  [설정 없음] 환경변수/기본값으로 진행 — METH_ROOT=%s\n' % _M)
+    _sys.stderr.write('  [설정 없음] 환경변수/기본값으로 진행. METH_ROOT=%s\n' % _M)
 
 
 """2단계 06: JSD 피처
@@ -60,7 +60,7 @@ _G = getattr(C, 'GEN')
 for _name, _val, _want in (('CAND', CAND, 'j_candidates' + _G),
                            ('JCOUNT', JCOUNT, 'j_jsdcount' + _G)):
     if os.path.basename(_val.rstrip('/')) != _want:
-        sys.exit('중단: 세대 불일치 — VERSION=%s · GEN=%s 인데 %s=%s (기대 %s)'
+        sys.exit('중단: 세대 불일치. VERSION=%s · GEN=%s 인데 %s=%s (기대 %s)'
                  % (C.VERSION, _G, _name, _val, _want)
                  + '\n  검증 러너가 JSD_CAND/JSD_JCOUNT 를 내보내는지 보십시오'
                    ' (3_validate/steps/run_one_sample.sh).')
@@ -136,7 +136,7 @@ def build_pn(nwin):
     # 정상, 암 구분은 samples.csv 의 type 열로 (파일 이름으로 추측 안 함)
     _sc = CAND + '/samples.csv'
     if not os.path.exists(_sc):
-        sys.exit('samples.csv 가 없습니다 — 1단계 01_candidates 를 먼저 돌리세요: ' + _sc)
+        sys.exit('samples.csv 가 없습니다. 1단계 01_candidates 를 먼저 돌리세요: ' + _sc)
     _meta = pd.read_csv(_sc)
     for _c in ('sample', 'type'):
         if _c not in _meta.columns:
@@ -147,14 +147,14 @@ def build_pn(nwin):
     # held-out 이면 참조군 정상만 사용 (LLR 참조표와 같게, 섞기에 쓴 정상이 기준에 안 들어가게)
     if int(getattr(_cfg, 'LLR_HELDOUT', 0)):
         _ref, _ = _cfg.split_ref_mix(sorted(_norm))
-        print('  P_N : held-out — 참조군 정상 %d/%d 명만 씀' % (len(_ref), len(_norm)))
+        print('  P_N : held-out. 참조군 정상 %d/%d 명만 씀' % (len(_ref), len(_norm)))
         _norm = set(_ref)
     _suf = '_K%d.parquet' % K
     _nm = lambda f: os.path.basename(f)[len('count_'):-len(_suf)]
     _drop = [f for f in fs if _nm(f) not in _norm]
     fs = [f for f in fs if _nm(f) in _norm]
     if not fs:
-        sys.exit('정상 count 파일을 못 찾았습니다 — samples.csv 의 정상 %d명과 이름이 겹치는 것이 없습니다: %s'
+        sys.exit('정상 count 파일을 못 찾았습니다. samples.csv 의 정상 %d명과 이름이 겹치는 것이 없습니다: %s'
                  % (len(_norm), JCOUNT))
     if _drop:
         print('  P_N : 정상 아닌 %d개 제외' % len(_drop))
@@ -354,7 +354,7 @@ def main():
                     _normal = getattr(C, 'COLSET_FROM', 'all') == 'normal'
                     _isn = F.index.astype(str).str.startswith('Normal')
                     if _normal and not _isn.any():
-                        sys.exit('COLSET_FROM=normal 인데 정상 행이 0개입니다 — 행 이름이 Normal 로 시작해야 합니다')
+                        sys.exit('COLSET_FROM=normal 인데 정상 행이 0개입니다. 행 이름이 Normal 로 시작해야 합니다')
                     _na = F.loc[_isn if _normal else [True] * len(F), _blk].isna().mean()
                     keep_cols = [x for x in _blk if _na[x] < MAXNA]
                     if _normal:

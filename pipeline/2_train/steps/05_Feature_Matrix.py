@@ -12,7 +12,7 @@ bedGraph 는 0-based 라 +1 해서 DMR 좌표(1-based)에 맞춤, 파일은 이�
 
 # 스크립트 전용 - import 하면 본체가 돌아 자료를 덮어씀
 if __name__ != '__main__':
-    raise ImportError(__file__ + ' 은(는) 스크립트다 — import 하지 않는다')
+    raise ImportError(__file__ + ' 은(는) 스크립트다. import 하지 않는다')
 
 import gzip
 import os
@@ -157,7 +157,7 @@ def to_frame(rows_normal, rows_gbm, label):
         # 커버율 재는 행. normal 이면 정상 행만 봐서 비율마다 같은 블록이 남음
         ref = df[df.index.astype(str).str.startswith('Normal')] if COLSET_FROM == 'normal' else df
         if len(ref) == 0:
-            raise SystemExit(f'COLSET_FROM={COLSET_FROM} 인데 정상 행이 0개입니다 ({label}) — 행 이름이 Normal 로 시작해야 합니다')
+            raise SystemExit(f'COLSET_FROM={COLSET_FROM} 인데 정상 행이 0개입니다 ({label}). 행 이름이 Normal 로 시작해야 합니다')
         if MIN_SAMPLE_COVERAGE >= 1.0:
             keep = ref.notna().all(axis=0)              # dropna(how='any') 와 같음
         else:

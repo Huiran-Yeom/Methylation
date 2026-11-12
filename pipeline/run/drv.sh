@@ -11,7 +11,7 @@
 set -u
 NAME=${1:?판 이름}; CODEDIR=${2:?코드 폴더 이름}; MODE=${3:?main · help · finish}; shift 3
 for k in NL MEMW O; do         # NL 등은 판 설정이 덮어서 무시되므로 받으면 중단 (*_SET 사용)
-  [ -n "${!k:-}" ] && { echo "$k 는 받지 않는다 — ${k}_SET 를 쓴다"; exit 1; }
+  [ -n "${!k:-}" ] && { echo "$k 는 받지 않는다. ${k}_SET 를 쓴다"; exit 1; }
 done
 H=$(cd "$(dirname "$0")" && pwd)
 . "$H/lib.sh"; . "$H/profiles.sh"
@@ -34,7 +34,7 @@ push_front(){ ( flock 9; { printf '%s\n' "$@"; cat "$Q"; } > "$Q.new" && mv "$Q.
 
 disk_guard(){
   [ "$(avail)" -ge 150 ] && return 0
-  say "  디스크 $(avail)G < 150G — 채점 끝난 검증 칸의 섞은 BAM 만 지운다"
+  say "  디스크 $(avail)G < 150G. 채점 끝난 검증 칸의 섞은 BAM 만 지운다"
   local l s c v x
   if del_ok; then
     for l in "$TMP_ROOT"/val_*.log; do
@@ -82,7 +82,7 @@ lane(){ local it
       sleep 60; continue
     fi
     set -- $it
-    [ "$#" -ge 3 ] || { say "  !! 대기열 항목이 이상하다 — 건너뜀: «$it»"; continue; }
+    [ "$#" -ge 3 ] || { say "  !! 대기열 항목이 이상하다. 건너뜀: «$it»"; continue; }
     mem_wait
     case "$1" in
       T) touch "$RUN/$2_$3"; do_train "$2" "$3" "$4"; rm -f "$RUN/$2_$3" ;;
@@ -111,7 +111,7 @@ gate(){   # 관문: 학습 실패 없음, feasible 칸 전부 n/n 이고 rc=0 (�
     s=$(grep -o "채점된 검체 [0-9]*/[0-9]*" "$l" 2>/dev/null | tail -1 | grep -oE "[0-9]+/[0-9]+")
     tail -1 "$l" 2>/dev/null | grep -q "끝 rc=0" && [ -n "$s" ] && [ "${s%/*}" = "${s#*/}" ] && continue
     if [ -n "${EXC_C:-}" ] && [ "$c $v ${s:-}" = "$EXC_C $EXC_V $EXC_S" ] && exc_ok; then
-      exc=$((exc + 1)); say "  사전등록 예외: $c $v $s · 풀 부족($EXC_N) — 1차 지표(5k) 밖 · 그대로 싣는다"; continue
+      exc=$((exc + 1)); say "  사전등록 예외: $c $v $s · 풀 부족($EXC_N). 1차 지표(5k) 밖 · 그대로 싣는다"; continue
     fi
     bad=1; say "  검증 미완 $c $v ${s:-}"
   done < <(sort -u "$O/feasible_$DS.txt"); done
@@ -146,7 +146,7 @@ report(){   # 4단계: 코호트 표, cv_all.csv 먼저. .new 에 쓰고 rc 0 �
 
 case "$MODE" in
   main|help)
-    [ -s "$O/stage1_ok_$DS" ] || { say "멈춤: 관문 ① 표지 없음 — $STAGE1 부터"; exit 1; } ;;
+    [ -s "$O/stage1_ok_$DS" ] || { say "멈춤: 관문 ① 표지 없음. $STAGE1 부터"; exit 1; } ;;
 esac
 help_alive(){ local f p n=0; for f in "$O"/help_$DS.*.pid; do [ -e "$f" ] || continue; p=$(cat "$f"); [ -d "/proc/$p" ] && n=$((n + 1)) || rm -f "$f"; done; echo "$n"; }
 case "$MODE" in
@@ -154,7 +154,7 @@ case "$MODE" in
     exec 8> "$O/main_$DS.lock"; flock -n 8 || { say "멈춤: 같은 판의 main 이 이미 돈다"; exit 1; }
     # 대기열 다 만들 때까지 등록 잠금 쥠 (help 등록과 겹치지 않게)
     exec 7> "$O/reg_$DS.lock"; flock 7
-    [ "$(help_alive)" = 0 ] || { say "멈춤: 살아 있는 보조 자리 $(help_alive)개 — 끝난 뒤 main 을 띄운다"; exit 1; } ;;
+    [ "$(help_alive)" = 0 ] || { say "멈춤: 살아 있는 보조 자리 $(help_alive)개. 끝난 뒤 main 을 띄운다"; exit 1; } ;;
   help)
     # main 이 대기열 만드는 중이면 등록 잠금에서 대기. 표지 파일 이름은 PID 로
     exec 7> "$O/reg_$DS.lock"; flock 7
@@ -194,7 +194,7 @@ case "$MODE" in
   finish)
     say "── 마무리 · 그룹 ${*:-없음} 이 끝나기를 기다린다"
     for g in "$@"; do while [ -n "$(ps -o pid= -g "$g" 2>/dev/null)" ]; do sleep 60; done; done
-    say "── 마무리 · 그룹 모두 끝 — 관문 · 4단계"
+    say "── 마무리 · 그룹 모두 끝. 관문 · 4단계"
     [ "$DRY" = 1 ] && { say "(DRY) 관문 · 표 · 끝"; exit 0; }
     gate || exit 1
     [ "${FINISH_TEST:-0}" = 1 ] && { say "(시험) 관문까지만"; exit 0; }

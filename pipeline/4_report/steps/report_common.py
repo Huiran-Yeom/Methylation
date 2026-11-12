@@ -28,7 +28,7 @@ def person(s):
 def person_warn():
     """PERSON_RE 가 하나도 못 맞추면 경고 (사람 단위 = 검체 단위가 돼서)"""
     if _pmiss[1] == 0 and _pmiss[0]:
-        print('  ! PERSON_RE 가 검체 %d개 중 하나도 못 맞췄습니다 — 사람 단위 묶기가 검체 단위와'
+        print('  ! PERSON_RE 가 검체 %d개 중 하나도 못 맞췄습니다. 사람 단위 묶기가 검체 단위와'
               ' 같아집니다. 환경변수 PERSON_RE 를 자료의 이름 규칙에 맞추세요.' % _pmiss[0])
 
 

@@ -20,7 +20,7 @@ def gen(cfg):
         try:
             g = cfg.GEN
         except Exception:
-            raise SystemExit('GEN(패널 세대)을 못 읽었습니다 — config.conf 의 GEN 을 채우거나 '
+            raise SystemExit('GEN(패널 세대)을 못 읽었습니다. config.conf 의 GEN 을 채우거나 '
                              '환경변수로 주십시오. 비워 두면 옛 세대 폴더를 가리킵니다.')
     return g
 
